@@ -1,3 +1,5 @@
+#include "window.h"
+#include "buffer.h"
 #include "argument.h"
 #include "flags.h"
 #include "error.h"
@@ -12,7 +14,16 @@
 static void
 run(const char *filename)
 {
-        
+        window  win;
+        buffer *buffer;
+        str     fp;
+
+        fp     = str_from(filename);
+        win    = window_create(glconf.term.w, glconf.term.h);
+        buffer = buffer_from_file(fp);
+
+        window_add_buffer(&win, buffer, 1);
+        window_handle(&win);
 }
 
 static int

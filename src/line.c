@@ -44,7 +44,7 @@ lines_of_cstr(const char *s)
                 dyn_array_append(buf, s[i]);
                 if (s[i] == 10) {
                         dyn_array_append(buf, 0);
-                        dyn_array_append(lns, line_from_cstr(no, buf.data));
+                        dyn_array_append(lns, line_from_cstr(no++, buf.data));
                         dyn_array_clear(buf);
                 }
         }

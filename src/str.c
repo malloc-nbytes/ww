@@ -33,6 +33,7 @@ str_append(str *s, char c)
         if (s->len >= s->cap) {
                 s->cap = s->cap ? s->cap*2 : 2;
                 s->chars = (char *)realloc(s->chars, s->cap);
+                memset(s->chars + s->len+1, 0, s->cap - s->len);
         }
         s->chars[s->len++] = c;
 }
