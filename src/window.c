@@ -32,7 +32,12 @@ static void
 close_buffer(window *win)
 {
         dyn_array_rm_at(win->bfrs, win->abi);
-        win->abi = win->bfrs.len-1;
+        if (win->bfrs.len == 0) {
+                win->ab = NULL;
+                win->abi = 0;
+        }
+        else if (win->abi > win->bfrs.len-1)
+                --win->abi;
 }
 
 static void
@@ -42,8 +47,8 @@ ctrlx(window *win)
         input_type  ty;
 
         switch (ty = get_input(&ch)) {
-        case INPUT_TYPE_CTRL:
-                if (ch == 'c')
+        case INPUT_TYPE_NORMAL:
+                if (ch == 'q')
                         close_buffer(win);
         default: break;
         }
@@ -71,8 +76,9 @@ window_handle(window *win)
 
                 if (ty == INPUT_TYPE_ALT)
                         assert(0);
-                else if (ty == INPUT_TYPE_CTRL && ch == 'x')
+                else if (ty == INPUT_TYPE_CTRL && ch == CTRL_X) {
                         ctrlx(win);
+                }
                 else {
                         proc = buffer_process(win->ab, ty, ch);
 

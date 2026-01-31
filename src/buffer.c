@@ -95,6 +95,18 @@ buffer_process(buffer     *b,
         };
 
         switch (ty) {
+        case INPUT_TYPE_CTRL: {
+                if (ch == 'n')
+                        movement_ar[1](b);
+                else if (ch == 'p')
+                        movement_ar[0](b);
+                else if (ch == 'f')
+                        movement_ar[2](b);
+                else if (ch == 'b')
+                        movement_ar[3](b);
+                gotoxy(b->cx, b->cy);
+                fflush(stdout);
+        } break;
         case INPUT_TYPE_ARROW:
                 movement_ar[ch-'A'](b);
                 gotoxy(b->cx, b->cy);
