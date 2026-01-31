@@ -10,7 +10,7 @@
 
 typedef enum {
         BP_NOP = 0,
-        BP_UPDATE,
+        BP_INSERT,
         BP_MOV,
 } buffer_proc;
 
@@ -27,6 +27,6 @@ DYN_ARRAY_TYPE(buffer *, bufferp_array);
 buffer      *buffer_alloc(void);
 buffer      *buffer_from_file(str filename);
 buffer_proc  buffer_process(buffer *b, input_type ty, char ch);
-void         buffer_dump(const buffer *b);
+void         buffer_dump(const buffer *b, size_t cx, size_t cy);
 
 #endif // BUFFER_H_INUCLUDED

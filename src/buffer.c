@@ -82,36 +82,66 @@ buffer_left(buffer *b)
                 --b->cx;
 }
 
+static void
+buffer_eol(buffer *b)
+{
+        b->cx = str_len(&b->lns.data[b->al]->s)-1;
+}
+
+static void
+buffer_bol(buffer *b)
+{
+        b->cx = 0;
+}
+
+static void
+insert_char(buffer *b, char ch)
+{
+        str_insert(&b->lns.data[b->al]->s, b->cx, ch);
+        ++b->cx;
+}
+
 buffer_proc
 buffer_process(buffer     *b,
                input_type  ty,
                char        ch)
 {
-        static void (*movement_ar[4])(buffer *) = {
+        static void (*movement_ar[])(buffer *) = {
                 buffer_up,
                 buffer_down,
                 buffer_right,
                 buffer_left,
+                buffer_eol,
+                buffer_bol,
         };
 
         switch (ty) {
         case INPUT_TYPE_CTRL: {
-                if (ch == 'n')
+                if (ch == CTRL_N)
                         movement_ar[1](b);
-                else if (ch == 'p')
+                else if (ch == CTRL_P)
                         movement_ar[0](b);
-                else if (ch == 'f')
+                else if (ch == CTRL_F)
                         movement_ar[2](b);
-                else if (ch == 'b')
+                else if (ch == CTRL_B)
                         movement_ar[3](b);
+                else if (ch == CTRL_E)
+                        movement_ar[4](b);
+                else if (ch == CTRL_A)
+                        movement_ar[5](b);
                 gotoxy(b->cx, b->cy);
-                fflush(stdout);
+                return BP_MOV;
         } break;
-        case INPUT_TYPE_ARROW:
+        case INPUT_TYPE_ARROW: {
                 movement_ar[ch-'A'](b);
                 gotoxy(b->cx, b->cy);
                 fflush(stdout);
                 return BP_MOV;
+        } break;
+        case INPUT_TYPE_NORMAL: {
+                insert_char(b, ch);
+                return BP_INSERT;
+        } break;
         default: break;
         }
 
@@ -119,7 +149,9 @@ buffer_process(buffer     *b,
 }
 
 void
-buffer_dump(const buffer *b)
+buffer_dump(const buffer *b,
+            size_t        cx,
+            size_t        cy)
 {
         for (size_t i = 0; i < b->lns.len; ++i) {
                 line *l = b->lns.data[i];
