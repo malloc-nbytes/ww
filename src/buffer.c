@@ -134,7 +134,14 @@ buffer_dump_xy(const buffer *b)
 static void
 del_char(buffer *b)
 {
-        assert(0);
+        line *ln = b->lns.data[b->al];
+
+        if (ln->s.chars[b->cx] == 10)
+                assert(0);
+
+        str_rm(&ln->s, b->cx);
+        if (b->cx > str_len(&ln->s)-1)
+                b->cx = str_len(&ln->s)-1;
 }
 
 buffer_proc
