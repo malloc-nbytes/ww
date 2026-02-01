@@ -131,17 +131,28 @@ buffer_dump_xy(const buffer *b)
         fflush(stdout);
 }
 
-static void
+static int
 del_char(buffer *b)
 {
-        line *ln = b->lns.data[b->al];
+        line *ln;
+        int   newline;
 
-        if (ln->s.chars[b->cx] == 10)
-                assert(0);
+        ln      = b->lns.data[b->al];
+        newline = 0;
+
+        if (ln->s.chars[b->cx] == 10) {
+                str *s = &ln->s;
+                newline = 1;
+                str_concat(s, str_cstr(&b->lns.data[b->al+1]->s));
+                line_free(b->lns.data[b->al+1]);
+                dyn_array_rm_at(b->lns, b->al+1);
+        }
 
         str_rm(&ln->s, b->cx);
         if (b->cx > str_len(&ln->s)-1)
                 b->cx = str_len(&ln->s)-1;
+
+        return newline;
 }
 
 buffer_proc
@@ -179,8 +190,7 @@ buffer_process(buffer     *b,
                         movement_ar[5](b);
                         return BP_MOV;
                 } else if (ch == CTRL_D) {
-                        del_char(b);
-                        return BP_INSERT;
+                        return del_char(b) ? BP_INSERTNL : BP_INSERT;
                 }
         } break;
         case INPUT_TYPE_ARROW: {

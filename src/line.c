@@ -53,3 +53,11 @@ lines_of_cstr(const char *s)
 
         return lns;
 }
+
+void
+line_free(line *ln)
+{
+        str_destroy(&ln->s);
+        free(ln);
+        ln = NULL;
+}
