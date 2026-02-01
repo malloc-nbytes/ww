@@ -5,12 +5,12 @@
 
 #include <stddef.h>
 
-typedef struct {
-        buffer        *ab;
-        size_t         abi;
-        bufferp_array  bfrs;
-        size_t         w;
-        size_t         h;
+typedef struct window {
+        buffer        *ab;   // active buffer (pointer)
+        size_t         abi;  // active buffer index
+        bufferp_array  bfrs; // buffers
+        size_t         w;    // window width
+        size_t         h;    // window height
 } window;
 
 window window_create(size_t w, size_t h);

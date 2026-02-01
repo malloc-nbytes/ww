@@ -1,13 +1,15 @@
 #include "buffer.h"
 #include "io.h"
 #include "term.h"
+#include "utils.h"
+#include "window.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 buffer *
-buffer_alloc(void)
+buffer_alloc(window *parent)
 {
         buffer *b = (buffer *)malloc(sizeof(buffer));
 
@@ -17,16 +19,19 @@ buffer_alloc(void)
         b->cy       = 0;
         b->al       = 0;
         b->wish_col = 0;
+        b->hscrloff = 0;
+        b->vscrloff = 0;
+        b->parent   = parent;
 
         return b;
 }
 
 buffer *
-buffer_from_file(str filename)
+buffer_from_file(str filename, window *parent)
 {
         buffer *b;
 
-        b = buffer_alloc();
+        b = buffer_alloc(parent);
         str_destroy(&b->filename);
         b->filename = filename;
 
@@ -39,6 +44,35 @@ buffer_from_file(str filename)
         }
 
         return b;
+}
+
+static void
+adjust_vscroll(buffer *b)
+{
+        size_t win_h = b->parent->h;
+
+        if (b->cy < b->vscrloff)
+                b->vscrloff = b->cy;
+        else if (b->cy >= b->vscrloff + win_h)
+                b->vscrloff = b->cy - win_h + 1;
+}
+
+static void
+adjust_hscroll(buffer *b)
+{
+        size_t win_w = b->parent->w;
+
+        if (b->cx < b->hscrloff)
+                b->hscrloff = b->cx;
+        else if (b->cx >= b->hscrloff + win_w)
+                b->hscrloff = b->cx - win_w + 1;
+}
+
+static void
+adjust_scroll(buffer *b)
+{
+        adjust_vscroll(b);
+        adjust_hscroll(b);
 }
 
 static void
@@ -56,6 +90,7 @@ buffer_up(buffer *b)
                 b->cx = b->wish_col;
 
         gotoxy(b->cx, b->cy);
+        adjust_scroll(b);
 }
 
 static void
@@ -74,6 +109,7 @@ buffer_down(buffer *b)
                 b->cx = b->wish_col;
 
         gotoxy(b->cx, b->cy);
+        adjust_scroll(b);
 }
 
 static void
@@ -90,6 +126,7 @@ buffer_right(buffer *b)
                 ++b->cx;
         b->wish_col = b->cx;
         gotoxy(b->cx, b->cy);
+        adjust_scroll(b);
 }
 
 static void
@@ -104,6 +141,7 @@ buffer_left(buffer *b)
                 --b->cx;
         b->wish_col = b->cx;
         gotoxy(b->cx, b->cy);
+        adjust_scroll(b);
 }
 
 static void
@@ -112,6 +150,7 @@ buffer_eol(buffer *b)
         b->cx = str_len(&b->lns.data[b->al]->s)-1;
         b->wish_col = b->cx;
         gotoxy(b->cx, b->cy);
+        adjust_scroll(b);
 }
 
 static void
@@ -120,6 +159,7 @@ buffer_bol(buffer *b)
         b->cx = 0;
         b->wish_col = b->cx;
         gotoxy(b->cx, b->cy);
+        adjust_scroll(b);
 }
 
 static void
@@ -139,6 +179,7 @@ insert_char(buffer *b, char ch)
         }
 
         b->wish_col = b->cx;
+        adjust_scroll(b);
 }
 
 void
@@ -174,6 +215,7 @@ del_char(buffer *b)
         if (b->cx > str_len(&ln->s)-1)
                 b->cx = str_len(&ln->s)-1;
 
+        adjust_scroll(b);
         return newline;
 }
 
@@ -198,6 +240,7 @@ backspace(buffer *b)
                 --b->al;
                 b->cx = prevln_len-1;
                 --b->cy;
+                adjust_scroll(b);
                 return 1;
         }
 
@@ -207,6 +250,7 @@ backspace(buffer *b)
         if (b->cx > str_len(&ln->s)-1)
                 b->cx = str_len(&ln->s)-1;
 
+        adjust_scroll(b);
         return newline;
 }
 
@@ -279,10 +323,19 @@ void
 buffer_dump(const buffer *b)
 {
         clear_terminal();
-        for (size_t i = 0; i < b->lns.len; ++i) {
+
+        size_t start;
+        size_t end;
+
+        start = b->vscrloff;
+        start = 0;
+
+        for (size_t i = start; i < b->lns.len; ++i) {
                 line *l = b->lns.data[i];
                 printf("%s", str_cstr(&l->s));
         }
+
         gotoxy(b->cx, b->cy);
         fflush(stdout);
 }
+

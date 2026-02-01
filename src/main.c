@@ -20,7 +20,7 @@ run(const char *filename)
 
         fp     = str_from(filename);
         win    = window_create(glconf.term.w, glconf.term.h);
-        buffer = buffer_from_file(fp);
+        buffer = buffer_from_file(fp, &win);
 
         window_add_buffer(&win, buffer, 1);
         window_handle(&win);
