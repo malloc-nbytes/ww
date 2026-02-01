@@ -198,6 +198,13 @@ backspace(buffer *b)
         return newline;
 }
 
+static void
+tab(buffer *b)
+{
+        for (size_t i = 0; i < 8; ++i)
+                insert_char(b, ' ');
+}
+
 buffer_proc
 buffer_process(buffer     *b,
                input_type  ty,
@@ -234,6 +241,9 @@ buffer_process(buffer     *b,
                         return BP_MOV;
                 } else if (ch == CTRL_D) {
                         return del_char(b) ? BP_INSERTNL : BP_INSERT;
+                } else if (TAB(ch)) {
+                        tab(b);
+                        return BP_INSERT;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
