@@ -80,26 +80,6 @@ window_handle(window *win)
                 else {
                         bproc = buffer_process(win->ab, ty, ch);
 
-                        /* if (win->ab) { */
-                        /*         size_t visible_lines = win->h; */
-
-                        /*         // Scroll down when selection reaches bottom of screen */
-                        /*         if (win->ab->al >= win->ab->vscrloff + visible_lines) */
-                        /*                 win->ab->vscrloff = win->ab->al - visible_lines; */
-
-                        /*         // Scroll up when selection reaches top of screen */
-                        /*         if (win->ab->al < win->ab->vscrloff) */
-                        /*                 win->ab->vscrloff = win->ab->al; */
-
-                        /*         // Clamp hoffset to valid range */
-                        /*         if (win->ab->vscrloff + visible_lines > win->ab->lns.len) */
-                        /*                 win->ab->vscrloff = win->ab->lns.len > visible_lines ? */
-                        /*                         win->ab->lns.len - visible_lines : 0; */
-
-                        /*         if (win->ab->vscrloff >= win->ab->lns.len) */
-                        /*                 win->ab->vscrloff = 0; */
-                        /* } */
-
                         if (bproc == BP_INSERT)
                                 buffer_dump_xy(win->ab);
                         else if (bproc == BP_INSERTNL)
