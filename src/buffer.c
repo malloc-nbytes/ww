@@ -234,11 +234,15 @@ del_char(buffer *b)
         newline = 0;
 
         if (ln->s.chars[b->cx] == 10) {
-                str *s = &ln->s;
                 newline = 1;
-                str_concat(s, str_cstr(&b->lns.data[b->al+1]->s));
-                line_free(b->lns.data[b->al+1]);
-                dyn_array_rm_at(b->lns, b->al+1);
+                if (b->al < b->lns.len-1) {
+                        str *s = &ln->s;
+                        str_concat(s, str_cstr(&b->lns.data[b->al+1]->s));
+                        line_free(b->lns.data[b->al+1]);
+                        dyn_array_rm_at(b->lns, b->al+1);
+                } else {
+                        return 0;
+                }
         }
 
         str_rm(&ln->s, b->cx);
