@@ -391,6 +391,35 @@ buffer_process(buffer     *b,
 }
 
 static void
+drawln(const str *s)
+{
+        int         space;
+        const char *sraw;
+
+        space = -1;
+        sraw  = str_cstr(s);
+
+        for (int i = str_len(s)-1; i >= 0; --i) {
+                if (sraw[i] == 10)
+                        continue;
+                if (sraw[i] != ' ')
+                        break;
+                space = i;
+        }
+
+        if (space == -1)
+                printf("%s", sraw);
+        else {
+                for (size_t i = 0; i < space; ++i)
+                        putchar(sraw[i]);
+                printf(GRAY);
+                for (size_t i = 0; i < str_len(s)-space-1; ++i)
+                        putchar('-');
+                printf(RESET);
+        }
+}
+
+static void
 draw_status(const buffer *b,
             const char   *msg)
 {
@@ -430,13 +459,15 @@ void
 buffer_dump_xy(const buffer *b)
 {
         const str *s = &b->lns.data[b->al]->s;
-        if (!s) return;
+        if (!s)
+                return;
 
         size_t screen_y = b->cy - b->vscrloff;
 
         gotoxy(0, screen_y);
         printf("\x1b[K"); // clear rest of line
-        printf("%s", str_cstr(s));
+        //printf("%s", str_cstr(s));
+        drawln(s);
 
         gotoxy(b->cx - b->hscrloff, screen_y);
         draw_status(b, NULL);
@@ -457,7 +488,8 @@ buffer_dump(const buffer *b)
 
                 gotoxy(0, i - b->vscrloff);
                 printf("\x1b[K");
-                printf("%s", str_cstr(&l->s));
+                // printf("%s", str_cstr(&l->s));
+                drawln(&l->s);
         }
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
