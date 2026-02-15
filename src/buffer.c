@@ -7,7 +7,13 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
+#include <limits.h>
+
+static void
+draw_status(const buffer *b,
+            const char   *msg);
 
 buffer *
 buffer_alloc(window *parent)
@@ -23,12 +29,13 @@ buffer_alloc(window *parent)
         b->hscrloff = 0;
         b->vscrloff = 0;
         b->parent   = parent;
+        b->saved    = 1;
 
         return b;
 }
 
 int
-buffer_save(const buffer *b)
+buffer_save(buffer *b)
 {
         char_array content = dyn_array_empty(char_array);
         for (size_t i = 0; i < b->lns.len; ++i) {
@@ -42,6 +49,9 @@ buffer_save(const buffer *b)
                 perror("write_file");
                 return 0;
         }
+
+        b->saved = 1;
+        draw_status(b, "saved");
         return 1;
 }
 
@@ -71,10 +81,16 @@ buffer_from_file(str filename, window *parent)
         return b;
 }
 
+static inline size_t
+get_win_hight(buffer *b)
+{
+        return b->parent->h-1; // -1 for status line
+}
+
 static void
 adjust_vscroll(buffer *b)
 {
-        size_t win_h = b->parent->h;
+        size_t win_h = get_win_hight(b);
 
         if (b->cy < b->vscrloff)
                 b->vscrloff = b->cy;
@@ -191,6 +207,8 @@ insert_char(buffer *b,
             char    ch,
             int     newline_advance)
 {
+        b->saved = 0;
+
         if (!b->lns.data) {
                 char tmp[2] = {10, 0};
                 dyn_array_append(b->lns, line_from(str_from(tmp)));
@@ -226,8 +244,9 @@ del_char(buffer *b)
         line *ln;
         int   newline;
 
-        ln      = b->lns.data[b->al];
-        newline = 0;
+        ln       = b->lns.data[b->al];
+        newline  = 0;
+        b->saved = 0;
 
         if (ln->s.chars[b->cx] == 10) {
                 newline = 1;
@@ -255,8 +274,9 @@ backspace(buffer *b)
         line *ln;
         int   newline;
 
-        ln      = b->lns.data[b->al];
-        newline = 0;
+        ln       = b->lns.data[b->al];
+        newline  = 0;
+        b->saved = 0;
 
         if (b->cx == 0) {
                 if (b->al == 0)
@@ -370,6 +390,42 @@ buffer_process(buffer     *b,
         return BP_NOP;
 }
 
+static void
+draw_status(const buffer *b,
+            const char   *msg)
+{
+        char   buf[PATH_MAX + 32];
+        size_t len;
+
+        len = 0;
+
+        gotoxy(0, b->parent->h);
+
+        printf(INVERT);
+
+        sprintf(buf, "%s:%zu:%zu%s",
+                str_cstr(&b->filename),
+                b->cx+1,
+                b->cy+1,
+                !b->saved ? "*" : "");
+        printf("%s", buf);
+        len += strlen(buf);
+
+        if (msg) {
+                sprintf(buf, " [%s" RESET INVERT "]", msg);
+                printf("%s", buf);
+                len += strlen(buf);
+        }
+
+        for (size_t i = len; i < b->parent->w; ++i)
+                putchar(' ');
+
+        printf(RESET);
+
+        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+        fflush(stdout);
+}
+
 void
 buffer_dump_xy(const buffer *b)
 {
@@ -383,7 +439,7 @@ buffer_dump_xy(const buffer *b)
         printf("%s", str_cstr(s));
 
         gotoxy(b->cx - b->hscrloff, screen_y);
-        fflush(stdout);
+        draw_status(b, NULL);
 }
 
 void
@@ -405,6 +461,6 @@ buffer_dump(const buffer *b)
         }
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        fflush(stdout);
+        draw_status(b, NULL);
 }
 
