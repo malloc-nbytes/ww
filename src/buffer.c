@@ -347,7 +347,7 @@ jump_to_first_char(buffer *b)
 }
 
 static void
-buffer_bof(buffer *b)
+jump_to_top_of_buffer(buffer *b)
 {
         if (b->lns.len == 0) // not sure if this is required, but doesn't hurt
                 return;
@@ -359,11 +359,51 @@ buffer_bof(buffer *b)
 }
 
 static void
-buffer_tof(buffer *b)
+jump_to_bottom_of_buffer(buffer *b)
 {
         b->cy = 0;
         b->cx = 0;
         b->al = 0;
+        adjust_scroll(b);
+}
+
+static void
+prev_paragraph(buffer *b)
+{
+        size_t nextln;
+
+        nextln = b->cy;
+
+        for (int i = b->cy-1; i >= 0; --i) {
+                const line *l = b->lns.data[i];
+                nextln        = i;
+                if (str_len(&l->s) == 1 && l->s.chars[0] == 10)
+                        break;
+        }
+
+        b->cy = nextln;
+        b->cx = 0;
+        b->al = nextln;
+        adjust_scroll(b);
+}
+
+static void
+next_paragraph(buffer *b)
+{
+        size_t nextln;
+
+        nextln = b->cy;
+
+        for (size_t i = b->cy+1; i < b->lns.len; ++i) {
+                const line *l = b->lns.data[i];
+                nextln        = i;
+                if (str_len(&l->s) == 1 && l->s.chars[0] == 10)
+                        break;
+        }
+
+        b->cy = nextln;
+        b->cx = 0;
+        b->al = nextln;
         adjust_scroll(b);
 }
 
@@ -419,11 +459,17 @@ buffer_process(buffer     *b,
                 if (ch == 'm') {
                         jump_to_first_char(b);
                         return BP_MOV;
-                } else if (ch == '>') {
-                        buffer_bof(b);
-                        return BP_MOV;
                 } else if (ch == '<') {
-                        buffer_tof(b);
+                        jump_to_bottom_of_buffer(b);
+                        return BP_MOV;
+                } else if (ch == '>') {
+                        jump_to_top_of_buffer(b);
+                        return BP_MOV;
+                } else if (ch == '{') {
+                        prev_paragraph(b);
+                        return BP_MOV;
+                } else if (ch == '}') {
+                        next_paragraph(b);
                         return BP_MOV;
                 }
         } break;
