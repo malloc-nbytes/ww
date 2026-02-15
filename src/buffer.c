@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
+#include <ctype.h>
 
 static void
 draw_status(const buffer *b,
@@ -427,6 +428,46 @@ kill_line(buffer *b)
 
         line_free(ln);
         dyn_array_rm_at(b->lns, b->al);
+
+        b->cx = 0;
+}
+
+static void
+jump_next_word(buffer *b)
+{
+        const line *ln;
+        const str  *s;
+        const char *sraw;
+        int         hitchars;
+        size_t      i;
+
+        ln       = b->lns.data[b->al];
+        s        = &ln->s;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx;
+
+        if (str_len(s) <= 0)
+                return;
+
+        while (i < str_len(s)) {
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (hitchars)
+                        break;
+                ++i;
+        }
+
+        if (i == str_len(s))
+                b->cx = str_len(s)-1;
+        else
+                b->cx = i;
+}
+
+static void
+jump_prev_word(buffer *b)
+{
+        assert(0);
 }
 
 buffer_proc
@@ -497,9 +538,12 @@ buffer_process(buffer     *b,
                         kill_line(b);
                         return BP_INSERTNL;
                 } else if (ch == 'f') {
-                        assert(0);
+                        jump_next_word(b);
+                        return BP_MOV;
                 } else if (ch == 'b') {
+                        jump_prev_word(b);
                         assert(0);
+                        return BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
