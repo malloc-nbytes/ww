@@ -497,6 +497,32 @@ jump_prev_word(buffer *b)
                 ++b->cx;
 }
 
+static void
+del_word(buffer *b)
+{
+        line       *ln;
+        str        *s;
+        const char *sraw;
+        int         hitchars;
+        size_t      i;
+
+        ln       = b->lns.data[b->al];
+        s        = &ln->s;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx;
+
+        while (i < str_len(s)) {
+                if (sraw[i] == 10)
+                        break;
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (!isalnum(sraw[i]) && hitchars)
+                        break;
+                str_rm(s, i);
+        }
+}
+
 buffer_proc
 buffer_process(buffer     *b,
                input_type  ty,
@@ -570,6 +596,9 @@ buffer_process(buffer     *b,
                 } else if (ch == 'b') {
                         jump_prev_word(b);
                         return BP_MOV;
+                } else if (ch == 'd') {
+                        del_word(b);
+                        return BP_INSERT;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
