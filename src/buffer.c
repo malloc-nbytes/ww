@@ -569,6 +569,8 @@ buffer_process(buffer     *b,
                         insert_char(b, 10, 0);
                         --b->cx;
                         return BP_INSERTNL;
+                } else if (ch == CTRL_H) {
+                        return backspace(b) ? BP_INSERTNL : BP_INSERT;
                 }
         } break;
         case INPUT_TYPE_ALT: {
