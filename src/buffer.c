@@ -375,10 +375,14 @@ prev_paragraph(buffer *b)
         nextln = b->cy;
 
         for (int i = b->cy-1; i >= 0; --i) {
-                const line *l = b->lns.data[i];
-                nextln        = i;
-                if (str_len(&l->s) == 1 && l->s.chars[0] == 10)
+                const line *l  = b->lns.data[i];
+                const line *l2 = b->lns.data[i+1];
+                nextln         = i;
+                if (str_len(&l->s) == 1 && l->s.chars[0] == 10) {
+                        if (i > 0 && l2 && l2->s.chars[0] == 10)
+                                continue;
                         break;
+                }
         }
 
         b->cy = nextln;
@@ -395,10 +399,14 @@ next_paragraph(buffer *b)
         nextln = b->cy;
 
         for (size_t i = b->cy+1; i < b->lns.len; ++i) {
-                const line *l = b->lns.data[i];
-                nextln        = i;
-                if (str_len(&l->s) == 1 && l->s.chars[0] == 10)
+                const line *l  = b->lns.data[i];
+                const line *l2 = b->lns.data[i+1];
+                nextln         = i;
+                if (str_len(&l->s) == 1 && l->s.chars[0] == 10) {
+                        if (i < b->lns.len && l2 && l2->s.chars[0] == 10)
+                                continue;
                         break;
+                }
         }
 
         b->cy = nextln;
@@ -488,6 +496,10 @@ buffer_process(buffer     *b,
                 } else if (ch == 'k') {
                         kill_line(b);
                         return BP_INSERTNL;
+                } else if (ch == 'f') {
+                        assert(0);
+                } else if (ch == 'b') {
+                        assert(0);
                 }
         } break;
         case INPUT_TYPE_ARROW: {
