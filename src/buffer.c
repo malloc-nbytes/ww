@@ -691,8 +691,9 @@ buffer_process(buffer     *b,
 }
 
 static void
-drawln2(const buffer *b,
-        const str    *s)
+show_whitespace(const buffer *b,
+                const str    *s,
+                int           eol)
 {
         int         space;
         const char *sraw;
@@ -700,21 +701,11 @@ drawln2(const buffer *b,
         space = -1;
         sraw  = str_cstr(s);
 
-        for (int i = str_len(s)-1; i >= 0; --i) {
-                if (sraw[i] == 10)
-                        continue;
-                if (sraw[i] != ' ')
-                        break;
-                space = i;
-        }
-
-        if (space == -1)
-                printf("%s", sraw);
+        if (eol == -1)
+                return;
         else {
-                for (size_t i = 0; i < space; ++i)
-                        putchar(sraw[i]);
                 printf(GRAY);
-                for (size_t i = 0; i < str_len(s)-space-1; ++i)
+                for (size_t i = 0; i < str_len(s)-eol-1; ++i)
                         putchar('-');
                 printf(RESET);
         }
@@ -724,12 +715,28 @@ static void
 drawln(const buffer *b,
        const str    *s)
 {
-        if (b->last_search.len == 0) {
-                drawln2(b, s);
-                return;
+        const char *sraw;
+        size_t      eol;
+        size_t      n;
+
+        n    = str_len(s);
+        sraw = str_cstr(s);
+        eol  = -1;
+
+        for (int i = n-1; i >= 0; --i) {
+                if (sraw[i] == '\n') continue;
+                if (sraw[i] == ' ')  eol = i;
+                else                 break;
         }
 
-        assert(0);
+        if (eol == -1) {
+                printf("%s", sraw);
+        } else {
+                for (size_t i = 0; i < eol; ++i)
+                        putchar(sraw[i]);
+        }
+
+        show_whitespace(b, s, eol);
 }
 
 static void
