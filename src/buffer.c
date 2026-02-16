@@ -655,9 +655,10 @@ buffer_process(buffer     *b,
                 return BP_MOV;
         } break;
         case INPUT_TYPE_NORMAL: {
-                if (BACKSPACE(ch)) {
+                if (BACKSPACE(ch))
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
-                }
+                else if (ch == 0) // ctrl+space
+                        break;
                 insert_char(b, ch, 1);
                 return ch == 10 ? BP_INSERTNL : BP_INSERT;
         } break;
