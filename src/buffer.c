@@ -58,7 +58,8 @@ buffer_alloc(window *parent)
         b->saved       = 1;
         b->state       = BS_NORMAL;
         b->last_search = str_create();
-        b->cpy      = str_create();
+        b->cpy         = str_create();
+        b->sel         = 0;
 
         return b;
 }
@@ -791,6 +792,17 @@ page_up(buffer *b)
         adjust_scroll(b);
 }
 
+static void
+selection(buffer *b)
+{
+        if (b->state == BS_NORMAL)
+                b->state = BS_SELECTION;
+        else if (b->state == BS_SELECTION)
+                b->state = BS_NORMAL;
+        else
+                return;
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -897,8 +909,10 @@ buffer_process(buffer     *b,
         case INPUT_TYPE_NORMAL: {
                 if (BACKSPACE(ch))
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
-                else if (ch == 0) // ctrl+space
-                        break;
+                else if (ch == 0) { // ctrl+space
+                        selection(b);
+                        return BP_INSERT;
+                }
                 insert_char(b, ch, 1);
                 return ch == 10 ? BP_INSERTNL : BP_INSERT;
         } break;
@@ -996,6 +1010,8 @@ drawln(const buffer *b,
 
                 dyn_array_free(matches);
                 goto done;
+        } else if (b->state == BS_SELECTION) {
+                assert(0);
         }
 
         if (eol == -1) {
