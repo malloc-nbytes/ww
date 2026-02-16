@@ -21,5 +21,6 @@ void        str_destroy(str *s);
 void        str_insert(str *s, size_t i, char ch);
 void        str_cut(str *s, size_t i);
 void        str_rm(str *s, size_t i);
+char        str_at(const str *s, size_t i);
 
 #endif // STR_H_INCLUDED

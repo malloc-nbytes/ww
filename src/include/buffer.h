@@ -28,6 +28,7 @@ typedef struct {
         size_t       vscrloff; // vertical scroll offset
         window      *parent;
         int          saved;
+        str          cpy;
 } buffer;
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);

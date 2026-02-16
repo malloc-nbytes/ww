@@ -129,3 +129,11 @@ str_rm(str *s, size_t i)
         s->chars[s->len-1] = 0;
         --s->len;
 }
+
+char
+str_at(const str *s, size_t i)
+{
+        assert(i < s->len-1);
+
+        return s->chars[i];
+}

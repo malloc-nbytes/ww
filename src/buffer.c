@@ -16,6 +16,16 @@ static void
 draw_status(const buffer *b,
             const char   *msg);
 
+static char_array g_cpy_buf = dyn_array_empty(char_array);
+
+static void
+append_cpy(buffer *b)
+{
+        dyn_array_append(g_cpy_buf, 0);
+        str_overwrite(&b->cpy, g_cpy_buf.data);
+        dyn_array_clear(g_cpy_buf);
+}
+
 buffer *
 buffer_alloc(window *parent)
 {
@@ -31,6 +41,7 @@ buffer_alloc(window *parent)
         b->vscrloff = 0;
         b->parent   = parent;
         b->saved    = 1;
+        b->cpy      = str_create();
 
         return b;
 }
@@ -507,11 +518,11 @@ jump_prev_word(buffer *b)
 static void
 del_word(buffer *b)
 {
-        line       *ln;
-        str        *s;
-        const char *sraw;
-        int         hitchars;
-        size_t      i;
+        line        *ln;
+        str         *s;
+        const char  *sraw;
+        int          hitchars;
+        size_t       i;
 
         ln       = b->lns.data[b->al];
         s        = &ln->s;
@@ -526,8 +537,12 @@ del_word(buffer *b)
                         hitchars = 1;
                 else if (!isalnum(sraw[i]) && hitchars)
                         break;
+                dyn_array_append(g_cpy_buf, str_at(s, i));
                 str_rm(s, i);
         }
+
+        if (hitchars)
+                append_cpy(b);
 }
 
 static void
