@@ -9,12 +9,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <limits.h>
 #include <ctype.h>
+
+#ifdef __linux__
+#include <limits.h>
+#else
+#define PATH_MAX 4096
+#endif
 
 static void
 draw_status(const buffer *b,
             const char   *msg);
+
+static char_array g_cpy_buf = dyn_array_empty(char_array);
+
+static void
+append_cpy(buffer *b)
+{
+        dyn_array_append(g_cpy_buf, 0);
+        str_overwrite(&b->cpy, g_cpy_buf.data);
+        dyn_array_clear(g_cpy_buf);
+}
 
 buffer *
 buffer_alloc(window *parent)
@@ -33,6 +48,7 @@ buffer_alloc(window *parent)
         b->saved       = 1;
         b->state       = BS_NORMAL;
         b->last_search = str_create();
+        b->cpy      = str_create();
 
         return b;
 }
@@ -321,11 +337,18 @@ static void
 delete_until_eol(buffer *b)
 {
         line *ln;
+        const str *s;
 
         ln = b->lns.data[b->al];
+        s  = &ln->s;
+
+        for (size_t i = 0; i < str_len(s)-1; ++i)
+                dyn_array_append(g_cpy_buf, str_at(s, i));
 
         str_cut(&ln->s, b->cx);
         str_insert(&ln->s, b->cx, 10);
+
+        append_cpy(b);
 }
 
 static void
@@ -422,11 +445,16 @@ static void
 kill_line(buffer *b)
 {
         line *ln;
+        const str *s;
 
         if (b->lns.len <= 0)
                 return;
 
         ln = b->lns.data[b->al];
+        s  = &ln->s;
+
+        for (size_t i = 0; i < str_len(s); ++i)
+                dyn_array_append(g_cpy_buf, str_at(s, i));
 
         line_free(ln);
         dyn_array_rm_at(b->lns, b->al);
@@ -440,6 +468,8 @@ kill_line(buffer *b)
         b->wish_col = 0;
 
         adjust_scroll(b);
+
+        append_cpy(b);
 }
 
 static void
@@ -509,11 +539,11 @@ jump_prev_word(buffer *b)
 static void
 del_word(buffer *b)
 {
-        line       *ln;
-        str        *s;
-        const char *sraw;
-        int         hitchars;
-        size_t      i;
+        line        *ln;
+        str         *s;
+        const char  *sraw;
+        int          hitchars;
+        size_t       i;
 
         ln       = b->lns.data[b->al];
         s        = &ln->s;
@@ -528,8 +558,12 @@ del_word(buffer *b)
                         hitchars = 1;
                 else if (!isalnum(sraw[i]) && hitchars)
                         break;
+                dyn_array_append(g_cpy_buf, str_at(s, i));
                 str_rm(s, i);
         }
+
+        if (hitchars)
+                append_cpy(b);
 }
 
 static void
@@ -583,6 +617,22 @@ center_view(buffer *b)
 
         b->vscrloff = vertical_offset;
         adjust_scroll(b);
+}
+
+static int
+paste(buffer *b)
+{
+        int newline;
+
+        newline = 0;
+
+        for (size_t i = 0; i < b->cpy.len; ++i) {
+                insert_char(b, b->cpy.chars[i], 1);
+                if (b->cpy.chars[i] == '\n')
+                        newline = 1;
+        }
+
+        return newline;
 }
 
 buffer_proc
@@ -639,6 +689,8 @@ buffer_process(buffer     *b,
                 } else if (ch == CTRL_L) {
                         center_view(b);
                         return BP_MOV;
+                } else if (ch == CTRL_Y) {
+                        return paste(b) ? BP_INSERTNL : BP_INSERT;
                 }
 
         } break;

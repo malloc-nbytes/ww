@@ -35,6 +35,7 @@ typedef struct {
         int          saved;       // has the document been saved?
         buffer_state state;       // our current state
         str          last_search; // last search query
+        str          cpy;         // the copy buffer
 } buffer;
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);

@@ -142,3 +142,11 @@ str_pop(str *s)
         str_rm(s, s->len-1);
         return ch;
 }
+
+char
+str_at(const str *s, size_t i)
+{
+        assert(i < s->len);
+
+        return s->chars[i];
+}
