@@ -566,6 +566,25 @@ search(buffer *b)
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
 }
 
+static void
+center_view(buffer *b)
+{
+        int rows = b->parent->h;
+        int vertical_offset = b->cy - (rows/2);
+        if (vertical_offset < 0)
+                vertical_offset = 0;
+
+        int max_offset = b->lns.len - rows;
+        if (max_offset < 0)
+                max_offset = 0;
+
+        //if (vertical_offset > max_offset)
+        //        vertical_offset = max_offset;
+
+        b->vscrloff = vertical_offset;
+        adjust_scroll(b);
+}
+
 buffer_proc
 buffer_process(buffer     *b,
                input_type  ty,
@@ -616,6 +635,9 @@ buffer_process(buffer     *b,
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
                 } else if (ch == CTRL_S) {
                         search(b);
+                        return BP_MOV;
+                } else if (ch == CTRL_L) {
+                        center_view(b);
                         return BP_MOV;
                 }
 
@@ -699,7 +721,7 @@ drawln2(const buffer *b,
 }
 
 static void
-drawln(const buffer *b
+drawln(const buffer *b,
        const str    *s)
 {
         if (b->last_search.len == 0) {
