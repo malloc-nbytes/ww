@@ -545,9 +545,9 @@ search(buffer *b)
         gotoxy(0, b->parent->h);
 
         while (1) {
+                buffer_dump(b);
                 clear_line(0, b->parent->h);
                 printf("Search: %s", str_cstr(input));
-                //buffer_dump(b);
                 fflush(stdout);
 
                 ty = get_input(&ch);
@@ -701,7 +701,7 @@ show_whitespace(const buffer *b,
         space = -1;
         sraw  = str_cstr(s);
 
-        if (eol == -1)
+        if (eol <= -1)
                 return;
         else {
                 printf(GRAY);
@@ -716,7 +716,7 @@ drawln(const buffer *b,
        const str    *s)
 {
         const char *sraw;
-        size_t      eol;
+        int         eol;
         size_t      n;
 
         n    = str_len(s);
