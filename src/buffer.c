@@ -612,7 +612,7 @@ find_all_matches_in_buffer(buffer *b)
 }
 
 static void
-search(buffer *b)
+search(buffer *b, int reverse)
 {
         input_type  ty;
         char        ch;
@@ -644,6 +644,11 @@ search(buffer *b)
                                         ++step;
                                 else
                                         break;
+                        }
+
+                        if (reverse && step > 0) {
+                                reverse = 0;
+                                --step;
                         }
                 }
 
@@ -679,9 +684,11 @@ search(buffer *b)
                                         str_pop(input);
                                 adjust = 1;
                         } else if (ENTER(ch)) {
-                                b->al = pairs.data[step].l;
-                                b->cy = pairs.data[step].l;
-                                b->cx = pairs.data[step].r;
+                                if (pairs.len > 0 && step < pairs.len) {
+                                        b->al = pairs.data[step].l;
+                                        b->cy = pairs.data[step].l;
+                                        b->cx = pairs.data[step].r;
+                                }
                                 break;
                         } else {
                                 b->cx = old_cx; b->cy = old_cy; b->al = old_al;
@@ -689,9 +696,11 @@ search(buffer *b)
                                 str_append(input, ch);
                         }
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_S) {
-                        ++step;
+                        if (step < pairs.len-1)
+                                ++step;
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_R) {
-                        --step;
+                        if (step > 0)
+                                --step;
                 } else {
                         b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                         break;
@@ -795,7 +804,7 @@ buffer_process(buffer     *b,
                 } else if (ch == CTRL_H) {
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
                 } else if (ch == CTRL_S || ch == CTRL_R) {
-                        search(b);
+                        search(b, ch == CTRL_R);
                         return BP_MOV;
                 } else if (ch == CTRL_L) {
                         center_view(b);
