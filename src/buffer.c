@@ -421,7 +421,7 @@ kill_line(buffer *b)
 {
         line *ln;
 
-        if (b->lns.len <= 1)
+        if (b->lns.len <= 0)
                 return;
 
         ln = b->lns.data[b->al];
@@ -429,8 +429,15 @@ kill_line(buffer *b)
         line_free(ln);
         dyn_array_rm_at(b->lns, b->al);
 
+        if (b->al > b->lns.len-1) {
+                --b->al;
+                --b->cy;
+        }
+
         b->cx       = 0;
         b->wish_col = 0;
+
+        adjust_scroll(b);
 }
 
 static void
