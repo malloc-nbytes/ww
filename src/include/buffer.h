@@ -37,7 +37,7 @@ typedef struct {
         buffer_state state;       // our current state
         str          last_search; // last search query
         str          cpy;         // the copy buffer
-        int          sel;         // the y position of selection mode
+        int          selpos;      // the y position of selection mode
 } buffer;
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);

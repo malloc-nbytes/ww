@@ -59,7 +59,7 @@ buffer_alloc(window *parent)
         b->state       = BS_NORMAL;
         b->last_search = str_create();
         b->cpy         = str_create();
-        b->sel         = 0;
+        b->selpos      = 0;
 
         return b;
 }
@@ -801,6 +801,8 @@ selection(buffer *b)
                 b->state = BS_NORMAL;
         else
                 return;
+
+        b->selpos = b->al;
 }
 
 // entrypoint
@@ -911,7 +913,7 @@ buffer_process(buffer     *b,
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
                 else if (ch == 0) { // ctrl+space
                         selection(b);
-                        return BP_INSERT;
+                        return BP_INSERTNL;
                 }
                 insert_char(b, ch, 1);
                 return ch == 10 ? BP_INSERTNL : BP_INSERT;
@@ -1011,7 +1013,25 @@ drawln(const buffer *b,
                 dyn_array_free(matches);
                 goto done;
         } else if (b->state == BS_SELECTION) {
-                assert(0);
+                for (size_t i = 0; i < str_len(s); ++i) {
+                        int in_y;
+                        int in_x;
+                        int in_selection;
+
+                        in_y = (lineno >= b->selpos && lineno <= b->al)
+                                || (lineno <= b->selpos && lineno >= b->al);
+                        in_x = in_y;
+                        if (lineno == b->al && i > b->cx)
+                                in_x = 0;
+                        in_selection = in_x && in_y;
+
+                        if (in_selection)
+                                printf(INVERT "%c", str_at(s, i));
+                        else
+                                printf(RESET "%c", str_at(s, i));
+                }
+
+                goto done;
         }
 
         if (eol == -1) {
