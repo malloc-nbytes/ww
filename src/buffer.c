@@ -594,6 +594,25 @@ goto_search_forward(buffer *b)
 }
 
 static void
+center_view(buffer *b)
+{
+        int rows = b->parent->h;
+        int vertical_offset = b->cy - (rows/2);
+        if (vertical_offset < 0)
+                vertical_offset = 0;
+
+        int max_offset = b->lns.len - rows;
+        if (max_offset < 0)
+                max_offset = 0;
+
+        //if (vertical_offset > max_offset)
+        //        vertical_offset = max_offset;
+
+        b->vscrloff = vertical_offset;
+        adjust_scroll(b);
+}
+
+static void
 search(buffer *b)
 {
         input_type  ty;
@@ -612,6 +631,12 @@ search(buffer *b)
         old_al   = b->al;
 
         while (1) {
+                goto_search_forward(b);
+                if (!first) {
+                        center_view(b);
+                }
+                buffer_dump(b);
+
                 gotoxy(0, b->parent->h);
                 clear_line(0, b->parent->h);
                 printf("Search: %s", str_cstr(input));
@@ -619,7 +644,8 @@ search(buffer *b)
 
                 ty = get_input(&ch);
                 if (ty == INPUT_TYPE_NORMAL) {
-                        if (first) {
+                        if (first && (BACKSPACE(ch)
+                                || (ty == INPUT_TYPE_NORMAL && ch != '\n'))) {
                                 str_clear(&b->last_search);
                                 first = 0;
                         }
@@ -627,11 +653,9 @@ search(buffer *b)
                                 b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                                 if (str_len(input) > 0)
                                         str_pop(input);
-                        }
-                        else if (ENTER(ch)) {
+                        } else if (ENTER(ch)) {
                                 break;
-                        }
-                        else {
+                        } else {
                                 b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                                 str_append(input, ch);
                         }
@@ -639,32 +663,10 @@ search(buffer *b)
                         b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                         break;
                 }
-
-                goto_search_forward(b);
-                buffer_dump(b);
         }
 
         b->state = BS_NORMAL;
 
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-}
-
-static void
-center_view(buffer *b)
-{
-        int rows = b->parent->h;
-        int vertical_offset = b->cy - (rows/2);
-        if (vertical_offset < 0)
-                vertical_offset = 0;
-
-        int max_offset = b->lns.len - rows;
-        if (max_offset < 0)
-                max_offset = 0;
-
-        //if (vertical_offset > max_offset)
-        //        vertical_offset = max_offset;
-
-        b->vscrloff = vertical_offset;
         adjust_scroll(b);
 }
 
@@ -871,12 +873,15 @@ find_line_matches(const buffer *b,
 
 static void
 drawln(const buffer *b,
-       const str    *s)
+       const line   *l,
+       int           lineno)
 {
+        const str  *s;
         const char *sraw;
         int         eol;
         size_t      n;
 
+        s    = &l->s;
         n    = str_len(s);
         sraw = str_cstr(s);
         eol  = -1;
@@ -892,7 +897,11 @@ drawln(const buffer *b,
 
                 for (size_t i = 0; i < str_len(s); ++i) {
                         if (matches.len > 0 && i == matches.data[0]) {
-                                printf(INVERT YELLOW "%s" RESET, str_cstr(&b->last_search));
+                                if (b->cx >= i && b->cx <= matches.data[0] + str_len(&b->last_search)
+                                        && b->al == lineno)
+                                        printf(INVERT BOLD ORANGE "%s" RESET, str_cstr(&b->last_search));
+                                else
+                                        printf(INVERT DIM YELLOW "%s" RESET, str_cstr(&b->last_search));
                                 dyn_array_rm_at(matches, 0);
                                 i += str_len(&b->last_search)-1;
                         } else {
@@ -955,7 +964,12 @@ draw_status(const buffer *b,
 void
 buffer_dump_xy(const buffer *b)
 {
-        const str *s = &b->lns.data[b->al]->s;
+        const line *l;
+        const str  *s;
+
+        l = b->lns.data[b->al];
+        s = &l->s;
+
         if (!s)
                 return;
 
@@ -963,7 +977,7 @@ buffer_dump_xy(const buffer *b)
 
         gotoxy(0, screen_y);
         printf("\x1b[K"); // clear rest of line
-        drawln(b, s);
+        drawln(b, l, b->al);
 
         gotoxy(b->cx - b->hscrloff, screen_y);
         draw_status(b, NULL);
@@ -984,7 +998,7 @@ buffer_dump(const buffer *b)
 
                 gotoxy(0, i - b->vscrloff);
                 printf("\x1b[K");
-                drawln(b, &l->s);
+                drawln(b, l, i);
         }
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
