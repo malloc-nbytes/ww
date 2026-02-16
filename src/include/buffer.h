@@ -23,17 +23,18 @@ typedef enum {
 } buffer_state;
 
 typedef struct {
-        str          filename;
-        line_array   lns;      // lines
-        size_t       cx;       // cursor x
-        size_t       cy;       // cursor y
-        size_t       al;       // active line
-        size_t       wish_col; // wished column
-        size_t       hscrloff; // horizontal scroll offset
-        size_t       vscrloff; // vertical scroll offset
-        window      *parent;   // the parent window
-        int          saved;    // has the document been saved?
-        buffer_state state;    // our current state
+        str          filename;    // file we are editing (if available)
+        line_array   lns;         // lines
+        size_t       cx;          // cursor x
+        size_t       cy;          // cursor y
+        size_t       al;          // active line
+        size_t       wish_col;    // wished column
+        size_t       hscrloff;    // horizontal scroll offset
+        size_t       vscrloff;    // vertical scroll offset
+        window      *parent;      // the parent window
+        int          saved;       // has the document been saved?
+        buffer_state state;       // our current state
+        str          last_search; // last search query
 } buffer;
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);

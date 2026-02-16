@@ -21,17 +21,18 @@ buffer_alloc(window *parent)
 {
         buffer *b = (buffer *)malloc(sizeof(buffer));
 
-        b->filename = str_create();
-        b->lns      = dyn_array_empty(line_array);
-        b->cx       = 0;
-        b->cy       = 0;
-        b->al       = 0;
-        b->wish_col = 0;
-        b->hscrloff = 0;
-        b->vscrloff = 0;
-        b->parent   = parent;
-        b->saved    = 1;
-        b->state    = BS_NORMAL;
+        b->filename    = str_create();
+        b->lns         = dyn_array_empty(line_array);
+        b->cx          = 0;
+        b->cy          = 0;
+        b->al          = 0;
+        b->wish_col    = 0;
+        b->hscrloff    = 0;
+        b->vscrloff    = 0;
+        b->parent      = parent;
+        b->saved       = 1;
+        b->state       = BS_NORMAL;
+        b->last_search = str_create();
 
         return b;
 }
@@ -525,35 +526,35 @@ del_word(buffer *b)
 }
 
 static void
-search(const buffer *b)
+search(buffer *b)
 {
-        input_type ty;
-        char       ch;
-        str        input;
+        input_type  ty;
+        char        ch;
+        str        *input;
 
-        input = str_create();
+        input    = &b->last_search;
+        b->state = BS_SEARCH;
 
         gotoxy(0, b->parent->h);
 
         while (1) {
                 clear_line(0, b->parent->h);
-                printf("Search: %s", str_cstr(&input));
-                fflush(stdout);
+                printf("Search: %s", str_cstr(input));
+                buffer_dump(b);
 
                 ty = get_input(&ch);
                 if (ty == INPUT_TYPE_NORMAL) {
                         if (BACKSPACE(ch))
-                                str_pop(&input);
+                                str_pop(input);
                         else if (ENTER(ch))
                                 break;
                         else
-                                str_append(&input, ch);
+                                str_append(input, ch);
                 }
                 else
                         break;
         }
 
-        str_destroy(&input);
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
 }
 
@@ -659,7 +660,8 @@ buffer_process(buffer     *b,
 }
 
 static void
-drawln(const str *s)
+drawln(const buffer *b,
+       const str    *s)
 {
         int         space;
         const char *sraw;
@@ -734,7 +736,7 @@ buffer_dump_xy(const buffer *b)
 
         gotoxy(0, screen_y);
         printf("\x1b[K"); // clear rest of line
-        drawln(s);
+        drawln(b, s);
 
         gotoxy(b->cx - b->hscrloff, screen_y);
         draw_status(b, NULL);
@@ -755,7 +757,7 @@ buffer_dump(const buffer *b)
 
                 gotoxy(0, i - b->vscrloff);
                 printf("\x1b[K");
-                drawln(&l->s);
+                drawln(b, &l->s);
         }
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
