@@ -421,7 +421,7 @@ kill_line(buffer *b)
 {
         line *ln;
 
-        if (b->lns.len <= 0)
+        if (b->lns.len <= 1)
                 return;
 
         ln = b->lns.data[b->al];
