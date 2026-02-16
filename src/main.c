@@ -30,6 +30,12 @@ run(const char *filename)
         return 1;
 }
 
+static void
+sigint_handler(int sig)
+{
+        (void)sig;
+}
+
 static int
 init(void)
 {
@@ -40,6 +46,16 @@ init(void)
 
         if (!get_terminal_xy(&glconf.term.w, &glconf.term.h)) {
                 perror("get_terminal_xy");
+                return 0;
+        }
+
+        struct sigaction sa;
+        sa.sa_handler = sigint_handler;
+        sa.sa_flags = 0;
+        sigemptyset(&sa.sa_mask);
+
+        if (sigaction(SIGINT, &sa, NULL) == 1) {
+                perror("sigaction");
                 return 0;
         }
 

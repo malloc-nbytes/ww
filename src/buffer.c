@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "window.h"
 #include "colors.h"
+#include "pair.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -21,6 +22,15 @@ static void
 draw_status(const buffer *b,
             const char   *msg);
 
+static int_array
+find_line_matches(const buffer *b,
+                  const str    *s);
+
+PAIR_TYPE(int, int, int_pair);
+PAIR_IMPL(int, int, int_pair);
+DYN_ARRAY_TYPE(int_array, int_array_array);
+DYN_ARRAY_TYPE(int_pair, int_pair_array);
+
 static char_array g_cpy_buf = dyn_array_empty(char_array);
 
 static void
@@ -36,16 +46,18 @@ buffer_alloc(window *parent)
 {
         buffer *b = (buffer *)malloc(sizeof(buffer));
 
-        b->filename = str_create();
-        b->lns      = dyn_array_empty(line_array);
-        b->cx       = 0;
-        b->cy       = 0;
-        b->al       = 0;
-        b->wish_col = 0;
-        b->hscrloff = 0;
-        b->vscrloff = 0;
-        b->parent   = parent;
-        b->saved    = 1;
+        b->filename    = str_create();
+        b->lns         = dyn_array_empty(line_array);
+        b->cx          = 0;
+        b->cy          = 0;
+        b->al          = 0;
+        b->wish_col    = 0;
+        b->hscrloff    = 0;
+        b->vscrloff    = 0;
+        b->parent      = parent;
+        b->saved       = 1;
+        b->state       = BS_NORMAL;
+        b->last_search = str_create();
         b->cpy      = str_create();
 
         return b;
@@ -500,6 +512,8 @@ jump_next_word(buffer *b)
                 b->cx = str_len(s)-1;
         else
                 b->cx = i;
+
+        b->wish_col = b->cx;
 }
 
 static void
@@ -532,6 +546,8 @@ jump_prev_word(buffer *b)
 
         if (!isalnum(sraw[b->cx]))
                 ++b->cx;
+
+        b->wish_col = b->cx;
 }
 
 static void
@@ -580,6 +596,119 @@ center_view(buffer *b)
         //        vertical_offset = max_offset;
 
         b->vscrloff = vertical_offset;
+        adjust_scroll(b);
+}
+
+int_pair_array
+find_all_matches_in_buffer(buffer *b)
+{
+        int_pair_array pairs = dyn_array_empty(int_pair_array);
+        for (size_t i = 0; i < b->lns.len; ++i) {
+                int_array verts = find_line_matches(b, &b->lns.data[i]->s);
+                for (size_t j = 0; j < verts.len; ++j)
+                        dyn_array_append(pairs, int_pair_create(i, verts.data[j]));
+        }
+        return pairs;
+}
+
+static void
+search(buffer *b, int reverse)
+{
+        input_type  ty;
+        char        ch;
+        str        *input;
+        int         first;
+        int         old_cx;
+        int         old_cy;
+        int         old_al;
+        int         step;
+        int         adjust;
+
+        input       = &b->last_search;
+        b->state    = BS_SEARCH;
+        first       = 1;
+        old_cx      = b->cx;
+        old_cy      = b->cy;
+        old_al      = b->al;
+        step        = 0;
+        adjust      = 1;
+
+        while (1) {
+                int_pair_array pairs = find_all_matches_in_buffer(b);
+
+                if (adjust) {
+                        step = 0;
+
+                        for (size_t i = 0; i < pairs.len; ++i) {
+                                if (pairs.data[i].l < b->al)
+                                        ++step;
+                                else
+                                        break;
+                        }
+
+                        if (reverse && step > 0) {
+                                reverse = 0;
+                                --step;
+                        }
+                }
+
+                adjust = 0;
+
+                if (pairs.len > 0 && step < pairs.len) {
+                        b->al = pairs.data[step].l;
+                        b->cy = pairs.data[step].l;
+                        b->cx = pairs.data[step].r;
+                        adjust_scroll(b);
+                }
+
+                center_view(b);
+                buffer_dump(b);
+
+                gotoxy(0, b->parent->h);
+                clear_line(0, b->parent->h);
+                printf("Search: %s", str_cstr(input));
+                fflush(stdout);
+
+                ty = get_input(&ch);
+                if (ty == INPUT_TYPE_NORMAL) {
+                        if (first && (BACKSPACE(ch)
+                                || (ty == INPUT_TYPE_NORMAL && ch != '\n'))) {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                str_clear(&b->last_search);
+                                first  = 0;
+                                adjust = 1;
+                        }
+                        if (BACKSPACE(ch)) {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                if (str_len(input) > 0)
+                                        str_pop(input);
+                                adjust = 1;
+                        } else if (ENTER(ch)) {
+                                if (pairs.len > 0 && step < pairs.len) {
+                                        b->al = pairs.data[step].l;
+                                        b->cy = pairs.data[step].l;
+                                        b->cx = pairs.data[step].r;
+                                }
+                                break;
+                        } else {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                adjust = 1;
+                                str_append(input, ch);
+                        }
+                } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_S) {
+                        if (step < pairs.len-1)
+                                ++step;
+                } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_R) {
+                        if (step > 0)
+                                --step;
+                } else {
+                        b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                        break;
+                }
+        }
+
+        b->state = BS_NORMAL;
+
         adjust_scroll(b);
 }
 
@@ -674,12 +803,16 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (ch == CTRL_H) {
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
+                } else if (ch == CTRL_S || ch == CTRL_R) {
+                        search(b, ch == CTRL_R);
+                        return BP_MOV;
                 } else if (ch == CTRL_L) {
                         center_view(b);
                         return BP_MOV;
                 } else if (ch == CTRL_Y) {
                         return paste(b) ? BP_INSERTNL : BP_INSERT;
                 }
+
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'm') {
@@ -733,7 +866,9 @@ buffer_process(buffer     *b,
 }
 
 static void
-drawln(const str *s)
+show_whitespace(const buffer *b,
+                const str    *s,
+                int           eol)
 {
         int         space;
         const char *sraw;
@@ -741,24 +876,95 @@ drawln(const str *s)
         space = -1;
         sraw  = str_cstr(s);
 
-        for (int i = str_len(s)-1; i >= 0; --i) {
-                if (sraw[i] == 10)
-                        continue;
-                if (sraw[i] != ' ')
-                        break;
-                space = i;
-        }
-
-        if (space == -1)
-                printf("%s", sraw);
+        if (eol <= -1)
+                return;
         else {
-                for (size_t i = 0; i < space; ++i)
-                        putchar(sraw[i]);
                 printf(GRAY);
-                for (size_t i = 0; i < str_len(s)-space-1; ++i)
+                for (size_t i = 0; i < str_len(s)-eol-1; ++i)
                         putchar('-');
                 printf(RESET);
         }
+}
+
+static int_array
+find_line_matches(const buffer *b,
+                  const str    *s)
+{
+        assert(b->state == BS_SEARCH);
+
+        static int_array  ar;
+        const char       *sraw;
+        const char       *query;
+
+        ar    = dyn_array_empty(int_array);
+        sraw  = str_cstr(s);
+        query = str_cstr(&b->last_search);
+
+        if (!sraw || !query || !str_len(&b->last_search))
+                return ar;
+
+        for (size_t i = 0; i < str_len(s); ++i) {
+                if (!memcmp(query, sraw+i, str_len(&b->last_search))) {
+                        dyn_array_append(ar, i);
+                        i += str_len(&b->last_search)-1;
+                }
+        }
+
+        return ar;
+}
+
+static void
+drawln(const buffer *b,
+       const line   *l,
+       int           lineno)
+{
+        const str  *s;
+        const char *sraw;
+        int         eol;
+        size_t      n;
+
+        s    = &l->s;
+        n    = str_len(s);
+        sraw = str_cstr(s);
+        eol  = -1;
+
+        for (int i = n-1; i >= 0; --i) {
+                if (sraw[i] == '\n') continue;
+                if (sraw[i] == ' ')  eol = i;
+                else                 break;
+        }
+
+        if (b->state == BS_SEARCH) {
+                int_array matches = find_line_matches(b, s);
+
+                for (size_t i = 0; i < str_len(s); ++i) {
+                        if (matches.len > 0 && i == matches.data[0]) {
+                                if (b->cx >= i && b->cx <= matches.data[0] + str_len(&b->last_search)
+                                        && b->al == lineno)
+                                        printf(INVERT BOLD ORANGE "%s" RESET, str_cstr(&b->last_search));
+                                else
+                                        printf(INVERT DIM YELLOW "%s" RESET, str_cstr(&b->last_search));
+                                dyn_array_rm_at(matches, 0);
+                                i += str_len(&b->last_search)-1;
+                        } else {
+                                putchar(str_at(s, i));
+                        }
+                }
+
+                dyn_array_free(matches);
+                goto done;
+        }
+
+        if (eol == -1) {
+                printf("%s", sraw);
+        } else {
+                for (size_t i = 0; i < eol; ++i) {
+                        putchar(sraw[i]);
+                }
+        }
+
+done:
+        show_whitespace(b, s, eol);
 }
 
 static void
@@ -800,7 +1006,12 @@ draw_status(const buffer *b,
 void
 buffer_dump_xy(const buffer *b)
 {
-        const str *s = &b->lns.data[b->al]->s;
+        const line *l;
+        const str  *s;
+
+        l = b->lns.data[b->al];
+        s = &l->s;
+
         if (!s)
                 return;
 
@@ -808,7 +1019,7 @@ buffer_dump_xy(const buffer *b)
 
         gotoxy(0, screen_y);
         printf("\x1b[K"); // clear rest of line
-        drawln(s);
+        drawln(b, l, b->al);
 
         gotoxy(b->cx - b->hscrloff, screen_y);
         draw_status(b, NULL);
@@ -829,7 +1040,7 @@ buffer_dump(const buffer *b)
 
                 gotoxy(0, i - b->vscrloff);
                 printf("\x1b[K");
-                drawln(&l->s);
+                drawln(b, l, i);
         }
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
