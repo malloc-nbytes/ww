@@ -755,6 +755,43 @@ combine_lines(buffer *b)
         b->wish_col = b->cx;
 }
 
+static void
+page_down(buffer *b)
+{
+        size_t h;
+
+        h = b->parent->h;
+
+        if (b->al + h > b->lns.len) {
+                b->al = b->lns.len-1;
+                b->cy = b->lns.len-1;
+        } else {
+                b->al += h;
+                b->cy += h;
+        }
+
+        adjust_scroll(b);
+}
+
+static void
+page_up(buffer *b)
+{
+        size_t h;
+
+        h = b->parent->h;
+
+        if ((int)b->al - (int)h < 0) {
+                b->al = 0;
+                b->cy = 0;
+        } else {
+                b->al -= h;
+                b->cy -= h;
+        }
+
+        adjust_scroll(b);
+}
+
+// entrypoint
 buffer_proc
 buffer_process(buffer     *b,
                input_type  ty,
@@ -811,6 +848,9 @@ buffer_process(buffer     *b,
                         return BP_MOV;
                 } else if (ch == CTRL_Y) {
                         return paste(b) ? BP_INSERTNL : BP_INSERT;
+                } else if (ch == CTRL_V) {
+                        page_down(b);
+                        return BP_INSERTNL;
                 }
 
         } break;
@@ -844,6 +884,9 @@ buffer_process(buffer     *b,
                         return BP_INSERT;
                 } else if (ch == 'j') {
                         combine_lines(b);
+                        return BP_INSERTNL;
+                } else if (ch == 'v') {
+                        page_up(b);
                         return BP_INSERTNL;
                 }
         } break;
