@@ -512,6 +512,8 @@ jump_next_word(buffer *b)
                 b->cx = str_len(s)-1;
         else
                 b->cx = i;
+
+        b->wish_col = b->cx;
 }
 
 static void
@@ -544,6 +546,8 @@ jump_prev_word(buffer *b)
 
         if (!isalnum(sraw[b->cx]))
                 ++b->cx;
+
+        b->wish_col = b->cx;
 }
 
 static void
@@ -595,40 +599,11 @@ center_view(buffer *b)
         adjust_scroll(b);
 }
 
+
+// b->al = pairs.data[sn].l; b->cy = pairs.data[sn].l; b->cx = pairs.data[sn].r; adjust_scroll(b);
 static int
-goto_search_forward(buffer *b,
-                    int     search_next)
+goto_search_next(buffer *b)
 {
-        int_pair_array pairs;
-        int            sn;
-
-        pairs = dyn_array_empty(int_pair_array);
-        sn    = search_next;
-
-        for (size_t i = /*b->al*/0; i < b->lns.len; ++i) {
-                const str *s;
-                int_array  verts;
-
-                s     = &b->lns.data[i]->s;
-                verts = find_line_matches(b, s);
-
-                for (size_t j = 0; j < verts.len; ++j)
-                        dyn_array_append(pairs, int_pair_create(i, verts.data[j]));
-
-                dyn_array_free(verts);
-        }
-
-        if (pairs.len > 0 && sn < pairs.len) {
-                b->al = pairs.data[sn].l;
-                b->cy = pairs.data[sn].l;
-                b->cx = pairs.data[sn].r;
-                adjust_scroll(b);
-        } else {
-                return 0;
-        }
-
-        dyn_array_free(pairs);
-        return 1;
 }
 
 static void
@@ -641,8 +616,8 @@ search(buffer *b)
         int         old_cx;
         int         old_cy;
         int         old_al;
-        int         search_next;
-        int         prev_search_next;
+        int         step;
+        int         first_adjustment;
 
         input       = &b->last_search;
         b->state    = BS_SEARCH;
@@ -650,15 +625,31 @@ search(buffer *b)
         old_cx      = b->cx;
         old_cy      = b->cy;
         old_al      = b->al;
-        search_next = 0;
-        prev_search_next = 0;
+        step        = 0;
+        first_adjustment = 1;
 
         while (1) {
-                if (!goto_search_forward(b, search_next))
-                        search_next = prev_search_next;
-                if (!first) {
-                        center_view(b);
+                int_pair_array pairs = dyn_array_empty(int_pair_array);
+                for (size_t i = 0; i < b->lns.len; ++i) {
+                        int_array verts = find_line_matches(b, &b->lns.data[i]->s);
+                        for (size_t j = 0; j < verts.len; ++j)
+                                dyn_array_append(pairs, int_pair_create(i, verts.data[j]));
+                        if (first_adjustment) {
+                                if (i < b->al)
+                                        step += verts.len;
+                        }
+                        dyn_array_free(verts);
                 }
+                first_adjustment = 0;
+
+                if (pairs.len > 0 && step < pairs.len) {
+                        b->al = pairs.data[step].l;
+                        b->cy = pairs.data[step].l;
+                        b->cx = pairs.data[step].r;
+                        adjust_scroll(b);
+                }
+
+                center_view(b);
                 buffer_dump(b);
 
                 gotoxy(0, b->parent->h);
@@ -672,6 +663,8 @@ search(buffer *b)
                                 || (ty == INPUT_TYPE_NORMAL && ch != '\n'))) {
                                 str_clear(&b->last_search);
                                 first = 0;
+                                first_adjustment = 1;
+                                step = 0;
                         }
                         if (BACKSPACE(ch)) {
                                 b->cx = old_cx; b->cy = old_cy; b->al = old_al;
@@ -684,11 +677,9 @@ search(buffer *b)
                                 str_append(input, ch);
                         }
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_S) {
-                        prev_search_next = search_next;
-                        ++search_next;
+                        ++step;
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_R) {
-                        prev_search_next = search_next;
-                        --search_next;
+                        --step;
                 } else {
                         b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                         break;
