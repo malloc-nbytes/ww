@@ -233,7 +233,7 @@ adjust_hscroll(buffer *b)
         return 0;
 }
 
-static int
+int
 adjust_scroll(buffer *b)
 {
         int res;
@@ -1290,10 +1290,7 @@ drawln(const buffer *b,
         for (size_t i = 0; i < eol; ++i) {
                 if (sraw[i] == '\t')
                         printf(GRAY ">" RESET);
-                else if (isprint(sraw[i]))
-                        putchar(sraw[i]);
-                else
-                        printf(RED INVERT "%c" RESET, sraw[i]);
+                putchar(sraw[i]);
         }
 
 done:

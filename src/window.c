@@ -506,7 +506,7 @@ capture_command_output(str *input)
         return output;
 }
 
-#define COMPILATION_HEADER "-*- Compilation -*-\n[ %s ]\n\n"
+#define COMPILATION_HEADER "*** Compilation [ %s ] ***\n\n"
 
 static void
 compilation_buffer(window *win)
@@ -576,16 +576,25 @@ done:
                 dyn_array_free(b->lns);
         }
 
-        char buf[1024] = {0};
-        sprintf(buf, COMPILATION_HEADER, str_cstr(&input));
-        b->lns = lines_of_cstr(buf);
-
         if (!exists)
                 window_add_buffer(win, b, 1);
         buffer_dump(win->ab);
 
         char *output = capture_command_output(&input);
         win->ab->lns = lines_of_cstr(output);
+
+        char buf[1024] = {0};
+        sprintf(buf, COMPILATION_HEADER, str_cstr(&input));
+        line_array header = lines_of_cstr(buf);
+        for (int i = header.len-1; i >= 0; --i)
+                dyn_array_insert_at(win->ab->lns, 0, header.data[i]);
+
+        dyn_array_append(win->ab->lns, line_from(str_from("\n")));
+        dyn_array_append(win->ab->lns, line_from(str_from("[ Done ] ")));
+        win->ab->cx = 0;
+        win->ab->al = win->ab->lns.len-1;
+        win->ab->cy = win->ab->lns.len-1;
+        adjust_scroll(win->ab);
 
         str_destroy(&input);
         buffer_dump(win->ab);
