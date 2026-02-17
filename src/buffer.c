@@ -558,6 +558,7 @@ jump_to_top_of_buffer(buffer *b)
 
         b->cy = b->lns.len-1;
         b->cx = 0;
+        b->wish_col = 0;
         b->al = b->lns.len-1;
         adjust_scroll(b);
 }
@@ -567,6 +568,7 @@ jump_to_bottom_of_buffer(buffer *b)
 {
         b->cy = 0;
         b->cx = 0;
+        b->wish_col = 0;
         b->al = 0;
         adjust_scroll(b);
 }
@@ -834,7 +836,7 @@ search(buffer *b, int reverse)
 
                 gotoxy(0, b->parent->h);
                 clear_line(0, b->parent->h);
-                printf("Search: %s", str_cstr(input));
+                printf("Search [ %s", str_cstr(input));
                 fflush(stdout);
 
                 ty = get_input(&ch);
