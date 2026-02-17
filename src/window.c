@@ -509,11 +509,19 @@ capture_command_output(str *input)
 #define COMPILATION_HEADER "*** Compilation [ %s ] ***\n\n"
 
 static void
+do_compilation(window *win)
+{
+}
+
+static void
 compilation_buffer(window *win)
 {
         str input;
 
-        input = str_create();
+        if (win->compile)
+                input = str_from(win->compile);
+        else
+                input = str_create();
 
         while (1) {
                 gotoxy(0, win->h);
@@ -557,7 +565,7 @@ done:
         int exists = 0;
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
-                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "Compilation")) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
                         b = win->bfrs.data[i];
                         win->ab = b;
                         win->abi = i;
@@ -568,7 +576,7 @@ done:
         if (!b) {
                 b = buffer_alloc(win);
                 str_destroy(&b->name);
-                b->name = str_from("Compilation");
+                b->name = str_from("ww-compilation");
         } else {
                 exists = 1;
                 for (size_t i = 0; i < b->lns.len; ++i)
@@ -592,8 +600,8 @@ done:
         dyn_array_append(win->ab->lns, line_from(str_from("\n")));
         dyn_array_append(win->ab->lns, line_from(str_from("[ Done ] ")));
         win->ab->cx = 0;
-        win->ab->al = win->ab->lns.len-1;
-        win->ab->cy = win->ab->lns.len-1;
+        win->ab->al = 0;
+        win->ab->cy = 0;
         adjust_scroll(win->ab);
 
         str_destroy(&input);
