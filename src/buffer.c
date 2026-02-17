@@ -1097,7 +1097,7 @@ buffer_process(buffer     *b,
                         return next_paragraph(b) ? BP_INSERTNL : BP_MOV;
                 } else if (ch == 'k') {
                         kill_line(b);
-                        return BP_MOV;
+                        return BP_INSERTNL;
                 } else if (ch == 'f') {
                         jump_next_word(b);
                         return BP_MOV;
@@ -1116,12 +1116,11 @@ buffer_process(buffer     *b,
                 } else if (ch == 'w') {
                         copy_selection(b);
                         cancel(b);
-                        return BP_MOV;
+                        return BP_INSERTNL;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
-                movement_ar[ch-'A'](b);
-                return BP_MOV;
+                return movement_ar[ch-'A'](b) ? BP_INSERTNL : BP_MOV;
         } break;
         case INPUT_TYPE_NORMAL: {
                 if (BACKSPACE(ch))
