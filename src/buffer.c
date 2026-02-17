@@ -924,6 +924,14 @@ search(buffer *b, int reverse)
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_R) {
                         if (step > 0)
                                 --step;
+                } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_Y && g_cpy_buf.len > 0) {
+                        if (first) {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                str_clear(&b->last_search);
+                                first  = 0;
+                                adjust = 1;
+                        }
+                        str_concat(input, g_cpy_buf.data);
                 } else {
                         b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                         break;

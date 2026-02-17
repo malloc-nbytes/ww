@@ -652,7 +652,8 @@ metax(window *win)
         for (size_t i = 0; i < sizeof(cmds)/sizeof(*cmds); ++i)
                 dyn_array_append(names, cmds[i]);
 
-        selected = completion_run(win, "M-x", names);
+        if (!(selected = completion_run(win, "M-x", names)))
+                goto done;
 
         if (!strcmp(selected, WINCMD_SPCAMT)) {
                 assert(0 && "set space amount");
@@ -662,10 +663,16 @@ metax(window *win)
                 choose_buffer(win);
         } else if (!strcmp(selected, WINCMD_COMP)) {
                 compilation_buffer(win);
+        } else if (!strcmp(selected, WINCMD_SAVEBUF)) {
+                buffer_dump(win->ab);
+                buffer_save(win->ab);
+        } else if (!strcmp(selected, WINCMD_EXIT)) {
+                quit(win);
         } else {
                 assert(0 && "unknown M-x command");
         }
 
+done:
         dyn_array_free(names);
 }
 

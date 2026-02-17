@@ -9,11 +9,15 @@
 #define WINCMD_KILLBUF  "kill-buffer"
 #define WINCMD_SWTCHBUF "switch-buffer"
 #define WINCMD_COMP     "compile"
+#define WINCMD_SAVEBUF  "save-buffer"
+#define WINCMD_EXIT     "exit"
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
         WINCMD_SWTCHBUF, \
         WINCMD_COMP, \
+        WINCMD_SAVEBUF, \
+        WINCMD_EXIT, \
 }
 
 typedef struct window {
