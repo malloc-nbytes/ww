@@ -888,6 +888,11 @@ paste(buffer *b)
 
         newline = 0;
 
+        if (b->state == BS_SELECTION) {
+                del_selection(b);
+                newline = 1;
+        }
+
         for (size_t i = 0; i < b->cpy.len; ++i) {
                 insert_char(b, b->cpy.chars[i], 1);
                 if (b->cpy.chars[i] == '\n')
