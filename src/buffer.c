@@ -939,6 +939,9 @@ page_down(buffer *b)
                 b->cy += h;
         }
 
+        b->cx       = 0;
+        b->wish_col = 0;
+
         adjust_scroll(b);
 }
 
@@ -956,6 +959,9 @@ page_up(buffer *b)
                 b->al -= h;
                 b->cy -= h;
         }
+
+        b->cx       = 0;
+        b->wish_col = 0;
 
         adjust_scroll(b);
 }
@@ -1327,11 +1333,16 @@ buffer_dump_xy(const buffer *b)
 void
 buffer_dump(const buffer *b)
 {
+        size_t start;
+        size_t end;
+
+        start = b->vscrloff;
+        end   = start + b->parent->h;
+
         clear_terminal();
 
-        size_t start = b->vscrloff;
-        size_t end   = start + b->parent->h;
-        if (end > b->lns.len) end = b->lns.len;
+        if (end > b->lns.len)
+                end = b->lns.len;
 
         for (size_t i = start; i < end; ++i) {
                 const line *l = b->lns.data[i];
