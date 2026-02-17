@@ -25,6 +25,8 @@ run(const char *filename)
                 return 0;
 
         window_add_buffer(&win, buffer, 1);
+        win.pb = win.ab;
+        win.pbi = win.abi;
         window_handle(&win);
 
         return 1;
