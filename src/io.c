@@ -1,8 +1,12 @@
 #include "io.h"
+#include "array.h"
 
+#include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 int
 file_exists(const char *fp)
@@ -80,4 +84,23 @@ load_file(const char *path)
         buf[size] = '\0';
 
         return buf;
+}
+
+cstr_array
+lsdir(const char *dir)
+{
+        DIR           *dp;
+        struct dirent *entry;
+        cstr_array     files;
+
+        files = dyn_array_empty(cstr_array);
+
+        if (!(dp = opendir(dir)))
+                return files;
+
+        while ((entry = readdir(dp)))
+                dyn_array_append(files, strdup(entry->d_name));
+
+        closedir(dp);
+        return files;
 }

@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 static void
 try_resize(str *s)
@@ -157,4 +159,38 @@ str_trim_before(str *s)
 {
         while (s->len > 0 && s->chars[0] == ' ')
                 str_rm(s, 0);
+}
+
+str
+str_from_fmt(const char *fmt, ...)
+{
+        va_list ap;
+        va_start(ap, fmt);
+
+        va_list ap_copy;
+        va_copy(ap_copy, ap);
+        int needed = vsnprintf(NULL, 0, fmt, ap_copy);
+        va_end(ap_copy);
+
+        if (needed < 0) {
+                va_end(ap);
+                fprintf(stderr, "str_from_fmt: vsnprintf failed\n");
+                exit(EXIT_FAILURE);
+        }
+
+        str s;
+        s.len = (size_t)needed;
+        s.cap = s.len + 1;
+        s.chars = malloc(s.cap);
+
+        if (!s.chars) {
+                va_end(ap);
+                fprintf(stderr, "str_from_fmt: malloc failed\n");
+                exit(EXIT_FAILURE);
+        }
+
+        vsnprintf(s.chars, s.cap, fmt, ap);
+        va_end(ap);
+
+        return s;
 }

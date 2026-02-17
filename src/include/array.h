@@ -92,13 +92,13 @@
 
 DYN_ARRAY_TYPE(int,      int_array);
 DYN_ARRAY_TYPE(char,     char_array);
-DYN_ARRAY_TYPE(char *,   str_array);
+DYN_ARRAY_TYPE(char *,   cstr_array);
 DYN_ARRAY_TYPE(size_t,   size_t_array);
 DYN_ARRAY_TYPE(float,    float_array);
 DYN_ARRAY_TYPE(double,   double_array);
 DYN_ARRAY_TYPE(long,     long_array);
 DYN_ARRAY_TYPE(unsigned, unsigned_array);
 DYN_ARRAY_TYPE(void *,   void_ptr_array);
-DYN_ARRAY_TYPE(const char *, const_str_array);
+DYN_ARRAY_TYPE(const char *, const_cstr_array);
 
 #endif // ARRAY_H_INCLUDED
