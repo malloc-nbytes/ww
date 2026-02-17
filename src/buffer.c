@@ -34,6 +34,20 @@ DYN_ARRAY_TYPE(int_pair, int_pair_array);
 
 static char_array g_cpy_buf = dyn_array_empty(char_array);
 
+
+static const char *
+state_to_cstr(const buffer *b)
+{
+        switch (b->state) {
+        case BS_NORMAL: return "normal";
+        case BS_SELECTION: return "selection";
+        case BS_SEARCH: return "search";
+        default: return "unknown";
+        }
+
+        return "unknown";
+}
+
 static void
 append_cpy(buffer *b)
 {
@@ -1292,11 +1306,12 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "%s:%zu:%zu%s",
+        sprintf(buf, "%s:%zu:%zu%s %s",
                 str_cstr(&b->filename),
                 b->cy+1,
                 b->cx+1,
-                !b->saved ? "*" : "");
+                !b->saved ? "*" : "",
+                state_to_cstr(b));
         printf("%s", buf);
         len += strlen(buf);
 
