@@ -49,10 +49,8 @@ state_to_cstr(const buffer *b)
 }
 
 static void
-append_cpy(buffer *b)
+clear_cpy(buffer *b)
 {
-        dyn_array_append(g_cpy_buf, 0);
-        str_overwrite(&b->cpy, g_cpy_buf.data);
         dyn_array_clear(g_cpy_buf);
 }
 
@@ -71,11 +69,10 @@ append_line_range_to_clipboard(line *ln, size_t from, size_t to) {
 
 static void
 copy_selection(buffer *b) {
-        if (b->state != BS_SELECTION) {
-                dyn_array_clear(g_cpy_buf);
-                append_cpy(b);
+        clear_cpy(b);
+
+        if (b->state != BS_SELECTION)
                 return;
-        }
 
         size_t anchor_y;
         size_t anchor_x;
@@ -86,8 +83,6 @@ copy_selection(buffer *b) {
         anchor_x = (size_t)b->sx;
         cursor_y = b->al;
         cursor_x = b->cx;
-
-        dyn_array_clear(g_cpy_buf);
 
         // normalize
         int forward = (anchor_y < cursor_y) ||
@@ -100,7 +95,6 @@ copy_selection(buffer *b) {
 
         // invalid line numbers
         if (start_y >= b->lns.len || end_y >= b->lns.len) {
-                append_cpy(b);
                 return;
         }
 
@@ -129,8 +123,6 @@ copy_selection(buffer *b) {
                         append_line_range_to_clipboard(ln, 0, end_x);
                 }
         }
-
-        append_cpy(b);
 }
 
 buffer *
@@ -534,13 +526,12 @@ delete_until_eol(buffer *b)
         ln = b->lns.data[b->al];
         s  = &ln->s;
 
+        clear_cpy(b);
         for (size_t i = b->cx; i < str_len(s)-1; ++i)
                 dyn_array_append(g_cpy_buf, str_at(s, i));
 
         str_cut(&ln->s, b->cx);
         str_insert(&ln->s, b->cx, 10);
-
-        append_cpy(b);
 }
 
 static void
@@ -647,6 +638,7 @@ kill_line(buffer *b)
         ln = b->lns.data[b->al];
         s  = &ln->s;
 
+        clear_cpy(b);
         for (size_t i = 0; i < str_len(s); ++i)
                 dyn_array_append(g_cpy_buf, str_at(s, i));
 
@@ -662,8 +654,6 @@ kill_line(buffer *b)
         b->wish_col = 0;
 
         adjust_scroll(b);
-
-        append_cpy(b);
 }
 
 static void
@@ -749,6 +739,7 @@ del_word(buffer *b)
         hitchars = 0;
         i        = b->cx;
 
+        clear_cpy(b);
         while (i < str_len(s)) {
                 if (sraw[i] == 10)
                         break;
@@ -759,9 +750,6 @@ del_word(buffer *b)
                 dyn_array_append(g_cpy_buf, str_at(s, i));
                 str_rm(s, i);
         }
-
-        if (hitchars)
-                append_cpy(b);
 }
 
 static void
@@ -909,9 +897,9 @@ paste(buffer *b)
                 newline = 1;
         }
 
-        for (size_t i = 0; i < b->cpy.len; ++i) {
-                insert_char(b, b->cpy.chars[i], 1);
-                if (b->cpy.chars[i] == '\n')
+        for (size_t i = 0; i < g_cpy_buf.len; ++i) {
+                insert_char(b, g_cpy_buf.data[i], 1);
+                if (g_cpy_buf.data[i] == '\n')
                         newline = 1;
         }
 
