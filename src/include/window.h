@@ -11,6 +11,7 @@ typedef struct window {
         bufferp_array  bfrs; // buffers
         size_t         w;    // window width
         size_t         h;    // window height
+        char          *compile; // current compile command
 } window;
 
 window window_create(size_t w, size_t h);

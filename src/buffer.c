@@ -125,10 +125,11 @@ copy_selection(buffer *b) {
 }
 
 buffer *
-buffer_alloc(window *parent)
+buffer_alloc(window     *parent)
 {
         buffer *b = (buffer *)malloc(sizeof(buffer));
 
+        b->name        = str_create();
         b->filename    = str_create();
         b->lns         = dyn_array_empty(line_array);
         b->cx          = 0;
@@ -177,6 +178,7 @@ buffer_from_file(str filename, window *parent)
         b = buffer_alloc(parent);
         str_destroy(&b->filename);
         b->filename = filename;
+        b->name = str_from(str_cstr(&b->filename));
 
         if (file_exists(str_cstr(&filename))) {
                 char       *file_data;
@@ -1312,7 +1314,7 @@ draw_status(const buffer *b,
         printf(INVERT);
 
         sprintf(buf, "%s:%zu:%zu%s %s",
-                str_cstr(&b->filename),
+                str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
                 !b->saved ? "*" : "",

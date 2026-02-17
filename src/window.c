@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #define MAX_COMPLETIONS  200
 #define DISPLAY_COUNT     6
@@ -235,6 +237,7 @@ window_create(size_t w, size_t h)
                 .bfrs = dyn_array_empty(bufferp_array),
                 .w    = w,
                 .h    = h,
+                .compile = NULL,
         };
 }
 
@@ -255,7 +258,7 @@ change_buffer_by_name(window     *win,
                       const char *name)
 {
         for (size_t i = 0; i < win->bfrs.len; ++i) {
-                if (!strcmp(str_cstr(&win->bfrs.data[i]->filename), name)) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), name)) {
                         win->abi = i;
                         win->ab = win->bfrs.data[i];
                         break;
@@ -371,7 +374,7 @@ choose_buffer(window *win)
         cstr_array names = dyn_array_empty(cstr_array);
 
         for (size_t i = 0; i < win->bfrs.len; ++i)
-                dyn_array_append(names, strdup(str_cstr(&win->bfrs.data[i]->filename)));
+                dyn_array_append(names, strdup(str_cstr(&win->bfrs.data[i]->name)));
 
         char *selected = completion_run(win, "Switch Buffer", names);
 
@@ -388,6 +391,122 @@ choose_buffer(window *win)
 
         buffer_dump(win->ab);
 }
+
+static char **
+make_command(str *s)
+{
+        cstr_array ar = dyn_array_empty(cstr_array);
+        char_array buf = dyn_array_empty(char_array);
+
+        for (size_t i = 0; i < s->len; ++i) {
+                char ch = str_at(s, i);
+                if (ch == ' ') {
+                        if (buf.len > 0) {
+                                dyn_array_append(buf, 0);
+                                dyn_array_append(ar, strdup(buf.data));
+                                dyn_array_clear(buf);
+                        }
+                } else {
+                        dyn_array_append(buf, ch);
+                }
+        }
+
+        if (buf.len > 0) {
+                dyn_array_append(buf, 0);
+                dyn_array_append(ar, strdup(buf.data));
+        }
+
+        dyn_array_append(ar, NULL);
+        dyn_array_free(buf);
+
+        return ar.data;
+}
+
+static char *
+capture_command_output(str *input)
+{
+        int pipefd[2];
+        pid_t pid;
+        char *output = NULL;
+        size_t output_size = 0;
+        size_t output_cap = 0;
+        char buffer[4096];
+
+        if (pipe(pipefd) == -1) {
+                perror("pipe");
+                return NULL;
+        }
+
+        pid = fork();
+        if (pid == -1) {
+                perror("fork");
+                close(pipefd[0]);
+                close(pipefd[1]);
+                return NULL;
+        }
+
+        if (pid == 0) {
+                // Child
+                close(pipefd[0]);
+
+                if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
+                        perror("dup2 stdout");
+                        _exit(1);
+                }
+
+                if (dup2(pipefd[1], STDERR_FILENO) == -1) {
+                        perror("dup2 stderr");
+                        _exit(1);
+                }
+
+                close(pipefd[1]);
+
+                char **args = make_command(input);
+                if (!args || !*args)
+                        _exit(127);
+
+                execvp(args[0], args);
+                perror("execvp");
+                fflush(stdout);
+                _exit(127);
+        }
+
+        // Parent
+        close(pipefd[1]);
+
+        // Read loop
+        ssize_t n;
+        while ((n = read(pipefd[0], buffer, sizeof(buffer) - 1)) > 0) {
+                buffer[n] = '\0';
+
+                size_t needed = output_size + n + 1;
+                if (needed > output_cap) {
+                        output_cap = needed * 2 < 8192 ? 8192 : needed * 2;
+                        char *new_out = realloc(output, output_cap);
+                        if (!new_out) {
+                                perror("realloc");
+                                free(output);
+                                close(pipefd[0]);
+                                waitpid(pid, NULL, 0);
+                                return NULL;
+                        }
+                        output = new_out;
+                }
+
+                memcpy(output + output_size, buffer, n);
+                output_size += n;
+                output[output_size] = '\0';
+        }
+
+        close(pipefd[0]);
+
+        int status;
+        waitpid(pid, &status, 0);
+
+        return output;
+}
+
+#define COMPILATION_HEADER "-*- Compilation -*-\n[ %s ]\n\n"
 
 static void
 compilation_buffer(window *win)
@@ -429,8 +548,47 @@ done:
                 return;
         }
 
-        assert(0);
+        if (win->compile)
+                free(win->compile);
+
+        win->compile = strdup(str_cstr(&input));
+
+        buffer *b = NULL;
+        int exists = 0;
+
+        for (size_t i = 0; i < win->bfrs.len; ++i) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "Compilation")) {
+                        b = win->bfrs.data[i];
+                        win->ab = b;
+                        win->abi = i;
+                        break;
+                }
+        }
+
+        if (!b) {
+                b = buffer_alloc(win);
+                str_destroy(&b->name);
+                b->name = str_from("Compilation");
+        } else {
+                exists = 1;
+                for (size_t i = 0; i < b->lns.len; ++i)
+                        line_free(b->lns.data[i]);
+                dyn_array_free(b->lns);
+        }
+
+        char buf[1024] = {0};
+        sprintf(buf, COMPILATION_HEADER, str_cstr(&input));
+        b->lns = lines_of_cstr(buf);
+
+        if (!exists)
+                window_add_buffer(win, b, 1);
+        buffer_dump(win->ab);
+
+        char *output = capture_command_output(&input);
+        win->ab->lns = lines_of_cstr(output);
+
         str_destroy(&input);
+        buffer_dump(win->ab);
 }
 
 static int

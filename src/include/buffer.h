@@ -24,6 +24,7 @@ typedef enum {
 } buffer_state;
 
 typedef struct {
+        str          name;
         str          filename;    // file we are editing (if available)
         line_array   lns;         // lines
         size_t       cx;          // cursor x
