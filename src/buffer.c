@@ -537,7 +537,8 @@ backspace(buffer *b)
                 return 1;
         }
 
-        if (b->last_tab) {
+        if (b->last_tab > 0) {
+                --b->last_tab;
                 for (size_t i = 0; i < 8; ++i) {
                         buffer_left(b);
                         str_rm(&ln->s, b->cx);
@@ -558,7 +559,7 @@ backspace(buffer *b)
 static void
 tab(buffer *b)
 {
-        b->last_tab = 1;
+        ++b->last_tab;
 
         for (size_t i = 0; i < 8; ++i)
                 insert_char(b, ' ', 1);
@@ -941,8 +942,6 @@ paste(buffer *b)
         if (!writable(b))
                 return 0;
 
-        b->last_tab = 0;
-
         int newline;
 
         newline = 0;
@@ -1077,6 +1076,13 @@ buffer_process(buffer     *b,
 
         switch (ty) {
         case INPUT_TYPE_CTRL: {
+                if (TAB(ch)) {
+                        tab(b);
+                        return BP_INSERT;
+                }
+
+                b->last_tab = 0;
+
                 if (ch == CTRL_N) {
                         return buffer_down(b) ? BP_INSERTNL : BP_MOV;
                 } else if (ch == CTRL_P) {
@@ -1091,9 +1097,6 @@ buffer_process(buffer     *b,
                         return buffer_bol(b) ? BP_INSERTNL : BP_MOV;
                 } else if (ch == CTRL_D) {
                         return del_char(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (TAB(ch)) {
-                        tab(b);
-                        return BP_INSERT;
                 } else if (ch == CTRL_K) {
                         delete_until_eol(b);
                         return BP_INSERT;
@@ -1101,7 +1104,6 @@ buffer_process(buffer     *b,
                         insert_char(b, 10, 0);
                         --b->cx;
                         --b->wish_col;
-                        b->last_tab = 0;
                         return BP_INSERTNL;
                 } else if (ch == CTRL_H) {
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
@@ -1122,10 +1124,13 @@ buffer_process(buffer     *b,
                 } else if (ch == CTRL_W) {
                         cut_selection(b);
                         return BP_INSERTNL;
+                } else if (ch == 8) { // ctrl+backspace
+                        assert(0);
                 }
 
         } break;
         case INPUT_TYPE_ALT: {
+                b->last_tab = 0;
                 if (ch == 'm') {
                         jump_to_first_char(b);
                         return BP_MOV;
@@ -1164,17 +1169,21 @@ buffer_process(buffer     *b,
                 }
         } break;
         case INPUT_TYPE_ARROW: {
+                b->last_tab = 0;
                 return movement_ar[ch-'A'](b) ? BP_INSERTNL : BP_MOV;
         } break;
         case INPUT_TYPE_NORMAL: {
                 if (BACKSPACE(ch))
                         return backspace(b) ? BP_INSERTNL : BP_INSERT;
-                else if (ch == 0) { // ctrl+space
+
+                b->last_tab = 0;
+
+                if (ch == 0) { // ctrl+space
                         selection(b);
                         return BP_MOV;
                 }
+
                 insert_char(b, ch, 1);
-                b->last_tab = 0;
                 return ch == 10 ? BP_INSERTNL : BP_INSERT;
         } break;
         default: break;
