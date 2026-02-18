@@ -101,7 +101,7 @@ parse_config(void)
                 printf("space-amt must be a number string\n");
                 ok = 0;
         }
-        if (!cstr_isdigit(((qcl_value_string *)space_amt)->s)) {
+        if (space_amt && !cstr_isdigit(((qcl_value_string *)space_amt)->s)) {
                 printf("space-amt must be a valid number string\n");
                 ok = 0;
         }

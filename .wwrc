@@ -1,0 +1,19 @@
+# Basic configuration file for wintrwritr,
+# feel free to edit this file as you wish.
+
+# This file is written in 'qcl' which is a
+# custom configuration language. It has similar
+# syntax to rust.
+
+# See the repo: https://github.com/malloc-nbytes/qcl
+
+# Show ghost trailing whitespace characters
+show-trails = true;
+
+# Use spaces instead of tabs
+spaces-are-tabs = true;
+
+# The number of spaces when hitting <tab>
+space-amt = '8';
+
+compile-command = 'make';
