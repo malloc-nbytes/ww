@@ -530,7 +530,6 @@ capture_command_output(str *input)
 }
 
 #define COMPILATION_HEADER "*** " BOLD WHITE "Compilation" RESET " [ " BOLD YELLOW "%s" RESET " ] [ (q)uit, a(g)ain, M-<tab>:switch-here ] ***\n\n"
-
 static void
 do_compilation(window *win)
 {
@@ -586,22 +585,22 @@ do_compilation(window *win)
         buffer_dump(win->ab);
 }
 
-static void
-compilation_buffer(window *win)
+static str
+get_generic_input(window     *win,
+                  const char *input_start,
+                  const char *prompt)
 {
         str input;
 
-        if (win->compile)
-                input = str_from(win->compile);
-        else if (glconf.defaults.compile_cmd)
-                input = str_from(glconf.defaults.compile_cmd);
+        if (input_start)
+                input = str_from(input_start);
         else
                 input = str_create();
 
         while (1) {
                 gotoxy(0, win->h);
                 clear_line(0, win->h);
-                printf("Compile [ %s", str_cstr(&input));
+                printf("%s [ %s", prompt ? prompt : "", str_cstr(&input));
                 fflush(stdout);
 
                 char       ch;
@@ -628,6 +627,23 @@ compilation_buffer(window *win)
         }
 
 done:
+        return input;
+}
+
+static void
+compilation_buffer(window *win)
+{
+        const char *input_start;
+
+        if (win->compile)
+                input_start = win->compile;
+        else if (glconf.defaults.compile_cmd)
+                input_start = glconf.defaults.compile_cmd;
+        else
+                input_start = NULL;
+
+        str input = get_generic_input(win, input_start, "Compile");
+
         if (input.len <= 0) {
                 str_destroy(&input);
                 buffer_dump(win->ab);
@@ -639,6 +655,29 @@ done:
 
         win->compile = strdup(str_cstr(&input));
         do_compilation(win);
+}
+
+static void
+find_replace(window *win)
+{
+        str from = get_generic_input(win, NULL, "Replace From");
+
+        if (from.len == 0)
+                return;
+
+        win->ab->state = BS_SEARCH;
+        win->ab->last_search = from;
+        buffer_dump(win->ab);
+        str to = get_generic_input(win, NULL, "Replace To");
+
+        win->ab->state = BS_SELECTION;
+
+        if (to.len == 0) {
+                str_destroy(&from);
+                return;
+        }
+
+        buffer_find_and_replace_in_selection(win->ab, str_cstr(&from), str_cstr(&to));
 }
 
 static void
@@ -681,6 +720,9 @@ metax(window *win)
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINCMD_SPACEMODE)) {
                 glconf.flags |= FT_SPACESARETABS;
+                buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINCMD_REPLACE)) {
+                find_replace(win);
                 buffer_dump(win->ab);
         } else {
                 assert(0 && "unknown M-x command");

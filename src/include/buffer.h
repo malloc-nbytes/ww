@@ -54,5 +54,6 @@ void         buffer_dump_xy(const buffer *b);
 int          buffer_save(buffer *b);
 int          adjust_scroll(buffer *b);
 void         buffer_copybuf_to_clipboard(const buffer *b);
+void         buffer_find_and_replace_in_selection(buffer *b, const char *from, const char *to);
 
 #endif // BUFFER_H_INUCLUDED

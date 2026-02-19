@@ -55,6 +55,98 @@ clear_cpy(buffer *b)
 }
 
 void
+buffer_find_and_replace_in_selection(buffer     *b,
+                                     const char *from,
+                                     const char *to)
+{
+        if (!b || b->state != BS_SELECTION)
+                return;
+
+        if (!from || !*from)
+                return;
+
+        size_t from_len = strlen(from);
+        size_t to_len   = strlen(to);
+
+        size_t anchor_y = (size_t)b->sy;
+        size_t anchor_x = (size_t)b->sx;
+        size_t cursor_y = b->al;
+        size_t cursor_x = b->cx;
+
+        // normalize direction
+        int forward = (anchor_y < cursor_y) ||
+                (anchor_y == cursor_y && anchor_x <= cursor_x);
+
+        size_t start_y = forward ? anchor_y : cursor_y;
+        size_t end_y   = forward ? cursor_y : anchor_y;
+        size_t start_x = forward ? anchor_x : cursor_x;
+        size_t end_x   = forward ? cursor_x : anchor_x;
+
+        if (start_y >= b->lns.len || end_y >= b->lns.len)
+                return;
+
+        for (size_t y = start_y; y <= end_y; ++y) {
+                line *ln = b->lns.data[y];
+                if (!ln)
+                        continue;
+
+                size_t line_len = str_len(&ln->s);
+
+                size_t range_start = 0;
+                size_t range_end   = line_len;
+
+                if (start_y == end_y) {
+                        range_start = start_x;
+                        range_end   = end_x;
+                } else if (y == start_y) {
+                        range_start = start_x;
+                } else if (y == end_y) {
+                        range_end = end_x;
+                }
+
+                if (range_start >= line_len || range_start >= range_end)
+                        continue;
+
+                char *data = ln->s.chars;
+
+                for (size_t i = range_start; i+from_len <= range_end; ) {
+
+                        if (memcmp(&data[i], from, from_len) == 0) {
+                                if (to_len != from_len) {
+                                        size_t new_len = line_len - from_len + to_len;
+
+                                        if (new_len + 1 > ln->s.cap) {
+                                                size_t new_cap = new_len + 16;
+                                                char *new_buf = realloc(ln->s.chars, new_cap);
+                                                if (!new_buf)
+                                                        return;
+                                                ln->s.chars = new_buf;
+                                                ln->s.cap   = new_cap;
+                                                data = ln->s.chars;
+                                        }
+
+                                        memmove(&data[i + to_len],
+                                                &data[i + from_len],
+                                                line_len - (i + from_len));
+
+                                        ln->s.len = new_len;
+                                        line_len  = new_len;
+
+                                        range_end = range_end - from_len + to_len;
+                                }
+
+                                memcpy(&data[i], to, to_len);
+                                i += to_len;
+                        }
+                        else
+                                i++;
+                }
+        }
+
+        b->saved = 0;
+}
+
+void
 buffer_copybuf_to_clipboard(const buffer *b)
 {
         if (!glconf.defaults.to_clipboard)
