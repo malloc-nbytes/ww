@@ -16,4 +16,10 @@ spaces-are-tabs = true;
 # The number of spaces when hitting <tab>
 space-amt = '8';
 
+# The default compilation command
 compile-command = 'make';
+
+# The way of copying the internal copy buffer
+# to the system clipboard. The `%s' is the data
+# from the copy buffer.
+to-clipboard = "echo '%s' | xclip -selection clipboard";

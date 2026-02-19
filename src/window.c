@@ -6,6 +6,7 @@
 #include "colors.h"
 #include "fuzzy.h"
 #include "glconf.h"
+#include "flags.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -675,6 +676,12 @@ metax(window *win)
                 quit(win);
         } else if (!strcmp(selected, WINCMD_COPYBUFTOCLIP)) {
                 buffer_copybuf_to_clipboard(win->ab);
+        } else if (!strcmp(selected, WINCMD_TABMODE)) {
+                glconf.flags &= ~FT_SPACESARETABS;
+                buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINCMD_SPACEMODE)) {
+                glconf.flags |= FT_SPACESARETABS;
+                buffer_dump(win->ab);
         } else {
                 assert(0 && "unknown M-x command");
         }
