@@ -963,7 +963,8 @@ search(buffer *b, int reverse)
                                 first  = 0;
                                 adjust = 1;
                         }
-                        str_concat(input, g_cpy_buf.data);
+                        for (size_t i = 0; i < g_cpy_buf.len; ++i)
+                                str_append(input, g_cpy_buf.data[i]);
                 } else {
                         b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                         break;
