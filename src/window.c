@@ -155,9 +155,9 @@ completion_draw(window *win,
 }
 
 static char *
-completion_run(window *win,
+completion_run(window     *win,
                const char *label,
-               cstr_array items)
+               cstr_array  items)
 {
         completion_state st;
         st.input = str_create();
@@ -246,15 +246,18 @@ window_create(size_t w, size_t h)
         };
 }
 
-static int
+static buffer *
 buffer_exists_by_name(window     *win,
                       const char *name)
 {
+        if (strlen(name) > 3 && name[0] == '.' && name[1] == '/')
+                name += 2;
+
         for (size_t i = 0; i < win->bfrs.len; ++i) {
                 if (!strcmp(name, str_cstr(&win->bfrs.data[i]->name)))
-                        return 1;
+                        return win->bfrs.data[i];
         }
-        return 0;
+        return NULL;
 }
 
 void
@@ -265,7 +268,7 @@ window_add_buffer(window *win,
         if (!buffer_exists_by_name(win, str_cstr(&b->name)))
                 dyn_array_append(win->bfrs, b);
         if (make_curr) {
-                win->pb = win->ab;
+                win->pb  = win->ab;
                 win->pbi = win->abi;
                 win->ab  = b;
                 win->abi = win->bfrs.len-1;
@@ -381,8 +384,12 @@ find_file(window *win)
                 return;
         }
 
-        str fp = str_from(chosen_file);
-        buffer *b = buffer_from_file(fp, win);
+        str     fp = str_from(chosen_file);
+        buffer *b  = NULL;
+
+        if (!(b = buffer_exists_by_name(win, chosen_file)))
+                b = buffer_from_file(fp, win);
+
         free(chosen_file);
 
         if (!b)
@@ -816,7 +823,11 @@ try_jump_to_error(window *win)
                 return;
         }
 
-        buffer *b = buffer_from_file(str_from(filename), win);
+        buffer *b = NULL;
+
+        if (!(b = buffer_exists_by_name(win, filename)))
+                b = buffer_from_file(str_from(filename), win);
+
         window_add_buffer(win, b, 1);
         buffer_jump_to_verts(win->ab, col-1, row-1);
 

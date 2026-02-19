@@ -313,6 +313,14 @@ buffer_from_file(str filename, window *parent)
 
         b = buffer_alloc(parent);
         str_destroy(&b->filename);
+
+        if (str_len(&filename) > 3
+                && str_at(&filename, 0) == '.'
+                && str_at(&filename, 1) == '/') {
+                str_rm(&filename, 0);
+                str_rm(&filename, 0);
+        }
+
         b->filename = filename;
         b->name = str_from(str_cstr(&b->filename));
 
