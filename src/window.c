@@ -7,6 +7,7 @@
 #include "fuzzy.h"
 #include "glconf.h"
 #include "flags.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -697,6 +698,24 @@ find_replace(window *win)
 }
 
 static void
+set_space_amt(window *win)
+{
+        str input;
+
+        input = get_generic_input(win, NULL, "Space#");
+
+        if (!input.len)
+                return;
+        if (!cstr_isdigit(str_cstr(&input)))
+                goto cleanup;
+
+        glconf.defaults.space_amt = atoi(str_cstr(&input));
+
+cleanup:
+        str_destroy(&input);
+}
+
+static void
 metax(window *win)
 {
         // TODO: make `names' live in static memory
@@ -717,7 +736,8 @@ metax(window *win)
         }
 
         if (!strcmp(selected, WINCMD_SPCAMT)) {
-                assert(0 && "set space amount");
+                set_space_amt(win);
+                buffer_dump(win->ab);
         } else if (!strcmp(selected, WINCMD_KILLBUF)) {
                 close_buffer(win);
         } else if (!strcmp(selected, WINCMD_SWTCHBUF)) {
