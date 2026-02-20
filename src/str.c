@@ -194,3 +194,22 @@ str_from_fmt(const char *fmt, ...)
 
         return s;
 }
+
+void
+str_remove_range(str *s, size_t start, size_t count)
+{
+      if (count == 0 || start >= s->len)
+          return;
+
+      if (start + count > s->len)
+          count = s->len - start;
+
+      memmove(s->chars + start,
+              s->chars + start + count,
+              s->len - (start + count) + 1); // +1 for null
+
+      s->len -= count;
+
+      if (s->len < s->cap)
+          s->chars[s->len] = 0;
+}
