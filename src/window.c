@@ -805,6 +805,8 @@ metax(window *win)
         } else if (!strcmp(selected, WINCMD_HELP)) {
                 window_open_help_buffer(win);
                 buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINCMD_FINDFILE)) {
+                find_file(win);
         } else {
                 assert(0 && "unknown M-x command");
         }

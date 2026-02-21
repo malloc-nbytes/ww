@@ -16,6 +16,7 @@
 #define WINCMD_SPACEMODE     "space-mode"
 #define WINCMD_REPLACE       "replace"
 #define WINCMD_HELP          "help"
+#define WINCMD_FINDFILE      "find-file"
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
@@ -28,6 +29,7 @@
         WINCMD_SPACEMODE, \
         WINCMD_REPLACE, \
         WINCMD_HELP, \
+        WINCMD_FINDFILE, \
 }
 
 typedef struct window {
