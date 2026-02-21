@@ -99,8 +99,5 @@ parse_args(int argc, char *argv[])
                 it       = it->n;
         }
 
-        if (!filename)
-                fatal("one filename is required");
-
         return filename;
 }

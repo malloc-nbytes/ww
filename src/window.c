@@ -8,6 +8,7 @@
 #include "glconf.h"
 #include "flags.h"
 #include "utils.h"
+#include "controls-buffer.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -715,6 +716,47 @@ cleanup:
         str_destroy(&input);
 }
 
+void
+window_open_help_buffer(window *win)
+{
+        line_array help;
+        line_array controls;
+
+        help = lines_of_cstr(HELP_DEF);
+        controls = lines_of_cstr(CONTROLS_DEF);
+
+        buffer *b = NULL;
+        int exists = 0;
+
+        for (size_t i = 0; i < win->bfrs.len; ++i) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "sigil-compilation")) {
+                        b = win->bfrs.data[i];
+                        win->ab = b;
+                        win->abi = i;
+                        break;
+                }
+        }
+
+        if (!b) {
+                b = buffer_alloc(win);
+                str_destroy(&b->name);
+                b->name = str_from("sigil-help");
+                b->writable = 0;
+                window_add_buffer(win, b, 1);
+        }
+
+        win->ab->lns = help;
+
+        for (size_t i = 0; i < controls.len; ++i)
+                dyn_array_append(win->ab->lns, controls.data[i]);
+
+        win->ab->cx  = 0;
+        win->ab->al  = 0;
+        win->ab->cy  = 0;
+
+        adjust_scroll(win->ab);
+}
+
 static void
 metax(window *win)
 {
@@ -759,6 +801,9 @@ metax(window *win)
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINCMD_REPLACE)) {
                 find_replace(win);
+                buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINCMD_HELP)) {
+                window_open_help_buffer(win);
                 buffer_dump(win->ab);
         } else {
                 assert(0 && "unknown M-x command");

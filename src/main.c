@@ -22,21 +22,33 @@ run(const char *filename)
         buffer *buffer;
         str     fp;
         char   *real;
+        int     file_provided;
 
-        win    = window_create(glconf.term.w, glconf.term.h);
-        real   = get_realpath(filename);
+        win           = window_create(glconf.term.w, glconf.term.h);
+        real          = get_realpath(filename);
+        file_provided = 1;
 
         if (real)
                 fp = str_from(real);
+        else if (!filename) {
+                fp            = str_from("sigil-help");
+                file_provided = 0;
+        }
         else
                 fp = str_from(filename);
 
-        if (!(buffer = buffer_from_file(fp, &win)))
-                return 0;
+        if (!file_provided) {
+                window_open_help_buffer(&win);
+        } else {
 
-        window_add_buffer(&win, buffer, 1);
-        win.pb = win.ab;
-        win.pbi = win.abi;
+                if (!(buffer = buffer_from_file(fp, &win)))
+                        return 0;
+
+                window_add_buffer(&win, buffer, 1);
+                win.pb = win.ab;
+                win.pbi = win.abi;
+        }
+
         window_handle(&win);
 
         return 1;
@@ -179,9 +191,6 @@ int
 main(int argc, char *argv[])
 {
         char *filename;
-
-        if (argc <= 1)
-                usage();
 
         if (!setup_config_file())
                 fatal("aborting");
