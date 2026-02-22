@@ -807,6 +807,9 @@ next_paragraph(buffer *b)
 static void
 kill_line(buffer *b)
 {
+        if (!writable(b))
+                return;
+
         line *ln;
         const str *s;
 
