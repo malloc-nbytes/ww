@@ -31,7 +31,7 @@ run(const char *filename)
         if (real)
                 fp = str_from(real);
         else if (!filename) {
-                fp            = str_from("sigil-help");
+                fp            = str_from("ww-help");
                 file_provided = 0;
         }
         else

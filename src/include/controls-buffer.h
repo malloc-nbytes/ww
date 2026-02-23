@@ -5,7 +5,7 @@
 
 #define HELP_DEF "*** " "Help Buffer ***\n" \
 "\n" \
-"Sigil is a text editor similar to vim or nano but with\n" \
+"ww is a text editor similar to vim or nano but with\n" \
 "a *very* heavy Emacs influence. It's controls are mostly\n" \
 "default Emacs keybindings (see controls).\n" \
 "\n" \
@@ -29,7 +29,7 @@
 "\n" \
 "M-x     = issue window command *\n" \
 "C-x C-f = find file *\n" \
-"C-x C-q = quit sigil *\n" \
+"C-x C-q = quit ww *\n" \
 "\n" \
 "Navigation:\n" \
 "\n" \

@@ -2,4 +2,4 @@
 
 set -xe
 
-cc -o sigil-debug-build -O0 -ggdb *.c -Iinclude/
+cc -o ww-debug-build -O0 -ggdb *.c -Iinclude/

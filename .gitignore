@@ -1,6 +1,6 @@
 main
-sigil
-sigil-debug-build
+ww
+ww-debug-build
 Makefile
 src/Makefile
 Makefile.in
@@ -17,7 +17,7 @@ missing
 src/.deps/
 src/Makefile
 src/Makefile.in
-src/sigil-debug-build
+src/ww-debug-build
 src/include/config.h
 src/include/stamp-h1
 *.bin
