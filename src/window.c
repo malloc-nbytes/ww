@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <regex.h>
+#include <signal.h>
 
 #define MAX_COMPLETIONS  200
 #define DISPLAY_COUNT     6
@@ -29,6 +30,41 @@ typedef struct {
         size_t selected_idx;
         size_t offset;
 } completion_state;
+
+static volatile sig_atomic_t
+g_resize_flag = 0;
+
+static void
+resize_signal_handler(int sig)
+{
+        (void)sig;
+        g_resize_flag = 1;
+}
+
+static void
+handle_resize(window *win)
+{
+        if (!g_resize_flag)
+                return;
+
+        g_resize_flag = 0;
+
+        size_t win_width;
+        size_t win_height;
+
+        if (!get_terminal_xy(&win_width, &win_height)) {
+                perror("get_terminal_xy");
+                exit(1);
+        }
+
+        win->w = win_width;
+        win->h = win_height;
+
+        glconf.term.w = win_width;
+        glconf.term.h = win_height;
+
+        buffer_dump(win->ab);
+}
 
 static void
 completion_draw(window *win,
@@ -323,6 +359,7 @@ save_buffer(window *win)
 {
         if (!buffer_save(win->ab))
                 return 0;
+        return 1;
 }
 
 void
@@ -921,7 +958,11 @@ window_handle(window *win)
         gotoxy(win->ab->cx, win->ab->cy);
         fflush(stdout);
 
+        signal(SIGWINCH, resize_signal_handler);
+
         while (1) {
+                handle_resize(win);
+
                 if (!win->ab)
                         break;
 

@@ -1327,7 +1327,6 @@ buffer_process(buffer     *b,
                input_type  ty,
                char        ch)
 {
-        // here
         static int (*movement_ar[])(buffer *) = {
                 buffer_up,
                 buffer_down,
