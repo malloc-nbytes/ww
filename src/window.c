@@ -793,10 +793,10 @@ metax(window *win)
         } else if (!strcmp(selected, WINCMD_COPYBUFTOCLIP)) {
                 buffer_copybuf_to_clipboard(win->ab);
         } else if (!strcmp(selected, WINCMD_TABMODE)) {
-                glconf.flags &= ~FT_SPACESARETABS;
+                glconf.flags |= FT_TABMODE;
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINCMD_SPACEMODE)) {
-                glconf.flags |= FT_SPACESARETABS;
+                glconf.flags &= ~FT_TABMODE;
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINCMD_REPLACE)) {
                 find_replace(win);

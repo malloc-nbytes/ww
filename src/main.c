@@ -102,7 +102,7 @@ parse_config(void)
         int ok = 1;
 
         qcl_value *show_trails     = qcl_value_get(&config, "show-trails");
-        qcl_value *spaces_are_tabs = qcl_value_get(&config, "spaces-are-tabs");
+        qcl_value *tabmode         = qcl_value_get(&config, "tab-mode");
         qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
         qcl_value *compile_command = qcl_value_get(&config, "compile-command");
         qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
@@ -112,7 +112,7 @@ parse_config(void)
                 ok = 0;
         }
 
-        if (spaces_are_tabs && spaces_are_tabs->kind != QCL_VALUE_KIND_BOOL) {
+        if (tabmode && tabmode->kind != QCL_VALUE_KIND_BOOL) {
                 printf("spaces-are-tabs must be a boolean\n");
                 ok = 0;
         }
@@ -142,8 +142,8 @@ parse_config(void)
         if (show_trails && ((qcl_value_bool *)show_trails)->b)
                 glconf.flags |= FT_SHOWTRAILS;
 
-        if (spaces_are_tabs && ((qcl_value_bool *)spaces_are_tabs)->b)
-                glconf.flags |= FT_SPACESARETABS;
+        if (tabmode && ((qcl_value_bool *)tabmode)->b)
+                glconf.flags |= FT_TABMODE;
 
         if (space_amt)
                 glconf.defaults.space_amt = atoi(((qcl_value_string *)space_amt)->s);

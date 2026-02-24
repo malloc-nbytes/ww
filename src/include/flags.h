@@ -8,7 +8,7 @@
 
 enum {
         FT_SHOWTRAILS = 1 << 0,
-        FT_SPACESARETABS = 1 << 1,
+        FT_TABMODE = 1 << 1,
 };
 
 void usage(void);

@@ -11,7 +11,7 @@
 show-trails = true;
 
 # Use spaces instead of tabs
-spaces-are-tabs = true;
+tab-mode = false;
 
 # The number of spaces when hitting <tab>
 space-amt = '8';

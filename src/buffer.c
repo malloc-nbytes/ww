@@ -29,8 +29,8 @@ static int_array
 find_line_matches(const buffer *b,
                   const str    *s);
 
-PAIR_TYPE(int, int, int_pair);
-PAIR_IMPL(int, int, int_pair);
+PAIR_TYPE(int, int, int_pair)
+PAIR_IMPL(int, int, int_pair)
 DYN_ARRAY_TYPE(int_array, int_array_array);
 DYN_ARRAY_TYPE(int_pair, int_pair_array);
 
@@ -658,7 +658,7 @@ backspace(buffer *b)
                 return 1;
         }
 
-        if (b->last_tab > 0 && (glconf.flags & FT_SPACESARETABS)) {
+        if (b->last_tab > 0 && (glconf.flags & FT_TABMODE) == 0) {
                 --b->last_tab;
                 for (size_t i = 0; i < glconf.defaults.space_amt; ++i) {
                         buffer_left(b);
@@ -682,7 +682,7 @@ tab(buffer *b)
 {
         ++b->last_tab;
 
-        if (glconf.flags & FT_SPACESARETABS) {
+        if ((glconf.flags & FT_TABMODE) == 0) {
                 for (size_t i = 0; i < glconf.defaults.space_amt; ++i)
                         insert_char(b, ' ', 1);
         }
