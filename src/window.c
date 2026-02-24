@@ -726,7 +726,6 @@ window_open_help_buffer(window *win)
         controls = lines_of_cstr(CONTROLS_DEF);
 
         buffer *b = NULL;
-        int exists = 0;
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
                 if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {

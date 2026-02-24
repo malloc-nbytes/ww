@@ -1,0 +1,12 @@
+* ww
+
+*NOTE*: This project is a work in progress and may not function correctly.
+
+=ww= is a text editor similar to vim or nano but with a _very_ heavy Emacs influence.
+It's controls are mostly default Emacs keybindings (see the help buffer in =ww= by doing =M-x help=).
+
+Also, dependencies such as =ncurses= are not needed, just a =C= compiler.
+
+** How to use
+
+

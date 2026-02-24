@@ -1578,11 +1578,11 @@ drawln(const buffer *b,
                 int is_middle_line = (lineno > start_y && lineno < end_y);
 
                 for (size_t i = 0; i < str_len(s); ++i) {
-                        int in_selection = false;
+                        int in_selection = 0;
 
                         if (is_middle_line) {
                                 // whole line is selected
-                                in_selection = true;
+                                in_selection = 1;
                         } else if (is_start_line && is_end_line) {
                                 // selection starts and ends on same line
                                 in_selection = (i >= start_x && i < end_x);
