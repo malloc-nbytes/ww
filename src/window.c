@@ -1002,7 +1002,6 @@ window_handle(window *win)
                                 buffer_dump(win->ab);
                         else if (bproc == BP_MOV)
                                 buffer_dump_xy(win->ab);
-                                //buffer_dump(win->ab);
                 }
         }
 }
