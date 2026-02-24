@@ -4,6 +4,7 @@
 * TODO
 - fix: handle two open buffers of the same file basename
 - fix: handle tabs correctly and non-1-byte characters
+- fix: lines going off-screen messes up buffer
 - add: highlight whole buffer
 - add: manually make buffer read-only
 - add: previous buffer the first option in switching buffers context

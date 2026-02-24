@@ -431,7 +431,8 @@ buffer_right(buffer *b)
         }
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b) || b->state == BS_SELECTION;
+        //return adjust_scroll(b) || b->state == BS_SELECTION;
+        return adjust_scroll(b);
 }
 
 static int
@@ -869,6 +870,8 @@ jump_next_word(buffer *b)
                 b->cx = i;
 
         b->wish_col = b->cx;
+
+        adjust_scroll(b);
 }
 
 static void
@@ -903,6 +906,7 @@ jump_prev_word(buffer *b)
                 ++b->cx;
 
         b->wish_col = b->cx;
+        adjust_scroll(b);
 }
 
 static void
@@ -1459,31 +1463,6 @@ buffer_process(buffer     *b,
         return BP_NOP;
 }
 
-static void
-show_whitespace(const buffer *b,
-                const str    *s,
-                int           eol)
-{
-        int         space;
-        const char *sraw;
-        char        spc;
-
-        space = -1;
-        sraw  = str_cstr(s);
-        spc   = (glconf.flags & FT_SHOWTRAILS) != 0
-                        ? '-'
-                        : ' ';
-
-        if (eol <= -1)
-                return;
-        else {
-                printf(GRAY);
-                for (size_t i = 0; i < str_len(s)-eol-1; ++i)
-                        putchar(spc);
-                printf(RESET);
-        }
-}
-
 static int_array
 find_line_matches(const buffer *b,
                   const str    *s)
@@ -1509,6 +1488,51 @@ find_line_matches(const buffer *b,
         }
 
         return ar;
+}
+
+static void
+show_whitespace(const buffer *b,
+                const str    *s,
+                int           eol,
+                size_t        start_x,
+                size_t        end_x)
+{
+        int         space;
+        const char *sraw;
+        char        spc;
+        size_t      len;
+        size_t      first_trailing;
+        size_t      last_trailing;
+        size_t      vis_start;
+        size_t      vis_end;
+
+        space = -1;
+        sraw  = str_cstr(s);
+        spc   = (glconf.flags & FT_SHOWTRAILS) != 0
+                        ? '-'
+                        : ' ';
+        len = str_len(s);
+        first_trailing = eol + 1;
+        last_trailing  = len;
+
+        if (first_trailing >= last_trailing)
+                return;
+
+        // clip to visible horizontal window
+        vis_start = start_x > first_trailing ? start_x : first_trailing;
+        vis_end   = end_x   < last_trailing  ? end_x   : last_trailing;
+
+        if (vis_start >= vis_end)
+                return;
+
+        if (eol <= -1)
+                return;
+        else {
+                printf(GRAY);
+                for (size_t i = vis_start; i < vis_end; ++i)
+                        putchar(spc);
+                printf(RESET);
+        }
 }
 
 static void
@@ -1576,7 +1600,7 @@ drawln(const buffer *b,
                 int is_end_line    = (lineno == end_y);
                 int is_middle_line = (lineno > start_y && lineno < end_y);
 
-                for (size_t i = 0; i < str_len(s); ++i) {
+                for (size_t i = start_x; i < strlen(sraw); ++i) {
                         int in_selection = 0;
 
                         if (is_middle_line) {
@@ -1609,14 +1633,19 @@ drawln(const buffer *b,
                 goto done;
         }
 
-        for (size_t i = 0; i < eol; ++i) {
+
+        size_t win_w   = b->parent->w;
+        size_t start_x = b->hscrloff;
+        size_t end_x   = start_x + win_w;
+
+        for (size_t i = start_x; i < eol && i < end_x; ++i) {
                 if (sraw[i] == '\t')
                         printf(GRAY ">" RESET);
                 putchar(sraw[i]);
         }
 
 done:
-        show_whitespace(b, s, eol);
+        show_whitespace(b, s, eol, start_x, end_x);
 }
 
 static void
