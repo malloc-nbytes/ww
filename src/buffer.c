@@ -49,7 +49,7 @@ state_to_cstr(const buffer *b)
 }
 
 static void
-clear_cpy(buffer *b)
+clear_cpy(void)
 {
         dyn_array_clear(g_cpy_buf);
 }
@@ -188,7 +188,7 @@ append_line_range_to_clipboard(line *ln, size_t from, size_t to) {
 
 static void
 copy_selection(buffer *b) {
-        clear_cpy(b);
+        clear_cpy();
 
         if (b->state != BS_SELECTION)
                 return;
@@ -660,7 +660,7 @@ backspace(buffer *b)
 
         if (b->last_tab > 0 && (glconf.flags & FT_TABMODE) == 0) {
                 --b->last_tab;
-                for (size_t i = 0; i < glconf.defaults.space_amt; ++i) {
+                for (size_t i = 0; i < (size_t)glconf.defaults.space_amt; ++i) {
                         buffer_left(b);
                         str_rm(&ln->s, b->cx);
                         if (b->cx > str_len(&ln->s)-1)
@@ -683,7 +683,7 @@ tab(buffer *b)
         ++b->last_tab;
 
         if ((glconf.flags & FT_TABMODE) == 0) {
-                for (size_t i = 0; i < glconf.defaults.space_amt; ++i)
+                for (int i = 0; i < glconf.defaults.space_amt; ++i)
                         insert_char(b, ' ', 1);
         }
         else
@@ -702,7 +702,7 @@ delete_until_eol(buffer *b)
         ln = b->lns.data[b->al];
         s  = &ln->s;
 
-        clear_cpy(b);
+        clear_cpy();
         for (size_t i = b->cx; i < str_len(s)-1; ++i)
                 dyn_array_append(g_cpy_buf, str_at(s, i));
 
@@ -819,7 +819,7 @@ kill_line(buffer *b)
         ln = b->lns.data[b->al];
         s  = &ln->s;
 
-        clear_cpy(b);
+        clear_cpy();
         for (size_t i = 0; i < str_len(s); ++i)
                 dyn_array_append(g_cpy_buf, str_at(s, i));
 
@@ -920,7 +920,7 @@ del_word(buffer *b)
         hitchars = 0;
         i        = b->cx;
 
-        clear_cpy(b);
+        clear_cpy();
         while (i < str_len(s)) {
                 if (sraw[i] == 10)
                         break;
@@ -993,7 +993,7 @@ search(buffer *b, int reverse)
                         step = 0;
 
                         for (size_t i = 0; i < pairs.len; ++i) {
-                                if (pairs.data[i].l < b->al)
+                                if (pairs.data[i].l < (int)b->al)
                                         ++step;
                                 else
                                         break;
@@ -1007,7 +1007,7 @@ search(buffer *b, int reverse)
 
                 adjust = 0;
 
-                if (pairs.len > 0 && step < pairs.len) {
+                if (pairs.len > 0 && step < (int)pairs.len) {
                         b->al = pairs.data[step].l;
                         b->cy = pairs.data[step].l;
                         b->cx = pairs.data[step].r;
@@ -1037,7 +1037,7 @@ search(buffer *b, int reverse)
                                         str_pop(input);
                                 adjust = 1;
                         } else if (ENTER(ch)) {
-                                if (pairs.len > 0 && step < pairs.len) {
+                                if (pairs.len > 0 && step < (int)pairs.len) {
                                         b->al       = pairs.data[step].l;
                                         b->cy       = pairs.data[step].l;
                                         b->cx       = pairs.data[step].r;
@@ -1050,7 +1050,7 @@ search(buffer *b, int reverse)
                                 str_append(input, ch);
                         }
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_S) {
-                        if (step < pairs.len-1)
+                        if (step < (int)pairs.len-1)
                                 ++step;
                 } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_R) {
                         if (step > 0)
@@ -1233,6 +1233,7 @@ input_from_minibuffer(buffer     *b,
                                 return NULL;
                         }
                         break;
+                default: break;
                 }
         }
 
@@ -1243,9 +1244,9 @@ done:
 void
 buffer_jump_to_verts(buffer *b, int x, int y)
 {
-        if (y > b->lns.len-1 || y < 0)
+        if (y > (int)b->lns.len-1 || y < 0)
                 return;
-        if (x > b->lns.data[y]->s.len-1 || x < 0)
+        if (x > (int)b->lns.data[y]->s.len-1 || x < 0)
                 return;
         b->cx = x;
         b->cy = y;
@@ -1267,7 +1268,7 @@ jump_to_line(buffer *b)
 
         no = atoi(input);
 
-        if (no-1 >= b->lns.len || no-1 <= 0)
+        if (no-1 >= (int)b->lns.len || no-1 <= 0)
                 return;
 
         b->cx = 0;
@@ -1284,13 +1285,9 @@ super_backspace(buffer *b)
                 return 0;
 
         line   *ln;
-        size_t  len;
-        int     deleted_newline;
         size_t  start;
 
         ln              = b->lns.data[b->al];
-        len             = str_len(&ln->s);
-        deleted_newline = 0;
         start           = b->cx;
 
         // cursor at beginning of line fall back to regular backspace
@@ -1464,15 +1461,11 @@ show_whitespace(const buffer *b,
                 const str    *s,
                 int           eol)
 {
-        int         space;
-        const char *sraw;
-        char        spc;
+        (void)b;
 
-        space = -1;
-        sraw  = str_cstr(s);
-        spc   = (glconf.flags & FT_SHOWTRAILS) != 0
-                        ? '-'
-                        : ' ';
+        char spc;
+
+        spc = (glconf.flags & FT_SHOWTRAILS) != 0 ? '-' : ' ';
 
         if (eol <= -1)
                 return;
@@ -1539,9 +1532,9 @@ drawln(const buffer *b,
                 int_array matches = find_line_matches(b, s);
 
                 for (size_t i = 0; i < str_len(s); ++i) {
-                        if (matches.len > 0 && i == matches.data[0]) {
+                        if (matches.len > 0 && (int)i == matches.data[0]) {
                                 if (b->cx >= i && b->cx <= matches.data[0] + str_len(&b->last_search)
-                                        && b->al == lineno)
+                                        && (int)b->al == lineno)
                                         printf(INVERT BOLD ORANGE "%s" RESET, str_cstr(&b->last_search));
                                 else
                                         printf(INVERT DIM YELLOW "%s" RESET, str_cstr(&b->last_search));
@@ -1555,10 +1548,7 @@ drawln(const buffer *b,
                 }
 
                 dyn_array_free(matches);
-                goto done;
         } else if (b->state == BS_SELECTION) {
-                int selection_active = 1;
-
                 size_t anchor_y = b->sy;
                 size_t cursor_y = b->al;
                 size_t anchor_x = b->sx;
@@ -1572,9 +1562,9 @@ drawln(const buffer *b,
                 size_t start_x = forward ? anchor_x : cursor_x;
                 size_t end_x   = forward ? cursor_x : anchor_x;
 
-                int is_start_line  = (lineno == start_y);
-                int is_end_line    = (lineno == end_y);
-                int is_middle_line = (lineno > start_y && lineno < end_y);
+                int is_start_line  = (lineno == (int)start_y);
+                int is_end_line    = (lineno == (int)end_y);
+                int is_middle_line = (lineno > (int)start_y && lineno < (int)end_y);
 
                 for (size_t i = 0; i < str_len(s); ++i) {
                         int in_selection = 0;
@@ -1603,19 +1593,16 @@ drawln(const buffer *b,
                         }*/
 
                         if (isprint(ch) || ch == '\n') printf("%s%c", color, ch);
-                        else             printf("%s" GRAY ">" RESET, color);
+                        else                           printf("%s" GRAY ">" RESET, color);
                 }
-
-                goto done;
+        } else {
+                for (size_t i = 0; (int)i < eol; ++i) {
+                        if (sraw[i] == '\t')
+                                printf(GRAY ">" RESET);
+                        putchar(sraw[i]);
+                }
         }
 
-        for (size_t i = 0; i < eol; ++i) {
-                if (sraw[i] == '\t')
-                        printf(GRAY ">" RESET);
-                putchar(sraw[i]);
-        }
-
-done:
         show_whitespace(b, s, eol);
 }
 
