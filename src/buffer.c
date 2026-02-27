@@ -1712,17 +1712,23 @@ buffer_dump(const buffer *b)
 
         clear_terminal();
 
-        if (end > b->lns.len)
-                end = b->lns.len;
+        //if (end > b->lns.len)
+                //end = b->lns.len;
 
         for (size_t i = start; i < end; ++i) {
-                const line *l = b->lns.data[i];
-                if (!l) break;
-
-                gotoxy(0, i - b->vscrloff);
-                printf("\x1b[K");
-                drawln(b, l, i);
+                if (i >= b->lns.len) {
+                        gotoxy(0, i - b->vscrloff);
+                        printf("\x1b[K");
+                        printf(DIM "~");
+                } else {
+                        const line *l = b->lns.data[i];
+                        gotoxy(0, i - b->vscrloff);
+                        printf("\x1b[K");
+                        drawln(b, l, i);
+                }
         }
+
+        printf(RESET);
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         draw_status(b, NULL);
