@@ -1321,6 +1321,26 @@ super_backspace(buffer *b)
         return 1;
 }
 
+static void
+expand_region(buffer *b)
+{
+        const line *ln   = b->lns.data[b->al];
+        const str  *s    = &ln->s;
+        const char *sraw = str_cstr(s);
+        int         oldcx = b->cx;
+
+        if (b->cx >= str_len(s)-1)
+                return;
+
+        if (b->state != BS_SELECTION)
+                selection(b);
+
+        jump_next_word(b);
+
+        b->wish_col = b->cx;
+        adjust_scroll(b);
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1433,6 +1453,9 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (BACKSPACE(ch)) {
                         return super_backspace(b) ? BP_INSERTNL : BP_INSERT;
+                } else if (ch == ' ') {
+                        expand_region(b);
+                        return BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
