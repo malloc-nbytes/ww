@@ -46,6 +46,10 @@ typedef struct {
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);
 
+// MUST CALL THIS FUNCTION BEFORE
+// ANY BUFFER FUNCTIONS! CALL IN MAIN!
+void         buffer_setup(void);
+
 buffer      *buffer_alloc(window *parent);
 buffer      *buffer_from_file(str filename, window *parent);
 buffer_proc  buffer_process(buffer *b, input_type ty, char ch);

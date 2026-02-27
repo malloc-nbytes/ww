@@ -25,6 +25,8 @@ run(const char *filename)
         char   *real;
         int     file_provided;
 
+        buffer_setup();
+
         win           = window_create(glconf.term.w, glconf.term.h);
         real          = get_realpath(filename);
         file_provided = 1;

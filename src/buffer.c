@@ -7,6 +7,7 @@
 #include "pair.h"
 #include "glconf.h"
 #include "flags.h"
+#include "trie.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -34,7 +35,8 @@ PAIR_IMPL(int, int, int_pair)
 DYN_ARRAY_TYPE(int_array, int_array_array);
 DYN_ARRAY_TYPE(int_pair, int_pair_array);
 
-static char_array g_cpy_buf = dyn_array_empty(char_array);
+static char_array g_cpy_buf;
+static void *g_trie;
 
 static const char *
 state_to_cstr(const buffer *b)
@@ -1690,5 +1692,12 @@ buffer_dump(const buffer *b)
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         draw_status(b, NULL);
+}
+
+void
+buffer_setup(void)
+{
+        g_cpy_buf = dyn_array_empty(char_array);
+        g_trie    = NULL;
 }
 
