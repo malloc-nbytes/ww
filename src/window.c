@@ -579,10 +579,11 @@ capture_command_output(str *input)
         return output;
 }
 
-#define COMPILATION_HEADER "*** " BOLD WHITE "Compilation" RESET " [ " BOLD YELLOW "%s" RESET " ] [ (q)uit, a(g)ain, M-<tab>:switch-here ] ***\n\n"
 static void
 do_compilation(window *win)
 {
+#define COMPILATION_HEADER "*** Compilation [ %s ] [ (q)uit, a(g)ain, M-<tab>:switch-here ] ***\n\n"
+
         if (!win->compile)
                 return;
 
@@ -633,6 +634,8 @@ do_compilation(window *win)
 
         str_destroy(&input);
         buffer_dump(win->ab);
+
+#undef COMPILATION_HEADER
 }
 
 static str
