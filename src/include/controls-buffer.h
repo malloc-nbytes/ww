@@ -77,6 +77,7 @@
 "\n" \
 "Misc.:\n" \
 "\n" \
-"C-l = center view\n"
+"C-l = center view\n" \
+"C-g = cancel action\n"
 
 #endif
