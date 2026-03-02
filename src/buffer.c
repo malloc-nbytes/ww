@@ -456,7 +456,8 @@ buffer_eol(buffer *b)
         b->cx = str_len(&b->lns.data[b->al]->s)-1;
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b);
+        adjust_scroll(b);
+        return 0;
 }
 
 static int
@@ -838,7 +839,7 @@ kill_line(buffer *b)
         adjust_scroll(b);
 }
 
-static void
+static int
 jump_next_word(buffer *b)
 {
         const line *ln;
@@ -854,7 +855,7 @@ jump_next_word(buffer *b)
         i        = b->cx;
 
         if (str_len(s) <= 0)
-                return;
+                return 0;
 
         while (i < str_len(s)) {
                 if (isalnum(sraw[i]))
@@ -871,10 +872,10 @@ jump_next_word(buffer *b)
 
         b->wish_col = b->cx;
 
-        adjust_scroll(b);
+        return adjust_scroll(b);
 }
 
-static void
+static int
 jump_prev_word(buffer *b)
 {
         const line *ln;
@@ -890,7 +891,7 @@ jump_prev_word(buffer *b)
         i        = b->cx-1;
 
         if (str_len(s) == 0 || b->cx == 0)
-                return;
+                return 0;
 
         while (i > 0) {
                 if (isalnum(sraw[i]))
@@ -906,7 +907,7 @@ jump_prev_word(buffer *b)
                 ++b->cx;
 
         b->wish_col = b->cx;
-        adjust_scroll(b);
+        return adjust_scroll(b);
 }
 
 static void
@@ -1434,11 +1435,9 @@ buffer_process(buffer     *b,
                         kill_line(b);
                         return BP_INSERTNL;
                 } else if (ch == 'f') {
-                        jump_next_word(b);
-                        return BP_MOV;
+                        return jump_next_word(b) ? BP_INSERTNL : BP_MOV;
                 } else if (ch == 'b') {
-                        jump_prev_word(b);
-                        return BP_MOV;
+                        return jump_prev_word(b) ? BP_INSERTNL : BP_MOV;
                 } else if (ch == 'd') {
                         del_word(b);
                         return BP_INSERT;
@@ -1531,10 +1530,8 @@ show_whitespace(const buffer *b,
 
         space = -1;
         sraw  = str_cstr(s);
-        spc   = (glconf.flags & FT_SHOWTRAILS) != 0
-                        ? '-'
-                        : ' ';
-        len = str_len(s);
+        spc   = (glconf.flags & FT_SHOWTRAILS) != 0 ? '-' : ' ';
+        len   = str_len(s);
         first_trailing = eol + 1;
         last_trailing  = len;
 
