@@ -1,12 +1,42 @@
 * ww
 
+*NOTE*: This package can be installed through forge [ https://github.com/malloc-nbytes/forge ].
+
 *NOTE*: This project is a work in progress and may not function correctly.
+
+*NOTE*: See [[./TODO.org][TODO]] for active features being worked on.
 
 =ww= is a text editor similar to vim or nano but with a _very_ heavy Emacs influence.
 It's controls are mostly default Emacs keybindings (see the help buffer in =ww= by doing =M-x help=).
 
-Also, dependencies such as =ncurses= are not needed, just a =C= compiler.
+Also, dependencies such as =ncurses= are not needed, just a =C= compiler and autotools.
+
+** Dependencies
+
+- A =C= compiler capable of =gnu17=
+- the standard autotools build suite:
+  - =libtool=
+  - =automake=
+  - =make=
+  - =autoconf=
+  - =pkg-config=
+  - =m4=
+
+** Compilation
+
+#+begin_src bash
+  autoreconf -iv
+  ./configure
+  make
+  make install
+#+end_src
 
 ** How to use
 
+Invoke by doing =ww [filepath]= to start editing/creating a file.
 
+To see the help buffer and to see the controls, either invoke =ww= without a file,
+or type =M-x help=.
+
+A configuration file gets created upon first launch of =ww= at =$HOME/.wwrc= and is empty.
+It is advised to copy the contents of [[./.wwrc][.wwrc in this repository]] to get started with configuring it.

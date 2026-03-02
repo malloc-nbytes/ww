@@ -1325,6 +1325,26 @@ super_backspace(buffer *b)
         return 1;
 }
 
+static void
+expand_region(buffer *b)
+{
+        const line *ln   = b->lns.data[b->al];
+        const str  *s    = &ln->s;
+        const char *sraw = str_cstr(s);
+        int         oldcx = b->cx;
+
+        if (b->cx >= str_len(s)-1)
+                return;
+
+        if (b->state != BS_SELECTION)
+                selection(b);
+
+        jump_next_word(b);
+
+        b->wish_col = b->cx;
+        adjust_scroll(b);
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1437,6 +1457,9 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (BACKSPACE(ch)) {
                         return super_backspace(b) ? BP_INSERTNL : BP_INSERT;
+                } else if (ch == ' ') {
+                        expand_region(b);
+                        return BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
@@ -1718,17 +1741,23 @@ buffer_dump(const buffer *b)
 
         clear_terminal();
 
-        if (end > b->lns.len)
-                end = b->lns.len;
+        //if (end > b->lns.len)
+                //end = b->lns.len;
 
         for (size_t i = start; i < end; ++i) {
-                const line *l = b->lns.data[i];
-                if (!l) break;
-
-                gotoxy(0, i - b->vscrloff);
-                printf("\x1b[K");
-                drawln(b, l, i);
+                if (i >= b->lns.len) {
+                        gotoxy(0, i - b->vscrloff);
+                        printf("\x1b[K");
+                        printf(DIM "~");
+                } else {
+                        const line *l = b->lns.data[i];
+                        gotoxy(0, i - b->vscrloff);
+                        printf("\x1b[K");
+                        drawln(b, l, i);
+                }
         }
+
+        printf(RESET);
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         draw_status(b, NULL);
