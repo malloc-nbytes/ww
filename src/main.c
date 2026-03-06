@@ -29,12 +29,14 @@ run(const char *filename)
         real          = get_realpath(filename);
         file_provided = 1;
 
-        if (real)
-                fp = str_from(real);
-        else if (!filename) {
+        if (real && is_dir(real)) {
+                if (chdir(real) != 0)
+                        fatal("could not chdir to `%s'", real);
                 fp            = str_from("ww-help");
                 file_provided = 0;
         }
+        else if (real)
+                fp = str_from(real);
         else
                 fp = str_from(filename);
 
@@ -199,7 +201,8 @@ main(int argc, char *argv[])
         if (!setup_config_file())
                 fatal("aborting");
 
-        filename = parse_args(argc, argv);
+        if (!(filename = parse_args(argc, argv)))
+            usage(NULL);
 
         if (!init())
                 fatal("aborting");

@@ -15,5 +15,6 @@ argument *argument_alloc(int    argc,
                          char **argv,
                          int    skip_first);
 void argument_free(argument *arg);
+void usage(argument **_);
 
 #endif // ARGUMENT_H_INCLUDED

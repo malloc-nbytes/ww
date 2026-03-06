@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void
+void
 usage(argument **_)
 {
         (void)_;
@@ -246,8 +246,8 @@ parse_args(int argc, char *argv[])
                 it = it->n;
         }
 
-        if (filename && is_dir(filename))
-                fatal("given file must not be a directory");
+        /* if (filename && is_dir(filename)) */
+        /*         fatal("given file must not be a directory"); */
 
         return filename;
 }
