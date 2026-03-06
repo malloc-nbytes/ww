@@ -87,6 +87,7 @@ parse_option1(const char *s)
 {
         static void (*cmdfunc[])(void) = {
                 usage,
+                version,
         };
 
         static const char options[] = FLAG1CPL;

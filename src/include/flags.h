@@ -7,9 +7,11 @@
 #define DEFAULT_TO_CLIPBOARD_COMMAND "echo '%s' | xclip -selection clipboard"
 
 #define FLAG1HELP 'h'
+#define FLAG1VERESION 'v'
 
 #define FLAG1CPL {                              \
                 FLAG1HELP,                      \
+                FLAG1VERESION,                  \
         }
 
 #define FLAG2HELP "help"
@@ -24,5 +26,6 @@ enum {
 };
 
 void usage(void);
+void version(void);
 
 #endif // FLAGS_H_INCLUDED

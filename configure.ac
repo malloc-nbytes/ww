@@ -6,4 +6,11 @@ AC_CONFIG_FILES([
     Makefile
     src/Makefile
 ])
+
+AC_DEFINE_UNQUOTED([COMPILER_NAME], ["$CC"], [Name of the C compiler])
+AC_DEFINE_UNQUOTED([COMPILER_VERSION], ["`$CC --version | head -n1`"], [Version of the C compiler])
+AC_DEFINE_UNQUOTED([COMPILER_PATH], ["`which $CC`"], [Full path to the C compiler])
+AC_DEFINE_UNQUOTED([PREFIX], ["$prefix"], [Installation prefix directory])
+AC_DEFINE_UNQUOTED([LIBDIR], ["$libdir"], [Library installation directory])
+
 AC_OUTPUT
