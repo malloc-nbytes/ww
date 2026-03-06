@@ -60,6 +60,7 @@
 "C-d           = delete char under cursor *\n" \
 "M-d           = delete word\n" \
 "C-SPACE | C-c = begin/end selection *\n" \
+"M-SPACE       = highlight word\n" \
 "M-w           = copy selection *\n" \
 "C-w           = cut selection\n" \
 "C-y           = paste *\n" \
@@ -76,6 +77,7 @@
 "\n" \
 "Misc.:\n" \
 "\n" \
-"C-l = center view\n"
+"C-l = center view\n" \
+"C-g = cancel action\n"
 
 #endif
