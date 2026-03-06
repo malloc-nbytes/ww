@@ -16,18 +16,18 @@
 
 #define FLAG2HELP    "help"
 #define FLAG2VERSION "version"
+#define FLAG2FAR     "far"
 
 #define FLAG2CPL {                              \
                 FLAG2HELP,                      \
                 FLAG2VERSION,                   \
+                FLAG2FAR,                       \
         }
 
 enum {
         FT_SHOWTRAILS = 1 << 0,
         FT_TABMODE    = 1 << 1,
+        FT_FAR        = 1 << 2,
 };
-
-void usage(void);
-void version(void);
 
 #endif // FLAGS_H_INCLUDED

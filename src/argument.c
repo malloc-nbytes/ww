@@ -3,10 +3,80 @@
 #include "io.h"
 #include "glconf.h"
 #include "flags.h"
+#include "colors.h"
+#include "config.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+static void
+usage(argument **_)
+{
+        (void)_;
+
+        printf("ww version 1.0, Copyright (C) 2025 malloc-nbytes.\n");
+        printf("ww comes with ABSOLUTELY NO WARRANTY.\n");
+        printf("This is free software, and you are welcome to redistribute it\n");
+        printf("under certain conditions; see command `copying`.\n\n");
+
+        printf("Compiler information:\n");
+        printf("| cc: " COMPILER_NAME "\n");
+        printf("| path: " COMPILER_PATH "\n");
+        printf("| ver.: " COMPILER_VERSION "\n\n");
+
+        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN "[FILEPATH]" RESET " [^\\+\\d+$]\n");
+        printf("Options:\n");
+        printf("  " YELLOW "-h, --help" RESET "            display this message\n");
+        printf("  " YELLOW "-v, --version" RESET "         show the version\n");
+        printf("  " YELLOW "    --far in=<fp|dir>\n");
+        printf("            query=<q>\n");
+        printf("            repl=<r>" RESET "    find and replace `query' with `repl' in `fp|dir'\n");
+        exit(0);
+}
+
+static void
+version(argument **_)
+{
+        (void)_;
+
+        printf("ww-v" VERSION "\n");
+        exit(0);
+}
+
+static void
+far(argument **a)
+{
+        char *in;
+        char *query;
+        char *repl;
+
+        *a = (*a)->n;
+
+        if (!*a || !(*a)->n || !(*a)->n->n)
+                goto bad;
+
+        if (strcmp((*a)->s, "in"))
+                goto bad;
+
+        in = strdup((*a)->eq);
+        *a = (*a)->n;
+
+        if (strcmp((*a)->s, "query"))
+                goto bad;
+
+        query = strdup((*a)->eq);
+        *a = (*a)->n;
+
+        if (strcmp((*a)->s, "repl"))
+                goto bad;
+
+        repl = strdup((*a)->eq);
+
+        return;
+ bad:
+        fatal("incorrect usage for option `far', see --help");
+}
 
 static char *
 argument_eat(int *argc, char ***argv)
@@ -83,9 +153,11 @@ argument_free(argument *arg)
 }
 
 static void
-parse_option1(const char *s)
+parse_option1(argument **a)
 {
-        static void (*cmdfunc[])(void) = {
+        const char *s;
+
+        static void (*cmdfunc[])(argument **) = {
                 usage,
                 version,
         };
@@ -94,6 +166,8 @@ parse_option1(const char *s)
 
         _Static_assert(sizeof(cmdfunc)/sizeof(*cmdfunc) == sizeof(options)/sizeof(*options),
                        "commands and options must match");
+
+        s = (*a)->s;
 
         for (size_t i = 0; s[i]; ++i) {
                 ssize_t func = -1;
@@ -105,18 +179,20 @@ parse_option1(const char *s)
                 }
                 if (func == -1)
                         fatal("unknown option `%c'", s[i]);
-                cmdfunc[func]();
+                cmdfunc[func](a);
         }
 }
 
 static void
-parse_option2(const char *s)
+parse_option2(argument **a)
 {
         ssize_t func;
+        const char *s;
 
-        static void (*cmdfunc[])(void) = {
+        static void (*cmdfunc[])(argument **) = {
                 usage,
                 version,
+                far,
         };
 
         static const char *options[] = FLAG2CPL;
@@ -125,6 +201,8 @@ parse_option2(const char *s)
                        "commands and options must match");
 
         func = -1;
+
+        s = (*a)->s;
 
         for (size_t i = 0; i < sizeof(options)/sizeof(*options); ++i) {
                 if (!strcmp(s, options[i])) {
@@ -136,7 +214,7 @@ parse_option2(const char *s)
         if (func == -1)
                 fatal("unknown option `%s'", s);
 
-        cmdfunc[func]();
+        cmdfunc[func](a);
 }
 
 char *
@@ -158,14 +236,14 @@ parse_args(int argc, char *argv[])
                         glconf.starting_lineno = lineno;
                 }
                 else if (it->h == 1) {
-                        parse_option1(it->s);
+                        parse_option1(&it);
                 } else if (it->h == 2) {
-                        parse_option2(it->s);
+                        parse_option2(&it);
                 } else if (filename)
                         fatal("only one filename is supported");
                 else
                         filename = strdup(it->s);
-                it       = it->n;
+                it = it->n;
         }
 
         if (filename && is_dir(filename))
