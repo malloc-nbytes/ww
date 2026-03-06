@@ -456,8 +456,7 @@ buffer_eol(buffer *b)
         b->cx = str_len(&b->lns.data[b->al]->s)-1;
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        adjust_scroll(b);
-        return 0;
+        return adjust_scroll(b);
 }
 
 static int
@@ -1599,7 +1598,6 @@ drawln(const buffer *b,
                 }
 
                 dyn_array_free(matches);
-                goto done;
         } else if (b->state == BS_SELECTION) {
                 int selection_active = 1;
 
@@ -1640,32 +1638,24 @@ drawln(const buffer *b,
                         char ch = str_at(s, i);
                         const char *color = in_selection ? INVERT : RESET;
 
-                        /*if (in_selection) {
-                                printf(INVERT "%c", str_at(s, i));
-                        } else {
-                                printf(RESET "%c", str_at(s, i));
-                        }*/
-
-                        if (isprint(ch) || ch == '\n') printf("%s%c", color, ch);
-                        else             printf("%s" GRAY ">" RESET, color);
+                        if (isprint(ch) || ch == '\n')
+                                printf("%s%c", color, ch);
+                        else
+                                printf("%s" GRAY ">" RESET, color);
                 }
+        } else {
+                size_t win_w   = b->parent->w;
+                size_t start_x = b->hscrloff;
+                size_t end_x   = start_x + win_w;
 
-                goto done;
+                for (size_t i = start_x; i < eol && i < end_x; ++i) {
+                        if (sraw[i] == '\t')
+                                printf(GRAY ">" RESET);
+                        putchar(sraw[i]);
+                }
         }
 
-
-        size_t win_w   = b->parent->w;
-        size_t start_x = b->hscrloff;
-        size_t end_x   = start_x + win_w;
-
-        for (size_t i = start_x; i < eol && i < end_x; ++i) {
-                if (sraw[i] == '\t')
-                        printf(GRAY ">" RESET);
-                putchar(sraw[i]);
-        }
-
-done:
-        show_whitespace(b, s, eol, start_x, end_x);
+        show_whitespace(b, s, eol, b->hscrloff, b->hscrloff + b->parent->w);
 }
 
 static void
