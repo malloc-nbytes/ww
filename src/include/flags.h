@@ -16,11 +16,13 @@
 
 #define FLAG2HELP    "help"
 #define FLAG2VERSION "version"
+#define FLAG2COPYING "copying"
 #define FLAG2FAR     "far"
 
 #define FLAG2CPL {                              \
                 FLAG2HELP,                      \
                 FLAG2VERSION,                   \
+                FLAG2COPYING,                   \
                 FLAG2FAR,                       \
         }
 

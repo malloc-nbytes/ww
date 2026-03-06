@@ -5,6 +5,7 @@
 #include "flags.h"
 #include "colors.h"
 #include "config.h"
+#include "copying.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -25,13 +26,26 @@ usage(argument **_)
         printf("| path: " COMPILER_PATH "\n");
         printf("| ver.: " COMPILER_VERSION "\n\n");
 
-        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN "[FILEPATH]" RESET " [^\\+\\d+$]\n");
+        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN "[FILEPATH]" RESET " [^\\+\\d+$]\n\n");
         printf("Options:\n");
-        printf("  " YELLOW "-h, --help" RESET "            display this message\n");
-        printf("  " YELLOW "-v, --version" RESET "         show the version\n");
-        printf("  " YELLOW "    --far in=<fp|dir>\n");
-        printf("            query=<q>\n");
-        printf("            repl=<r>" RESET "    find and replace `query' with `repl' in `fp|dir'\n");
+        printf("  " YELLOW BOLD "-h, --help" "            " RESET " display this message\n");
+        printf("  " YELLOW BOLD "-v, --version" "         " RESET " show the version\n");
+        printf("  " YELLOW BOLD "    --copying" "         " RESET " show copying information\n");
+        printf("  " YELLOW BOLD "    --far query=<str>\n");
+        printf("            repl=<str>  " RESET " find and replace `query' with `repl' in `fp|dir'\n");
+        exit(0);
+}
+
+static void
+copying(argument **_)
+{
+        (void)_;
+        printf(COPYING1);
+        printf(COPYING2);
+        printf(COPYING3);
+        printf(COPYING4);
+        printf(COPYING5);
+        printf(COPYING6);
         exit(0);
 }
 
@@ -47,31 +61,29 @@ version(argument **_)
 static void
 far(argument **a)
 {
-        char *in;
         char *query;
         char *repl;
 
         *a = (*a)->n;
 
-        if (!*a || !(*a)->n || !(*a)->n->n)
+        if (!*a || !(*a)->n)
                 goto bad;
-
-        if (strcmp((*a)->s, "in"))
-                goto bad;
-
-        in = strdup((*a)->eq);
-        *a = (*a)->n;
 
         if (strcmp((*a)->s, "query"))
                 goto bad;
 
         query = strdup((*a)->eq);
+
         *a = (*a)->n;
 
         if (strcmp((*a)->s, "repl"))
                 goto bad;
 
         repl = strdup((*a)->eq);
+
+        glconf.flags     |= FT_FAR;
+        glconf.far.query  = query;
+        glconf.far.repl   = repl;
 
         return;
  bad:
@@ -192,6 +204,7 @@ parse_option2(argument **a)
         static void (*cmdfunc[])(argument **) = {
                 usage,
                 version,
+                copying,
                 far,
         };
 
@@ -246,8 +259,11 @@ parse_args(int argc, char *argv[])
                 it = it->n;
         }
 
-        /* if (filename && is_dir(filename)) */
-        /*         fatal("given file must not be a directory"); */
+        if (glconf.flags & FT_FAR) {
+                if (!filename)
+                        fatal("option `far' requires a file or directory");
+                glconf.far.path = filename;
+        }
 
         return filename;
 }

@@ -1,20 +1,5 @@
 /* src/include/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Compiler flags used */
-#undef COMPILER_FLAGS
-
-/* Name of the C compiler */
-#undef COMPILER_NAME
-
-/* Full path to the C compiler */
-#undef COMPILER_PATH
-
-/* Version of the C compiler */
-#undef COMPILER_VERSION
-
-/* Library installation directory */
-#undef LIBDIR
-
 /* Name of package */
 #undef PACKAGE
 
@@ -35,9 +20,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* Installation prefix directory */
-#undef PREFIX
 
 /* Version number of package */
 #undef VERSION

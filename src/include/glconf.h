@@ -23,6 +23,12 @@ extern struct {
                 size_t h;
                 struct termios old;
         } term;
+
+        struct {
+                char *path;
+                char *query;
+                char *repl;
+        } far;
 } glconf;
 
 #endif // GLCONF_H_INCLUDED
