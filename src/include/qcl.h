@@ -479,7 +479,7 @@ _qcl_lexer_dump(const _qcl_lexer *l)
         }
 }
 
-QCL_MAP_TYPE(const char *, _qcl_tt, symmap);
+QCL_MAP_TYPE(const char *, _qcl_tt, symmap)
 
 static unsigned
 _qcl_symmap_hash(const char **s)
@@ -1518,7 +1518,7 @@ qcl_value_bool_alloc(int b)
         return v;
 }
 
-QCL_MAP_TYPE(const char *, qcl_value *, symtbl);
+QCL_MAP_TYPE(const char *, qcl_value *, symtbl)
 
 static unsigned
 symtbl_hash(const char **sym)

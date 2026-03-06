@@ -50,6 +50,7 @@ run(const char *filename)
                 win.pbi = win.abi;
         }
 
+        init_buffer_context();
         window_handle(&win);
 
         return 1;
