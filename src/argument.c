@@ -112,8 +112,31 @@ parse_option1(const char *s)
 static void
 parse_option2(const char *s)
 {
-        (void)s;
-        assert(0 && "two-hyphen flags are unimplemented");
+        ssize_t func;
+
+        static void (*cmdfunc[])(void) = {
+                usage,
+                version,
+        };
+
+        static const char *options[] = FLAG2CPL;
+
+        _Static_assert(sizeof(cmdfunc)/sizeof(*cmdfunc) == sizeof(options)/sizeof(*options),
+                       "commands and options must match");
+
+        func = -1;
+
+        for (size_t i = 0; i < sizeof(options)/sizeof(*options); ++i) {
+                if (!strcmp(s, options[i])) {
+                        func = (ssize_t)i;
+                        break;
+                }
+        }
+
+        if (func == -1)
+                fatal("unknown option `%s'", s);
+
+        cmdfunc[func]();
 }
 
 char *
