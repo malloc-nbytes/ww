@@ -1323,8 +1323,6 @@ expand_region(buffer *b)
 {
         const line *ln   = b->lns.data[b->al];
         const str  *s    = &ln->s;
-        const char *sraw = str_cstr(s);
-        int         oldcx = b->cx;
 
         if (b->cx >= str_len(s)-1)
                 return;
