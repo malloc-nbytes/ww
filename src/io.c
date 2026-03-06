@@ -16,7 +16,7 @@ file_exists(const char *fp)
 {
         FILE *f;
 
-        if (f = fopen(fp, "r")) {
+        if ((f = fopen(fp, "r")) != NULL) {
                 fclose(f);
                 return 1;
         }

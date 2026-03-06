@@ -1,5 +1,8 @@
 #include "argument.h"
 #include "error.h"
+#include "io.h"
+#include "glconf.h"
+#include "flags.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -79,6 +82,39 @@ argument_free(argument *arg)
         }
 }
 
+static void
+parse_option1(const char *s)
+{
+        static void (*cmdfunc[])(void) = {
+                usage,
+        };
+
+        static const char options[] = FLAG1CPL;
+
+        _Static_assert(sizeof(cmdfunc)/sizeof(*cmdfunc) == sizeof(options)/sizeof(*options),
+                       "commands and options must match");
+
+        for (size_t i = 0; s[i]; ++i) {
+                ssize_t func = -1;
+                for (size_t j = 0; j < sizeof(options)/sizeof(*options); ++j) {
+                        if (s[i] == options[j]) {
+                                func = (ssize_t)j;
+                                break;
+                        }
+                }
+                if (func == -1)
+                        fatal("unknown option `%c'", s[i]);
+                cmdfunc[func]();
+        }
+}
+
+static void
+parse_option2(const char *s)
+{
+        (void)s;
+        assert(0 && "two-hyphen flags are unimplemented");
+}
+
 char *
 parse_args(int argc, char *argv[])
 {
@@ -91,13 +127,25 @@ parse_args(int argc, char *argv[])
         it       = hd;
 
         while (it) {
-                if (it->h)
-                        fatal("options are unimplemented");
-                if (filename)
+                if (!it->h && it->s[0] == '+') {
+                        int lineno = atoi(it->s+1);
+                        if (!lineno && it->s[0] == '0')
+                                fatal("invalid starting line number");
+                        glconf.starting_lineno = lineno;
+                }
+                else if (it->h == 1) {
+                        parse_option1(it->s);
+                } else if (it->h == 2) {
+                        parse_option2(it->s);
+                } else if (filename)
                         fatal("only one filename is supported");
-                filename = strdup(it->s);
+                else
+                        filename = strdup(it->s);
                 it       = it->n;
         }
+
+        if (filename && is_dir(filename))
+                fatal("given file must not be a directory");
 
         return filename;
 }

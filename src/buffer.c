@@ -1694,9 +1694,6 @@ buffer_dump(const buffer *b)
 
         clear_terminal();
 
-        //if (end > b->lns.len)
-                //end = b->lns.len;
-
         for (size_t i = start; i < end; ++i) {
                 if (i >= b->lns.len) {
                         gotoxy(0, i - b->vscrloff);

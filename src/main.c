@@ -45,6 +45,8 @@ run(const char *filename)
                 if (!(buffer = buffer_from_file(fp, &win)))
                         return 0;
 
+                buffer->al = glconf.starting_lineno ? glconf.starting_lineno-1 : 0;
+                buffer->cy = buffer->al;
                 window_add_buffer(&win, buffer, 1);
                 win.pb = win.ab;
                 win.pbi = win.abi;
@@ -197,12 +199,14 @@ main(int argc, char *argv[])
         if (!setup_config_file())
                 fatal("aborting");
 
+        filename = parse_args(argc, argv);
+
         if (!init())
                 fatal("aborting");
-
         atexit(cleanup);
-        filename = parse_args(argc, argv);
+
         int res = run(filename);
+
         free(filename);
 
         return res;

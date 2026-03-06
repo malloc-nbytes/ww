@@ -6,6 +6,18 @@
 #define DEFAULT_COMPILE_COMMAND "make"
 #define DEFAULT_TO_CLIPBOARD_COMMAND "echo '%s' | xclip -selection clipboard"
 
+#define FLAG1HELP 'h'
+
+#define FLAG1CPL {                              \
+                FLAG1HELP,                      \
+        }
+
+#define FLAG2HELP "help"
+
+#define FLAG2CPL {                              \
+                FLAG2HELP,                      \
+        }
+
 enum {
         FT_SHOWTRAILS = 1 << 0,
         FT_TABMODE = 1 << 1,

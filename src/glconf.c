@@ -7,6 +7,7 @@
 struct {
         uint32_t flags;
         char     config_filepath[512];
+        size_t   starting_lineno;
 
         struct {
                 int         space_amt;
@@ -22,6 +23,7 @@ struct {
 } glconf = {
         .flags           = 0x0000,
         .config_filepath = {0},
+        .starting_lineno = 0,
         .defaults = {
                 .space_amt    = DEFAULT_SPACE_AMT,
                 .compile_cmd  = DEFAULT_COMPILE_COMMAND,
