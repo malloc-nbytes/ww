@@ -28,7 +28,7 @@ extern struct {
                 char *path;
                 char *query;
                 char *repl;
-        } far;
+        } replace;
 } glconf;
 
 #endif // GLCONF_H_INCLUDED

@@ -25,7 +25,7 @@ struct {
                 char *path;
                 char *query;
                 char *repl;
-        } far;
+        } replace;
 } glconf = {
         .flags           = 0x0000,
         .config_filepath = {0},
@@ -40,7 +40,7 @@ struct {
                 .h   = 0,
                 .old = {0},
         },
-        .far = {
+        .replace = {
                 .path  = NULL,
                 .query = NULL,
                 .repl  = NULL,

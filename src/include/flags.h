@@ -17,19 +17,19 @@
 #define FLAG2HELP    "help"
 #define FLAG2VERSION "version"
 #define FLAG2COPYING "copying"
-#define FLAG2FAR     "far"
+#define FLAG2REPLACE "replace"
 
 #define FLAG2CPL {                              \
                 FLAG2HELP,                      \
                 FLAG2VERSION,                   \
                 FLAG2COPYING,                   \
-                FLAG2FAR,                       \
+                FLAG2REPLACE,                   \
         }
 
 enum {
         FT_SHOWTRAILS = 1 << 0,
         FT_TABMODE    = 1 << 1,
-        FT_FAR        = 1 << 2,
+        FT_REPLACE    = 1 << 2,
 };
 
 #endif // FLAGS_H_INCLUDED

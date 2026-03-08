@@ -28,11 +28,11 @@ usage(argument **_)
 
         printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN "[FILEPATH]" RESET " [^\\+\\d+$]\n\n");
         printf("Options:\n");
-        printf("  " YELLOW BOLD "-h, --help" "            " RESET " display this message\n");
-        printf("  " YELLOW BOLD "-v, --version" "         " RESET " show the version\n");
-        printf("  " YELLOW BOLD "    --copying" "         " RESET " show copying information\n");
-        printf("  " YELLOW BOLD "    --far query=<str>\n");
-        printf("            repl=<str>  " RESET " find and replace `query' with `repl' in `fp|dir'\n");
+        printf("  " YELLOW BOLD "-h, --help" "            " RESET "     display this message\n");
+        printf("  " YELLOW BOLD "-v, --version" "         " RESET "     show the version\n");
+        printf("  " YELLOW BOLD "    --copying" "         " RESET "     show copying information\n");
+        printf("  " YELLOW BOLD "    --replace query=<str>\n");
+        printf("                repl=<str>  " RESET " find and replace `query' with `repl'\n");
         exit(0);
 }
 
@@ -81,13 +81,13 @@ far(argument **a)
 
         repl = strdup((*a)->eq);
 
-        glconf.flags     |= FT_FAR;
-        glconf.far.query  = query;
-        glconf.far.repl   = repl;
+        glconf.flags         |= FT_REPLACE;
+        glconf.replace.query  = query;
+        glconf.replace.repl   = repl;
 
         return;
  bad:
-        fatal("incorrect usage for option `far', see --help");
+        fatal("incorrect usage for option `replace', see --help");
 }
 
 static char *
@@ -259,10 +259,10 @@ parse_args(int argc, char *argv[])
                 it = it->n;
         }
 
-        if (glconf.flags & FT_FAR) {
+        if (glconf.flags & FT_REPLACE) {
                 if (!filename)
                         fatal("option `far' requires a file or directory");
-                glconf.far.path = filename;
+                glconf.replace.path = filename;
         }
 
         return filename;
