@@ -60,6 +60,84 @@ run(const char *filename)
         return 1;
 }
 
+static int
+replace_in_file(const char *path)
+{
+        // NOTE: returns 1 on failure, 0 on success.
+
+        assert(*glconf.replace.query);
+
+        char       *data;
+        const char *query;
+        size_t      query_n;
+        const char *repl;
+        str         newd;
+        int         changed;
+        int         res;
+
+        if (!(data = load_file(path)))
+                return 1;
+
+        query   = glconf.replace.query;
+        query_n = strlen(query);
+        repl    = glconf.replace.repl;
+        newd    = str_create();
+        changed = 0;
+        res     = 0;
+
+        for (size_t i = 0, lineno = 1; data[i]; ++i) {
+                if (!memcmp(query, data+i, query_n)) {
+                        changed = 1;
+
+                        str_concat(&newd, repl);
+                        i += query_n-1;
+
+                        printf("%zu: %s", lineno, repl);
+                        for (size_t j = i+1; data[j] && data[j] != '\n'; ++j)
+                                putchar(data[j]);
+                        putchar('\n');
+                }
+                else
+                        str_append(&newd, data[i]);
+
+                if (data[i] == '\n')
+                        ++lineno;
+        }
+
+        if (changed)
+                if (!write_file(path, str_cstr(&newd)))
+                        res = 1;
+
+        free(data);
+        str_destroy(&newd);
+
+        return res;
+}
+
+static int
+replace_in_dir(const char *dir)
+{
+        // NOTE: returns 1 on failure, 0 on success.
+
+        assert(0);
+}
+
+static int
+run_replace_option(void)
+{
+        // NOTE: returns 1 on failure, 0 on success.
+
+        const char *path;
+
+        path = glconf.replace.path;
+
+        if (!file_exists(path))
+                return 1;
+        return is_dir(path)
+                ? replace_in_dir(path)
+                : replace_in_file(path);
+}
+
 static void
 sigint_handler(int sig)
 {
@@ -202,15 +280,15 @@ main(int argc, char *argv[])
                 fatal("aborting");
 
         if (!(filename = parse_args(argc, argv)))
-            usage(NULL);
+            option_usage(NULL);
+
+        if (glconf.flags & FT_REPLACE)
+                return run_replace_option();
 
         if (!init())
                 fatal("aborting");
         atexit(cleanup);
-
         int res = run(filename);
-
         free(filename);
-
         return res;
 }

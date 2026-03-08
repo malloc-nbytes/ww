@@ -12,7 +12,7 @@
 #include <string.h>
 
 void
-usage(argument **_)
+option_usage(argument **_)
 {
         (void)_;
 
@@ -26,7 +26,7 @@ usage(argument **_)
         printf("| path: " COMPILER_PATH "\n");
         printf("| ver.: " COMPILER_VERSION "\n\n");
 
-        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN "[FILEPATH]" RESET " [^\\+\\d+$]\n\n");
+        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN "[FILEPATH]" RESET GRAY " [+LINENO]" RESET "\n\n");
         printf("Options:\n");
         printf("  " YELLOW BOLD "-h, --help" "            " RESET "     display this message\n");
         printf("  " YELLOW BOLD "-v, --version" "         " RESET "     show the version\n");
@@ -37,7 +37,7 @@ usage(argument **_)
 }
 
 static void
-copying(argument **_)
+option_copying(argument **_)
 {
         (void)_;
         printf(COPYING1);
@@ -50,7 +50,7 @@ copying(argument **_)
 }
 
 static void
-version(argument **_)
+option_version(argument **_)
 {
         (void)_;
 
@@ -59,7 +59,7 @@ version(argument **_)
 }
 
 static void
-far(argument **a)
+option_replace(argument **a)
 {
         char *query;
         char *repl;
@@ -170,8 +170,8 @@ parse_option1(argument **a)
         const char *s;
 
         static void (*cmdfunc[])(argument **) = {
-                usage,
-                version,
+                option_usage,
+                option_version,
         };
 
         static const char options[] = FLAG1CPL;
@@ -202,10 +202,10 @@ parse_option2(argument **a)
         const char *s;
 
         static void (*cmdfunc[])(argument **) = {
-                usage,
-                version,
-                copying,
-                far,
+                option_usage,
+                option_version,
+                option_copying,
+                option_replace,
         };
 
         static const char *options[] = FLAG2CPL;
