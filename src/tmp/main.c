@@ -92,7 +92,7 @@ replace_in_file(const char *path)
                         str_concat(&newd, repl);
                         i += query_n-1;
 
-                        printf("F %s %zu: %s", path, lineno, repl);
+                        printf("%zu: %s", lineno, repl);
                         for (size_t j = i+1; data[j] && data[j] != '\n'; ++j)
                                 putchar(data[j]);
                         putchar('\n');
@@ -120,35 +120,16 @@ replace_in_dir(const char *dir)
         // NOTE: returns 1 on failure, 0 on success.
 
         cstr_array entries;
-        int        res;
 
         entries = lsdir(dir);
-        res     = 0;
-
-        printf("D %s\n", dir);
 
         for (size_t i = 0; i < entries.len; ++i) {
                 const char *e = entries.data[i];
-                if (!strcmp(e, ".") || !strcmp(e, ".."))
-                        continue;
-                if (is_dir(e)) {
-                        if (replace_in_dir(e) != 0) {
-                                res = 1;
-                                goto done;
-                        }
-                }
-                else {
-                        if (replace_in_file(e) != 0) {
-                                res = 1;
-                                goto done;
-                        }
-                }
+                if (is_dir(e))
+                        replace_in_dir(e);
+                else
+                        replace_in_file(e);
         }
-
-        dyn_array_free(entries);
-
-done:
-        return res;
 }
 
 static int
