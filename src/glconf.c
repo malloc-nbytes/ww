@@ -20,6 +20,12 @@ struct {
                 size_t h;
                 struct termios old;
         } term;
+
+        struct {
+                char *path;
+                char *query;
+                char *repl;
+        } replace;
 } glconf = {
         .flags           = 0x0000,
         .config_filepath = {0},
@@ -33,5 +39,10 @@ struct {
                 .w   = 0,
                 .h   = 0,
                 .old = {0},
+        },
+        .replace = {
+                .path  = NULL,
+                .query = NULL,
+                .repl  = NULL,
         },
 };

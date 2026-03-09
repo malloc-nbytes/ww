@@ -13,7 +13,7 @@ cstr_array lsdir(const char *path);
 cstr_array walkdir(const char *path);
 
 const char *gethome(void);
-char *get_realpath(const char *fp);
+char       *get_realpath(const char *fp);
 const char *get_basename(const char *name);
 
 #endif // IO_H_INCLUDED
