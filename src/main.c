@@ -128,17 +128,29 @@ replace_in_dir(const char *dir)
         printf("D %s\n", dir);
 
         for (size_t i = 0; i < entries.len; ++i) {
-                const char *e = entries.data[i];
-                if (!strcmp(e, ".") || !strcmp(e, ".."))
+                const char *e;
+                str         realpath;
+                const char *rpraw;
+
+                e = entries.data[i];
+
+                if (strcmp(e, ".")==0 || strcmp(e, "..")==0)
                         continue;
-                if (is_dir(e)) {
-                        if (replace_in_dir(e) != 0) {
+
+                realpath = str_from(dir);
+                if (str_at(&realpath, realpath.len-1) != '/')
+                        str_append(&realpath, '/');
+                str_concat(&realpath, e);
+
+                rpraw = str_cstr(&realpath);
+
+                if (is_dir(rpraw)) {
+                        if (replace_in_dir(rpraw) != 0) {
                                 res = 1;
                                 goto done;
                         }
-                }
-                else {
-                        if (replace_in_file(e) != 0) {
+                } else {
+                        if (replace_in_file(rpraw) != 0) {
                                 res = 1;
                                 goto done;
                         }

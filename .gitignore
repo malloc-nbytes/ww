@@ -1,4 +1,5 @@
 main
+src/tmp
 ww
 src/include/config.h.in
 ww-debug-build
