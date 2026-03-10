@@ -9,6 +9,7 @@
 #include "io.h"
 #include "glconf.h"
 #include "utils.h"
+#include "lexer.h"
 
 #include <assert.h>
 #include <stdio.h>
