@@ -57,5 +57,6 @@ void         buffer_copybuf_to_clipboard(const buffer *b);
 void         buffer_find_and_replace_in_selection(buffer *b, const char *from, const char *to);
 void         buffer_jump_to_verts(buffer *b, int x, int y);
 void         init_buffer_context(void);
+void         buffer_dupline(buffer *b);
 
 #endif // BUFFER_H_INUCLUDED

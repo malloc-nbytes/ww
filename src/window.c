@@ -8,7 +8,7 @@
 #include "glconf.h"
 #include "flags.h"
 #include "utils.h"
-#include "controls-buffer.h"
+#include "helpbuf.h"
 #include "error.h"
 
 #include <assert.h>
@@ -858,6 +858,9 @@ metax(window *win)
                 find_file(win);
         } else if (!strcmp(selected, WINDCMD_TRAILMODE)) {
                 glconf.flags ^= FT_SHOWTRAILS;
+                buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINDCMD_DUPLINE)) {
+                buffer_dupline(win->ab);
                 buffer_dump(win->ab);
         } else {
                 buffer_dump(win->ab);

@@ -1336,6 +1336,66 @@ expand_region(buffer *b)
         adjust_scroll(b);
 }
 
+void
+buffer_dupline(buffer *b)
+{
+        if (!writable(b))
+                return;
+
+        line *ln;
+        str  *s;
+        line *newln;
+
+        ln = b->lns.data[b->al];
+        s  = &ln->s;
+        newln = line_from_cstr(str_cstr(s));
+
+        dyn_array_insert_at(b->lns, b->al, newln);
+        ++b->al;
+        ++b->cy;
+        adjust_scroll(b);
+}
+
+static void
+movetxt_up(buffer *b)
+{
+        if (!writable(b))
+                return;
+
+        if (b->al <= 0)
+                return;
+
+        line *tmp;
+
+        tmp                  = b->lns.data[b->al];
+        b->lns.data[b->al]   = b->lns.data[b->al-1];
+        b->lns.data[b->al-1] = tmp;
+
+        --b->al;
+        --b->cy;
+        adjust_scroll(b);
+}
+
+static void
+movetxt_down(buffer *b)
+{
+        if (!writable(b))
+                return;
+
+        if (b->al >= b->lns.len-1)
+                return;
+
+        line *tmp;
+
+        tmp                  = b->lns.data[b->al];
+        b->lns.data[b->al]   = b->lns.data[b->al+1];
+        b->lns.data[b->al+1] = tmp;
+
+        ++b->al;
+        ++b->cy;
+        adjust_scroll(b);
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1451,6 +1511,12 @@ buffer_process(buffer     *b,
                 } else if (ch == ' ') {
                         expand_region(b);
                         return BP_MOV;
+                } else if (ch == 'n') {
+                        movetxt_down(b);
+                        return BP_INSERTNL;
+                } else if (ch == 'p') {
+                        movetxt_up(b);
+                        return BP_INSERTNL;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
