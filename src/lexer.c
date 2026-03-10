@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 static token *
 token_alloc(const char *st,
@@ -71,6 +72,7 @@ lex_file(lexer_cfg cfg)
                 .hd   = NULL,
                 .tl   = NULL,
                 .err  = NULL,
+                .cfg  = cfg,
         };
 
         r     = 1;
@@ -80,6 +82,8 @@ lex_file(lexer_cfg cfg)
         src_n = strlen(src);
 
         while (i < src_n) {
+                char ch = src[i];
+
                 if (memcmp(src+i, cfg.mlop, strlen(cfg.mlop))) {
                         assert(0);
                 } else if (memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl))) {
@@ -92,6 +96,12 @@ lex_file(lexer_cfg cfg)
                         assert(0);
                 } else if (src[i] == ' ') {
                         assert(0);
+                } else if (isalpha(ch) || ch == '_') {
+                        assert(0);
+                } else if (isdigit(ch)) {
+                        assert(0);
+                } else {
+                        ;
                 }
         }
 

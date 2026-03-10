@@ -135,13 +135,6 @@ typedef struct {
 } token;
 
 typedef struct {
-        token *root;
-        token *hd;
-        token *tl;
-        char  *err;
-} lexer;
-
-typedef struct {
         const char  *fp;
         const char  *src;
         const char **kwds;
@@ -150,6 +143,14 @@ typedef struct {
         const char  *sl;   // singleline comment
         uint32_t     bits;
 } lexer_cfg;
+
+typedef struct {
+        token     *root;
+        token     *hd;
+        token     *tl;
+        char      *err;
+        lexer_cfg  cfg;
+} lexer;
 
 lexer_cfg lexer_cfg_from_filext(const char *ext);
 lexer     lex_file(lexer_cfg cfg);
