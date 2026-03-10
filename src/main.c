@@ -322,14 +322,15 @@ main(int argc, char *argv[])
         const char *single   = "//";
 
         lexer l = lex_file((lexer_cfg) {
-                .fp            = "tmp.txt",
-                .src           = load_file("tmp.txt"),
-                .kwds          = kwds,
-                .multi_comm_op = multi_op,
-                .multi_comm_cl = multi_cl,
-                .single_comm   = single,
-                .bits          = LEXERCFG_COPS,
+                .fp   = "tmp.txt",
+                .src  = load_file("tmp.txt"),
+                .kwds = kwds,
+                .mlop = multi_op,
+                .mlcl = multi_cl,
+                .sl   = single,
+                .bits = LEXERCFG_COPS,
         });
+        (void)l;
         return 0;
 
         char *filename;

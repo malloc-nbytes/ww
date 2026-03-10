@@ -52,6 +52,7 @@ lexer_dump(const lexer *l)
 lexer_cfg
 lexer_cfg_from_filext(const char *ext)
 {
+        (void)ext;
         assert(0 && "unimplemented");
 }
 
@@ -74,6 +75,12 @@ lex_file(lexer_cfg cfg)
         c = 1;
         i = 0;
 
+        (void)r;
+        (void)c;
+        (void)i;
+        (void)append;
+        (void)token_alloc;
+
         while (cfg.src[i]) {
                 ;
         }
@@ -87,4 +94,3 @@ lexer_free(lexer *l)
         (void)l;
         assert(0);
 }
-

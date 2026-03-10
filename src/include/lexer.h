@@ -145,9 +145,9 @@ typedef struct {
         const char  *fp;
         const char  *src;
         const char **kwds;
-        const char  *multi_comm_op;
-        const char *multi_comm_cl;
-        const char *single_comm;
+        const char  *mlop; // multiline comment open
+        const char  *mlcl; // multiline comment close
+        const char  *sl;   // singleline comment
         uint32_t     bits;
 } lexer_cfg;
 
