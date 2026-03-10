@@ -1,10 +1,21 @@
 #include "lexer.h"
 #include "io.h"
+#include "map.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+
+MAP_TYPE(char *, token_kind, opmap)
+
+static void
+opmap_init(opmap *m)
+{
+        opmap_insert(m, "(", TK_LPAR);
+        opmap_insert(m, ")", TK_RPAR);
+        opmap_insert(m, ";", TK_SEMI);
+}
 
 static token *
 token_alloc(const char *st,
@@ -31,8 +42,17 @@ token_alloc(const char *st,
         t->loc = loc;
         t->lx  = str_from(buf);
         t->k   = k;
+        t->n   = NULL;
 
         return t;
+}
+
+static const char *
+tloc_cstr(tloc loc)
+{
+        static char buf[256];
+        sprintf(buf, "%s:%zu:%zu", loc.fp, loc.r, loc.c);
+        return buf;
 }
 
 static void
@@ -46,8 +66,15 @@ append(lexer *l, token *t)
 void
 lexer_dump(const lexer *l)
 {
-        (void)l;
-        assert(0);
+        token *it;
+
+        it = l->hd;
+
+        while (it) {
+                printf("{ %s (%d): %s }\n",
+                        str_cstr(&it->lx), (int)it->k, tloc_cstr(it->loc));
+                it = it->n;
+        }
 }
 
 lexer_cfg
@@ -91,6 +118,7 @@ lex_file(lexer_cfg cfg)
         size_t      i;
         const char *src;
         size_t      src_n;
+        opmap       ops;
 
         l = (lexer) {
                 .root = NULL,
@@ -105,6 +133,8 @@ lex_file(lexer_cfg cfg)
         i     = 0;
         src   = cfg.src;
         src_n = strlen(src);
+
+        opmap_init(&ops);
 
         while (i < src_n) {
                 char ch = src[i];

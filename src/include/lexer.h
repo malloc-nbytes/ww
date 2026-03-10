@@ -131,10 +131,11 @@ typedef struct {
         size_t      c;
 } tloc;
 
-typedef struct {
-        tloc       loc;
-        str        lx;
-        token_kind k;
+typedef struct token {
+        tloc          loc;
+        str           lx;
+        token_kind    k;
+        struct token *n;
 } token;
 
 typedef struct {
