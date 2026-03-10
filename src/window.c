@@ -8,7 +8,7 @@
 #include "glconf.h"
 #include "flags.h"
 #include "utils.h"
-#include "controls-buffer.h"
+#include "helpbuf.h"
 #include "error.h"
 
 #include <assert.h>
