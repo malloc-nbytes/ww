@@ -9,6 +9,7 @@
 #include "flags.h"
 #include "utils.h"
 #include "controls-buffer.h"
+#include "error.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -227,10 +228,14 @@ completion_run(window     *win,
                         if (ENTER(ch)) {
                                 if (total_matches > 0 &&
                                     st.selected_idx < total_matches) {
-                                        char *res =
-                                                strdup(matches.data[st.selected_idx]);
+                                        char *res = strdup(matches.data[st.selected_idx]);
                                         dyn_array_free(matches);
                                         str_destroy(&st.input);
+                                        return res;
+                                } else {
+                                        char *res = strdup(str_cstr(&st.input));
+                                        str_destroy(&st.input);
+                                        dyn_array_free(matches);
                                         return res;
                                 }
                         } else if (BACKSPACE(ch)) {
@@ -426,6 +431,11 @@ find_file(window *win)
 
         if (!(b = buffer_exists_by_name(win, chosen_file))) {
                 char *real = get_realpath(str_cstr(&fp));
+                if (!real) {
+                        if (!create_file(chosen_file, 1))
+                                fatal("create file");
+                        real = get_realpath(str_cstr(&fp));
+                }
                 if (real)
                         b = buffer_from_file(str_from(real), win);
                 else
@@ -850,7 +860,7 @@ metax(window *win)
                 glconf.flags ^= FT_SHOWTRAILS;
                 buffer_dump(win->ab);
         } else {
-                assert(0 && "unknown M-x command");
+                buffer_dump(win->ab);
         }
 
 done:
