@@ -57,6 +57,31 @@ lexer_cfg_from_filext(const char *ext)
         assert(0 && "unimplemented");
 }
 
+static int
+iskwd(const char *st, size_t len)
+{
+        static char *kwds[] = LEXER_C_KWDS;
+        for (size_t i = 0; i < sizeof(kwds)/sizeof(*kwds); ++i) {
+                if (memcmp(kwds[i], st, len) == 0)
+                        return 1;
+        }
+        return 0;
+}
+
+static size_t
+consume_while(const char *st,
+              int (*pred)(int))
+{
+        size_t i = 0;
+
+        while (st[i] && pred(st[i]))
+                ++i;
+
+        return i;
+}
+
+static int isident(int ch) { return isalnum(ch) || ch == '_'; }
+
 lexer
 lex_file(lexer_cfg cfg)
 {
@@ -84,24 +109,40 @@ lex_file(lexer_cfg cfg)
         while (i < src_n) {
                 char ch = src[i];
 
-                if (memcmp(src+i, cfg.mlop, strlen(cfg.mlop))) {
+                if (memcmp(src+i, cfg.mlop, strlen(cfg.mlop)) == 0) {
                         assert(0);
-                } else if (memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl))) {
+                } else if (memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl)) == 0) {
                         assert(0);
-                } else if (memcmp(src+i, cfg.sl, strlen(cfg.sl))) {
+                } else if (memcmp(src+i, cfg.sl, strlen(cfg.sl)) == 0) {
                         assert(0);
                 } else if (src[i] == '\n') {
-                        assert(0);
+                        if (cfg.bits & LEXERCFG_TRACK_NEWLINES)
+                                append(&l, token_alloc(src+i, 1, TK_NL, cfg.fp, r, c));
+                        ++i;
+                        ++r;
+                        c = 1;
                 } else if (src[i] == '\t') {
-                        assert(0);
+                        if (cfg.bits & LEXERCFG_TRACK_TABS)
+                                append(&l, token_alloc(src+i, 1, TK_TAB, cfg.fp, r, c));
+                        ++i;
+                        ++c;
                 } else if (src[i] == ' ') {
-                        assert(0);
+                        if (cfg.bits & LEXERCFG_TRACK_SPACES)
+                                append(&l, token_alloc(src+i, 1, TK_SPC, cfg.fp, r, c));
+                        ++i;
+                        ++c;
                 } else if (isalpha(ch) || ch == '_') {
-                        assert(0);
+                        size_t len = consume_while(src+i, isident);
+                        append(&l, token_alloc(src+i, len, iskwd(src+i, len) ? TK_KW : TK_ID, cfg.fp, r, c));
+                        i += len;
+                        c += len;
                 } else if (isdigit(ch)) {
-                        assert(0);
+                        size_t len = consume_while(src+i, isdigit);
+                        append(&l, token_alloc(src+i, len, TK_INTL, cfg.fp, r, c));
+                        i += len;
+                        c += len;
                 } else {
-                        ;
+                        assert(0);
                 }
         }
 

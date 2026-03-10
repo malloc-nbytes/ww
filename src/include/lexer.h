@@ -113,6 +113,9 @@
 
 typedef enum {
         TK_EOF = 0,
+        TK_NL,
+        TK_TAB,
+        TK_SPC,
         TK_ID,
         TK_KW,
         TK_LPAR,
