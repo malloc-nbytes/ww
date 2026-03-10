@@ -1336,6 +1336,23 @@ expand_region(buffer *b)
         adjust_scroll(b);
 }
 
+void
+buffer_dupline(buffer *b)
+{
+        line *ln;
+        str  *s;
+        line *newln;
+
+        ln = b->lns.data[b->al];
+        s  = &ln->s;
+        newln = line_from_cstr(str_cstr(s));
+
+        dyn_array_insert_at(b->lns, b->al, newln);
+        ++b->al;
+        ++b->cy;
+        adjust_scroll(b);
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
