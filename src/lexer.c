@@ -1,6 +1,7 @@
 #include "lexer.h"
 #include "io.h"
 #include "map.h"
+#include "error.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -15,6 +16,24 @@ opmap_init(opmap *m)
         opmap_insert(m, "(", TK_LPAR);
         opmap_insert(m, ")", TK_RPAR);
         opmap_insert(m, ";", TK_SEMI);
+        opmap_insert(m, "=", TK_EQ);
+        opmap_insert(m, "==", TK_EQEQ);
+        opmap_insert(m, "+", TK_PLUS);
+        opmap_insert(m, "-", TK_MINUS);
+        opmap_insert(m, "/", TK_FORSL);
+        opmap_insert(m, "\\", TK_BAKSL);
+        opmap_insert(m, "#", TK_HASH);
+        opmap_insert(m, ":", TK_COLON);
+        opmap_insert(m, "!", TK_BANG);
+        opmap_insert(m, ">", TK_GT);
+        opmap_insert(m, "<", TK_LT);
+        opmap_insert(m, ">=", TK_GTE);
+        opmap_insert(m, "<=", TK_LTE);
+        opmap_insert(m, "!=", TK_BANGEQ);
+        opmap_insert(m, "{", TK_LCUR);
+        opmap_insert(m, "}", TK_RCUR);
+        opmap_insert(m, "[", TK_LSQR);
+        opmap_insert(m, "]", TK_RSQR);
 }
 
 static token *
@@ -108,6 +127,31 @@ consume_while(const char *st,
 }
 
 static int isident(int ch) { return isalnum(ch) || ch == '_'; }
+static int isop(int ch)
+{
+        return !isalnum(ch)
+                && ch != '_'
+                && ch != ' '
+                && ch != '\t'
+                && ch != '\n'
+                && ch != '\r';
+}
+
+static token_kind *
+determine_op(opmap      *m,
+             const char *st,
+             size_t     *len)
+{
+        while (*len > 0) {
+                char buf[256];
+                snprintf(buf, *len, "%s", st);
+                if (opmap_contains(m, buf))
+                        return opmap_get(m, buf);
+                --(*len);
+        }
+
+        return NULL;
+}
 
 lexer
 lex_file(lexer_cfg cfg)
@@ -172,7 +216,17 @@ lex_file(lexer_cfg cfg)
                         i += len;
                         c += len;
                 } else {
-                        assert(0);
+                        size_t      len;
+                        token_kind *k;
+
+                        len = consume_while(src+i, isop);
+                        if (!(k = determine_op(&ops, src+i, &len)))
+                                fatal("unknown symbol at %c", src[i]);
+
+                        append(&l, token_alloc(src+i, len, *k, cfg.fp, r, c));
+
+                        i += len;
+                        c += len;
                 }
         }
 
