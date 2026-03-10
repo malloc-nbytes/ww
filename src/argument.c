@@ -33,6 +33,7 @@ option_usage(argument **_)
         printf("  " YELLOW BOLD "    --copying" "         " RESET "     show copying information\n");
         printf("  " YELLOW BOLD "    --replace query=<str>\n");
         printf("                repl=<str>  " RESET " find and replace `query' with `repl'\n");
+        printf("\nTo quickly get started and see the help buffer, do `ww .'\n");
         exit(0);
 }
 
