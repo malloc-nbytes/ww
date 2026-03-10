@@ -63,6 +63,8 @@ lex_file(lexer_cfg cfg)
         size_t      r;
         size_t      c;
         size_t      i;
+        const char *src;
+        size_t      src_n;
 
         l = (lexer) {
                 .root = NULL,
@@ -71,18 +73,26 @@ lex_file(lexer_cfg cfg)
                 .err  = NULL,
         };
 
-        r = 1;
-        c = 1;
-        i = 0;
+        r     = 1;
+        c     = 1;
+        i     = 0;
+        src   = cfg.src;
+        src_n = strlen(src);
 
-        (void)r;
-        (void)c;
-        (void)i;
-        (void)append;
-        (void)token_alloc;
-
-        while (cfg.src[i]) {
-                ;
+        while (i < src_n) {
+                if (memcmp(src+i, cfg.mlop, strlen(cfg.mlop))) {
+                        assert(0);
+                } else if (memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl))) {
+                        assert(0);
+                } else if (memcmp(src+i, cfg.sl, strlen(cfg.sl))) {
+                        assert(0);
+                } else if (src[i] == '\n') {
+                        assert(0);
+                } else if (src[i] == '\t') {
+                        assert(0);
+                } else if (src[i] == ' ') {
+                        assert(0);
+                }
         }
 
         return l;
