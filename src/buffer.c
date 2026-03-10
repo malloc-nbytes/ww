@@ -1339,6 +1339,9 @@ expand_region(buffer *b)
 void
 buffer_dupline(buffer *b)
 {
+        if (!writable(b))
+                return;
+
         line *ln;
         str  *s;
         line *newln;
