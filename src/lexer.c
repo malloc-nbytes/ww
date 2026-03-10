@@ -13,7 +13,25 @@ token_alloc(const char *st,
             size_t      r,
             size_t      c)
 {
-        assert(0);
+        token *t;
+        tloc   loc;
+        char   buf[1024];
+
+        t = (token *)malloc(sizeof(token));
+
+        loc = (tloc) {
+                .fp = fp,
+                .r  = r,
+                .c  = c,
+        };
+
+        snprintf(buf, len, "%s", st);
+
+        t->loc = loc;
+        t->lx  = str_from(buf);
+        t->k   = k;
+
+        return t;
 }
 
 static void
@@ -31,11 +49,16 @@ lexer_dump(const lexer *l)
         assert(0);
 }
 
+lexer_cfg
+lexer_cfg_from_filext(const char *ext)
+{
+        assert(0 && "unimplemented");
+}
+
 lexer
-lex_file(const char *fp)
+lex_file(lexer_cfg cfg)
 {
         lexer       l;
-        const char *src;
         size_t      r;
         size_t      c;
         size_t      i;
@@ -47,19 +70,12 @@ lex_file(const char *fp)
                 .err  = NULL,
         };
 
-        if (!(src = load_file(fp))) {
-                char msg[512] = {0};
-                sprintf(msg, "could not load file `%s'", fp);
-                l.err = strdup(msg);
-                return l;
-        }
-
         r = 1;
         c = 1;
         i = 0;
 
-        while (src[i]) {
-                assert(0);
+        while (cfg.src[i]) {
+                ;
         }
 
         return l;
