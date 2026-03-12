@@ -330,7 +330,7 @@ main(int argc, char *argv[])
                 .sl   = single,
                 .bits = LEXERCFG_COPS,
         });
-        (void)l;
+        lexer_dump(&l);
         return 0;
 
         char *filename;

@@ -141,6 +141,7 @@ typedef enum {
         TK_RCUR,
         TK_LSQR,
         TK_RSQR,
+        TK_PERIOD,
 } token_kind;
 
 typedef struct {
@@ -176,6 +177,7 @@ typedef struct {
 
 lexer_cfg lexer_cfg_from_filext(const char *ext);
 lexer     lex_file(lexer_cfg cfg);
+void      lexer_dump(const lexer *l);
 void      lexer_free(lexer *l);
 
 #endif

@@ -34,6 +34,7 @@ opmap_init(opmap *m)
         opmap_insert(m, "}", TK_RCUR);
         opmap_insert(m, "[", TK_LSQR);
         opmap_insert(m, "]", TK_RSQR);
+        opmap_insert(m, ".", TK_PERIOD);
 }
 
 static token *
@@ -77,9 +78,14 @@ tloc_cstr(tloc loc)
 static void
 append(lexer *l, token *t)
 {
-        (void)l;
-        (void)t;
-        assert(0);
+        if (!l->hd && !l->tl) {
+                l->hd = l->tl = t;
+                l->root = t;
+        } else {
+                token *tmp = l->tl;
+                l->tl = t;
+                tmp->n = t;
+        }
 }
 
 void
@@ -127,6 +133,7 @@ consume_while(const char *st,
 }
 
 static int isident(int ch) { return isalnum(ch) || ch == '_'; }
+static int noquote(int ch) { return ch != '"'; }
 static int isop(int ch)
 {
         return !isalnum(ch)
@@ -138,19 +145,33 @@ static int isop(int ch)
 }
 
 static token_kind *
-determine_op(opmap      *m,
-             const char *st,
-             size_t     *len)
+determine_op(opmap *m, const char *s, size_t *len)
 {
+        assert(*len < 256);
+        char buf[256] = {0};
+
         while (*len > 0) {
-                char buf[256];
-                snprintf(buf, *len, "%s", st);
-                if (opmap_contains(m, buf))
+                memset(buf, 0, 256);
+                strncpy(buf, s, *len);
+                if (opmap_contains(m, buf)) {
                         return opmap_get(m, buf);
+                }
                 --(*len);
         }
 
         return NULL;
+}
+
+static unsigned
+opmap_hash(char **s)
+{
+        return **s;
+}
+
+static int
+opmap_cmp(char **s0, char **s1)
+{
+        return strcmp(*s0, *s1);
 }
 
 lexer
@@ -177,6 +198,7 @@ lex_file(lexer_cfg cfg)
         i     = 0;
         src   = cfg.src;
         src_n = strlen(src);
+        ops   = opmap_create(opmap_hash, opmap_cmp);
 
         opmap_init(&ops);
 
@@ -188,7 +210,11 @@ lex_file(lexer_cfg cfg)
                 } else if (memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl)) == 0) {
                         assert(0);
                 } else if (memcmp(src+i, cfg.sl, strlen(cfg.sl)) == 0) {
-                        assert(0);
+                        while (i < src_n && src[i] != '\n')
+                                ++i, ++c;
+                        ++i;
+                        ++r;
+                        c = 1;
                 } else if (src[i] == '\n') {
                         if (cfg.bits & LEXERCFG_TRACK_NEWLINES)
                                 append(&l, token_alloc(src+i, 1, TK_NL, cfg.fp, r, c));
@@ -215,6 +241,12 @@ lex_file(lexer_cfg cfg)
                         append(&l, token_alloc(src+i, len, TK_INTL, cfg.fp, r, c));
                         i += len;
                         c += len;
+                } else if (src[i] == '"' || src[i] == '\'') {
+                        ++i, ++c;
+                        size_t len = consume_while(src+i, noquote);
+                        append(&l, token_alloc(src+i, len, TK_STRL, cfg.fp, r, c));
+                        i += len+1;
+                        c += len+1;
                 } else {
                         size_t      len;
                         token_kind *k;
