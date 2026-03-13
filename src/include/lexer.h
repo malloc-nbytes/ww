@@ -2,6 +2,8 @@
 #define LEXER_H_INCLUDED
 
 #include "str.h"
+#include "array.h"
+#include "line.h"
 
 #include <stdint.h>
 
@@ -11,6 +13,12 @@
 #define LEXERCFG_TRACK_SPACES        (1 << 2)
 #define LEXERCFG_TRACK_CHARS_AS_STRS (1 << 3)
 #define LEXERCFG_COPS                (1 << 4)
+
+#define LEXERCFG_C LEXERCFG_COPS
+#define LEXERCFG_PY (LEXERCFG_TRACK_NEWLINES \
+                        | LEXERCFG_TRACK_TABS \
+                        | LEXERCFG_TRACK_SPACES \
+                        | LEXERCFG_TRACK_CHARS_AS_STRS)
 
 #define LEXER_C_KWDS { \
         "if", \
@@ -157,6 +165,8 @@ typedef struct token {
         struct token *n;
 } token;
 
+DYN_ARRAY_TYPE(token *, token_array);
+
 typedef struct {
         const char  *fp;
         const char  *src;
@@ -175,9 +185,6 @@ typedef struct {
         lexer_cfg  cfg;
 } lexer;
 
-lexer_cfg lexer_cfg_from_filext(const char *ext);
-lexer     lex_file(lexer_cfg cfg);
-void      lexer_dump(const lexer *l);
-void      lexer_free(lexer *l);
+str_array get_global_identifiers(const char *filepath);
 
 #endif

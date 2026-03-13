@@ -11,14 +11,15 @@
 #define WINCMD_COMP          "compile"
 #define WINCMD_SAVEBUF       "save-buffer"
 #define WINCMD_EXIT          "exit"
-#define WINCMD_COPYBUFTOCLIP "copybuffer-to-clipboard"
+#define WINCMD_COPYBUFTOCLIP "ww-clipboard-copy"
 #define WINCMD_TABMODE       "tab-mode"
 #define WINCMD_SPACEMODE     "space-mode"
 #define WINCMD_REPLACE       "replace"
 #define WINCMD_HELP          "help"
 #define WINCMD_FINDFILE      "find-file"
-#define WINDCMD_TRAILMODE    "trail-mode"
+#define WINDCMD_TRAILMODE    "toggle-trails"
 #define WINDCMD_DUPLINE      "dup-line"
+#define WINDCMD_LISTIDS      "list-identifiers"
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
@@ -34,6 +35,7 @@
         WINCMD_FINDFILE, \
         WINDCMD_TRAILMODE, \
         WINDCMD_DUPLINE, \
+        WINDCMD_LISTIDS, \
 }
 
 typedef struct window {

@@ -316,23 +316,6 @@ cleanup(void)
 int
 main(int argc, char *argv[])
 {
-        const char *kwds[]   = LEXER_C_KWDS;
-        const char *multi_op = "/*";
-        const char *multi_cl = "*/";
-        const char *single   = "//";
-
-        lexer l = lex_file((lexer_cfg) {
-                .fp   = "tmp.txt",
-                .src  = load_file("tmp.txt"),
-                .kwds = kwds,
-                .mlop = multi_op,
-                .mlcl = multi_cl,
-                .sl   = single,
-                .bits = LEXERCFG_COPS,
-        });
-        lexer_dump(&l);
-        return 0;
-
         char *filename;
 
         if (!setup_config_file())

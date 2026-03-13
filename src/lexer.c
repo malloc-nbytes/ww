@@ -2,6 +2,7 @@
 #include "io.h"
 #include "map.h"
 #include "error.h"
+#include "str.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -57,7 +58,7 @@ token_alloc(const char *st,
                 .c  = c,
         };
 
-        snprintf(buf, len, "%s", st);
+        snprintf(buf, len+1, "%s", st);
 
         t->loc = loc;
         t->lx  = str_from(buf);
@@ -75,8 +76,14 @@ tloc_cstr(tloc loc)
         return buf;
 }
 
+static inline token *
+lexer_hd(lexer *l)
+{
+        return l->hd;
+}
+
 static void
-append(lexer *l, token *t)
+lexer_append(lexer *l, token *t)
 {
         if (!l->hd && !l->tl) {
                 l->hd = l->tl = t;
@@ -88,7 +95,37 @@ append(lexer *l, token *t)
         }
 }
 
-void
+static const token *
+lexer_peek(lexer *l, size_t k)
+{
+        token *it;
+
+        it = lexer_hd(l);
+
+        for (size_t i = 0; i < k; ++i) {
+                if (!it)
+                        return NULL;
+                it = it->n;
+        }
+
+        return it;
+}
+
+static token *
+lexer_next(lexer *l)
+{
+        if (!lexer_hd(l))
+                return NULL;
+
+        token *t;
+
+        t     = l->hd;
+        l->hd = l->hd->n;
+
+        return t;
+}
+
+static void
 lexer_dump(const lexer *l)
 {
         token *it;
@@ -174,7 +211,7 @@ opmap_cmp(char **s0, char **s1)
         return strcmp(*s0, *s1);
 }
 
-lexer
+static lexer
 lex_file(lexer_cfg cfg)
 {
         lexer       l;
@@ -217,34 +254,34 @@ lex_file(lexer_cfg cfg)
                         c = 1;
                 } else if (src[i] == '\n') {
                         if (cfg.bits & LEXERCFG_TRACK_NEWLINES)
-                                append(&l, token_alloc(src+i, 1, TK_NL, cfg.fp, r, c));
+                                lexer_append(&l, token_alloc(src+i, 1, TK_NL, cfg.fp, r, c));
                         ++i;
                         ++r;
                         c = 1;
                 } else if (src[i] == '\t') {
                         if (cfg.bits & LEXERCFG_TRACK_TABS)
-                                append(&l, token_alloc(src+i, 1, TK_TAB, cfg.fp, r, c));
+                                lexer_append(&l, token_alloc(src+i, 1, TK_TAB, cfg.fp, r, c));
                         ++i;
                         ++c;
                 } else if (src[i] == ' ') {
                         if (cfg.bits & LEXERCFG_TRACK_SPACES)
-                                append(&l, token_alloc(src+i, 1, TK_SPC, cfg.fp, r, c));
+                                lexer_append(&l, token_alloc(src+i, 1, TK_SPC, cfg.fp, r, c));
                         ++i;
                         ++c;
                 } else if (isalpha(ch) || ch == '_') {
                         size_t len = consume_while(src+i, isident);
-                        append(&l, token_alloc(src+i, len, iskwd(src+i, len) ? TK_KW : TK_ID, cfg.fp, r, c));
+                        lexer_append(&l, token_alloc(src+i, len, iskwd(src+i, len) ? TK_KW : TK_ID, cfg.fp, r, c));
                         i += len;
                         c += len;
                 } else if (isdigit(ch)) {
                         size_t len = consume_while(src+i, isdigit);
-                        append(&l, token_alloc(src+i, len, TK_INTL, cfg.fp, r, c));
+                        lexer_append(&l, token_alloc(src+i, len, TK_INTL, cfg.fp, r, c));
                         i += len;
                         c += len;
                 } else if (src[i] == '"' || src[i] == '\'') {
                         ++i, ++c;
                         size_t len = consume_while(src+i, noquote);
-                        append(&l, token_alloc(src+i, len, TK_STRL, cfg.fp, r, c));
+                        lexer_append(&l, token_alloc(src+i, len, TK_STRL, cfg.fp, r, c));
                         i += len+1;
                         c += len+1;
                 } else {
@@ -255,7 +292,7 @@ lex_file(lexer_cfg cfg)
                         if (!(k = determine_op(&ops, src+i, &len)))
                                 fatal("unknown symbol at %c", src[i]);
 
-                        append(&l, token_alloc(src+i, len, *k, cfg.fp, r, c));
+                        lexer_append(&l, token_alloc(src+i, len, *k, cfg.fp, r, c));
 
                         i += len;
                         c += len;
@@ -265,9 +302,72 @@ lex_file(lexer_cfg cfg)
         return l;
 }
 
-void
+static void
 lexer_free(lexer *l)
 {
         (void)l;
         assert(0);
+}
+
+typedef enum {
+        IDK_FUNC = 0,
+        IDK_VAR,
+} identifier_kind;
+
+typedef struct { identifier_kind k; } identifier;
+
+typedef struct {
+        identifier   base;
+        const token *rtype;
+        const token *id;
+        token_array  ptypes;
+        token_array  pids;
+} func;
+
+typedef struct {
+        identifier   base;
+        const token *type;
+        const token *id;
+} var;
+
+static identifier *
+consume_identifier(lexer *l)
+{
+        assert(0);
+}
+
+static str
+realize(identifier *id)
+{
+        assert(0);
+}
+
+str_array
+get_global_identifiers(const char *filepath)
+{
+        str_array   ar;
+        const char *kwds[] = LEXER_C_KWDS;
+
+        ar = dyn_array_empty(str_array);
+
+        lexer l = lex_file((lexer_cfg) {
+                .fp   = filepath,
+                .src  = load_file(filepath),
+                .kwds = kwds,
+                .mlop = "/*",
+                .mlcl = "*/",
+                .sl   = "//",
+                .bits = LEXERCFG_C,
+
+        });
+
+        while (lexer_hd(&l)) {
+                const token *t = lexer_peek(&l, 0);
+
+                if (t->k == TK_ID || t->k == TK_KW) {
+                        str s = realize(consume_identifier(&l));
+                }
+        }
+
+        return ar;
 }

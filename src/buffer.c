@@ -7,6 +7,7 @@
 #include "pair.h"
 #include "glconf.h"
 #include "flags.h"
+#include "lexer.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -1400,6 +1401,12 @@ movetxt_down(buffer *b)
         ++b->al;
         ++b->cy;
         adjust_scroll(b);
+}
+
+void
+buffer_list_ids(buffer *b)
+{
+        assert(0);
 }
 
 // entrypoint
