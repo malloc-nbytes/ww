@@ -1279,6 +1279,12 @@ jump_to_line(buffer *b)
 }
 
 static int
+backspace_stop(unsigned char ch)
+{
+        return isspace(ch) || !isalnum(ch);
+}
+
+static int
 super_backspace(buffer *b)
 {
         if (!writable(b))
@@ -1296,11 +1302,11 @@ super_backspace(buffer *b)
 
         b->saved = 0;
 
-        while (start > 0 && isspace((unsigned char)str_at(&ln->s, start - 1)))
+        while (start > 0 && backspace_stop((unsigned char)str_at(&ln->s, start - 1)))
                 --start;
 
         if (start > 0) {
-                while (start > 0 && !isspace((unsigned char)str_at(&ln->s, start - 1)))
+                while (start > 0 && !backspace_stop((unsigned char)str_at(&ln->s, start - 1)))
                         --start;
         }
 
