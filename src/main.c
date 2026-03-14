@@ -316,6 +316,12 @@ cleanup(void)
 int
 main(int argc, char *argv[])
 {
+        str_array ar = get_global_identifiers("buffer.c");
+        for (size_t i = 0; i < ar.len; ++i)
+                printf("%s\n", str_cstr(&ar.data[i]));
+
+        return 0;
+
         char *filename;
 
         if (!setup_config_file())

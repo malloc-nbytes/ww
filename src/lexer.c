@@ -36,6 +36,12 @@ opmap_init(opmap *m)
         opmap_insert(m, "[", TK_LSQR);
         opmap_insert(m, "]", TK_RSQR);
         opmap_insert(m, ".", TK_PERIOD);
+        opmap_insert(m, ",", TK_COMMA);
+        opmap_insert(m, "*", TK_AST);
+        opmap_insert(m, "&", TK_AMP);
+        opmap_insert(m, "?", TK_QUEST);
+        opmap_insert(m, "%", TK_PERC);
+        opmap_insert(m, "|", TK_PIPE);
 }
 
 static token *
@@ -309,37 +315,56 @@ lexer_free(lexer *l)
         assert(0);
 }
 
-typedef enum {
-        IDK_FUNC = 0,
-        IDK_VAR,
-} identifier_kind;
-
-typedef struct { identifier_kind k; } identifier;
-
-typedef struct {
-        identifier   base;
-        const token *rtype;
-        const token *id;
-        token_array  ptypes;
-        token_array  pids;
-} func;
-
-typedef struct {
-        identifier   base;
-        const token *type;
-        const token *id;
-} var;
-
-static identifier *
+static str
 consume_identifier(lexer *l)
 {
-        assert(0);
+        str s;
+        int paren;
+
+        s     = str_from(str_cstr(&lexer_next(l)->lx));
+        paren = 0;
+
+        while (lexer_hd(l) && lexer_hd(l)->k != TK_LCUR && lexer_hd(l)->k != TK_SEMI) {
+                const token *t = lexer_hd(l);
+
+                if (!paren)
+                        str_append(&s, ' ');
+                else
+                        paren = 0;
+
+                if (t->k == TK_LPAR || t->k == TK_LCUR)
+                        paren = 1;
+                if (t->n && (t->n->k == TK_COMMA || t->n->k == TK_RPAR || t->n->k == TK_LPAR))
+                        paren = 1;
+
+                str_concat(&s, str_cstr(&lexer_next(l)->lx));
+        }
+
+        return s;
 }
 
-static str
-realize(identifier *id)
+static int
+validkw(const char *s)
 {
-        assert(0);
+        const char *kwds[] = {
+                "void",
+                "int",
+                "float",
+                "double",
+                "unsigned",
+                "long",
+                "char",
+                "inline",
+                "const",
+                "volatile"
+        };
+
+        for (size_t i = 0; i < sizeof(kwds)/sizeof(*kwds); ++i) {
+                if (!strcmp(s, kwds[i]))
+                        return 1;
+        }
+
+        return 0;
 }
 
 str_array
@@ -364,9 +389,17 @@ get_global_identifiers(const char *filepath)
         while (lexer_hd(&l)) {
                 const token *t = lexer_peek(&l, 0);
 
-                if (t->k == TK_ID || t->k == TK_KW) {
-                        str s = realize(consume_identifier(&l));
+                if (t->k == TK_KW && !strcmp(str_cstr(&t->lx), "include")) {
+                        while (lexer_hd(&l)->k != TK_GT && lexer_hd(&l)->k != TK_STRL)
+                                lexer_next(&l);
                 }
+
+                if (t->k == TK_ID || (t->k == TK_KW && validkw(str_cstr(&t->lx)))) {
+                        str s = consume_identifier(&l);
+                        printf("%s:%zu:%zu: %s\n", t->loc.fp, t->loc.r, t->loc.c, str_cstr(&s));
+                }
+
+                lexer_next(&l);
         }
 
         return ar;

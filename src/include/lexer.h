@@ -79,6 +79,11 @@
         "_Noreturn", \
         "_Static_assert", \
         "_Thread_local", \
+        "include", \
+        "define", \
+        "ifndef", \
+        "ifdef", \
+        "defined", \
 }
 
 #define LEXER_PY_KWDS { \
@@ -150,6 +155,12 @@ typedef enum {
         TK_LSQR,
         TK_RSQR,
         TK_PERIOD,
+        TK_COMMA,
+        TK_AST,
+        TK_AMP,
+        TK_QUEST,
+        TK_PERC,
+        TK_PIPE,
 } token_kind;
 
 typedef struct {
