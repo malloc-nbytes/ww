@@ -1575,9 +1575,6 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (BACKSPACE(ch)) {
                         return super_backspace(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == ' ') {
-                        expand_region(b);
-                        return BP_MOV;
                 } else if (ch == 'n') {
                         movetxt_down(b);
                         return BP_INSERTNL;
@@ -1593,6 +1590,9 @@ buffer_process(buffer     *b,
                 } else if (ch == 'u') {
                         caps_word(b);
                         return BP_INSERT;
+                } else if (ch == '.') {
+                        expand_region(b);
+                        return BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
