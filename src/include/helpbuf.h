@@ -76,10 +76,11 @@
 "\n" \
 "Buffer Manipulation:\n" \
 "\n" \
-"C-x s = save buffer (must have write permissions) *\n" \
-"C-x x = invoke compilation buffer\n" \
-"C-x b = switch to different buffer *\n" \
-"C-x k = kill current buffer\n" \
+"C-x s   = save buffer (must have write permissions) *\n" \
+"C-x x   = invoke compilation buffer *\n" \
+"M-SPACE = invoke a shell *\n" \
+"C-x b   = switch to different buffer *\n" \
+"C-x k   = kill current buffer\n" \
 "\n" \
 "Misc.:\n" \
 "\n" \
