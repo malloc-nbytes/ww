@@ -1403,7 +1403,9 @@ movetxt_down(buffer *b)
 }
 
 static void
-upperlower_word(buffer *b, int (*fun)(int))
+upperlower_word(buffer *b,
+                int   (*fun)(int),
+                int     all)
 {
         size_t      start;
         line       *ln;
@@ -1421,21 +1423,21 @@ upperlower_word(buffer *b, int (*fun)(int))
         if (start >= str_len(s))
                 return;
 
-        s->chars[start] = fun(s->chars[start]);
-
-        while (start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'))
-                ++start;
+        for (size_t i = 0; start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'); ++i, ++start) {
+                if ((!all && !i) || all)
+                        s->chars[start] = fun(s->chars[start]);
+        }
 
         b->cx = start;
         b->wish_col = b->cx;
 }
 
 static void
-capital_word(buffer *b)
+uppercase_word(buffer *b)
 {
         if (!writable(b))
                 return;
-        upperlower_word(b, toupper);
+        upperlower_word(b, toupper, 0);
         adjust_scroll(b);
 }
 
@@ -1444,7 +1446,16 @@ lowercase_word(buffer *b)
 {
         if (!writable(b))
                 return;
-        upperlower_word(b, tolower);
+        upperlower_word(b, tolower, 1);
+        adjust_scroll(b);
+}
+
+static void
+caps_word(buffer *b)
+{
+        if (!writable(b))
+                return;
+        upperlower_word(b, toupper, 1);
         adjust_scroll(b);
 }
 
@@ -1570,10 +1581,13 @@ buffer_process(buffer     *b,
                         movetxt_up(b);
                         return BP_INSERTNL;
                 } else if (ch == 'c') {
-                        capital_word(b);
+                        uppercase_word(b);
                         return BP_INSERT;
                 } else if (ch == 'l') {
                         lowercase_word(b);
+                        return BP_INSERT;
+                } else if (ch == 'u') {
+                        caps_word(b);
                         return BP_INSERT;
                 }
         } break;
