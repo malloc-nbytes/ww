@@ -8,6 +8,7 @@
 #include "glconf.h"
 #include "flags.h"
 #include "lexer.h"
+#include "config.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -1406,7 +1407,64 @@ movetxt_down(buffer *b)
 void
 buffer_list_ids(buffer *b)
 {
+        (void)b;
         assert(0);
+}
+static void
+upperlower_word(buffer *b,
+                int   (*fun)(int),
+                int     all)
+{
+        size_t      start;
+        line       *ln;
+        str        *s;
+        const char *sraw;
+
+        start = b->cx;
+        ln    = b->lns.data[b->al];
+        s     = &ln->s;
+        sraw  = str_cstr(s);
+
+        while (start < str_len(s) && !isalpha(sraw[start]))
+                ++start;
+
+        if (start >= str_len(s))
+                return;
+
+        for (size_t i = 0; start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'); ++i, ++start) {
+                if ((!all && !i) || all)
+                        s->chars[start] = fun(s->chars[start]);
+        }
+
+        b->cx = start;
+        b->wish_col = b->cx;
+}
+
+static void
+uppercase_word(buffer *b)
+{
+        if (!writable(b))
+                return;
+        upperlower_word(b, toupper, 0);
+        adjust_scroll(b);
+}
+
+static void
+lowercase_word(buffer *b)
+{
+        if (!writable(b))
+                return;
+        upperlower_word(b, tolower, 1);
+        adjust_scroll(b);
+}
+
+static void
+caps_word(buffer *b)
+{
+        if (!writable(b))
+                return;
+        upperlower_word(b, toupper, 1);
+        adjust_scroll(b);
 }
 
 // entrypoint
@@ -1476,6 +1534,9 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (ch == 8) { // ctrl+backspace
                         assert(0);
+                } else if (ch == CTRL_T) {
+                        buffer_dupline(b);
+                        return BP_INSERTNL;
                 }
 
         } break;
@@ -1530,6 +1591,15 @@ buffer_process(buffer     *b,
                 } else if (ch == 'p') {
                         movetxt_up(b);
                         return BP_INSERTNL;
+                } else if (ch == 'c') {
+                        uppercase_word(b);
+                        return BP_INSERT;
+                } else if (ch == 'l') {
+                        lowercase_word(b);
+                        return BP_INSERT;
+                } else if (ch == 'u') {
+                        caps_word(b);
+                        return BP_INSERT;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
@@ -1716,7 +1786,7 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "%s:%zu:%zu%s %s",
+        sprintf(buf, "[ww-v" VERSION "] %s:%zu:%zu%s %s",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
