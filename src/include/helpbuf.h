@@ -69,6 +69,8 @@
 "M-g           = jump to line number\n" \
 "M-n           = move text down\n" \
 "M-p           = move text up\n" \
+"M-c           = capitalize word\n" \
+"M-l           = lowercase word\n" \
 "\n" \
 "Buffer Manipulation:\n" \
 "\n" \

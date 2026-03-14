@@ -1402,6 +1402,52 @@ movetxt_down(buffer *b)
         adjust_scroll(b);
 }
 
+static void
+upperlower_word(buffer *b, int (*fun)(int))
+{
+        size_t      start;
+        line       *ln;
+        str        *s;
+        const char *sraw;
+
+        start = b->cx;
+        ln    = b->lns.data[b->al];
+        s     = &ln->s;
+        sraw  = str_cstr(s);
+
+        while (start < str_len(s) && !isalpha(sraw[start]))
+                ++start;
+
+        if (start >= str_len(s))
+                return;
+
+        s->chars[start] = fun(s->chars[start]);
+
+        while (start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'))
+                ++start;
+
+        b->cx = start;
+        b->wish_col = b->cx;
+}
+
+static void
+capital_word(buffer *b)
+{
+        if (!writable(b))
+                return;
+        upperlower_word(b, toupper);
+        adjust_scroll(b);
+}
+
+static void
+lowercase_word(buffer *b)
+{
+        if (!writable(b))
+                return;
+        upperlower_word(b, tolower);
+        adjust_scroll(b);
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1523,6 +1569,12 @@ buffer_process(buffer     *b,
                 } else if (ch == 'p') {
                         movetxt_up(b);
                         return BP_INSERTNL;
+                } else if (ch == 'c') {
+                        capital_word(b);
+                        return BP_INSERT;
+                } else if (ch == 'l') {
+                        lowercase_word(b);
+                        return BP_INSERT;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
