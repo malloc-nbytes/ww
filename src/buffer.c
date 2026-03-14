@@ -7,6 +7,7 @@
 #include "pair.h"
 #include "glconf.h"
 #include "flags.h"
+#include "config.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -1526,6 +1527,9 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (ch == 8) { // ctrl+backspace
                         assert(0);
+                } else if (ch == CTRL_T) {
+                        buffer_dupline(b);
+                        return BP_INSERTNL;
                 }
 
         } break;
@@ -1775,7 +1779,7 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "%s:%zu:%zu%s %s",
+        sprintf(buf, "[ww-v" VERSION "] %s:%zu:%zu%s %s",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
