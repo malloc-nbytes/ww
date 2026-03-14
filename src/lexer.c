@@ -343,37 +343,32 @@ consume_identifier(lexer *l)
         return s;
 }
 
-static int
-validkw(const char *s)
+static void
+consume_macro(lexer *l)
 {
-        const char *kwds[] = {
-                "void",
-                "int",
-                "float",
-                "double",
-                "unsigned",
-                "long",
-                "char",
-                "inline",
-                "const",
-                "volatile"
-        };
-
-        for (size_t i = 0; i < sizeof(kwds)/sizeof(*kwds); ++i) {
-                if (!strcmp(s, kwds[i]))
-                        return 1;
-        }
-
-        return 0;
 }
 
-str_array
+static definition *
+parse(lexer *l)
+{
+        token *t;
+
+        if (!(t = lexer_hd(l)))
+                return NULL;
+
+        if (t->k == TK_HASH)
+                consume_macro(l);
+
+        return NULL;
+}
+
+definition_array
 get_global_identifiers(const char *filepath)
 {
-        str_array   ar;
-        const char *kwds[] = LEXER_C_KWDS;
+        definition_array   ar;
+        const char        *kwds[] = LEXER_C_KWDS;
 
-        ar = dyn_array_empty(str_array);
+        ar = dyn_array_empty(definition_array);
 
         lexer l = lex_file((lexer_cfg) {
                 .fp   = filepath,
@@ -382,24 +377,13 @@ get_global_identifiers(const char *filepath)
                 .mlop = "/*",
                 .mlcl = "*/",
                 .sl   = "//",
-                .bits = LEXERCFG_C,
-
+                .bits = LEXERCFG_TRACK_NEWLINES | LEXERCFG_COPS,
         });
 
         while (lexer_hd(&l)) {
-                const token *t = lexer_peek(&l, 0);
-
-                if (t->k == TK_KW && !strcmp(str_cstr(&t->lx), "include")) {
-                        while (lexer_hd(&l)->k != TK_GT && lexer_hd(&l)->k != TK_STRL)
-                                lexer_next(&l);
-                }
-
-                if (t->k == TK_ID || (t->k == TK_KW && validkw(str_cstr(&t->lx)))) {
-                        str s = consume_identifier(&l);
-                        printf("%s:%zu:%zu: %s\n", t->loc.fp, t->loc.r, t->loc.c, str_cstr(&s));
-                }
-
-                lexer_next(&l);
+                definition *d;
+                if ((d = parse(&l)) != NULL)
+                        dyn_array_append(ar, d);
         }
 
         return ar;

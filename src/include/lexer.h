@@ -196,6 +196,13 @@ typedef struct {
         lexer_cfg  cfg;
 } lexer;
 
-str_array get_global_identifiers(const char *filepath);
+typedef struct {
+        str  s;
+        tloc loc;
+} definition;
+
+DYN_ARRAY_TYPE(definition *, definition_array);
+
+definition_array get_global_identifiers(const char *filepath);
 
 #endif

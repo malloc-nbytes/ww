@@ -316,10 +316,7 @@ cleanup(void)
 int
 main(int argc, char *argv[])
 {
-        str_array ar = get_global_identifiers("buffer.c");
-        for (size_t i = 0; i < ar.len; ++i)
-                printf("%s\n", str_cstr(&ar.data[i]));
-
+        definition_array ar = get_global_identifiers("buffer.c");
         return 0;
 
         char *filename;
