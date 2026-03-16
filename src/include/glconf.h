@@ -16,6 +16,7 @@ extern struct {
                 int         space_amt;
                 const char *compile_cmd;
                 const char *to_clipboard;
+                int         empty_line_squiggles;
         } defaults;
 
         struct {

@@ -6,6 +6,7 @@
 #include "colors.h"
 #include "config.h"
 #include "copying.h"
+#include "default-config.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -28,11 +29,12 @@ option_usage(argument **_)
 
         printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN BOLD "<FILEPATH>" RESET GRAY " [+LINENO]" RESET "\n\n");
         printf("Options:\n");
-        printf("  " YELLOW BOLD "-h, --help" "            " RESET "     display this message\n");
-        printf("  " YELLOW BOLD "-v, --version" "         " RESET "     show the version\n");
-        printf("  " YELLOW BOLD "    --copying" "         " RESET "     show copying information\n");
+        printf("  " YELLOW BOLD "-h, --help" "            " RESET "        display this message\n");
+        printf("  " YELLOW BOLD "-v, --version" "         " RESET "        show the version\n");
+        printf("  " YELLOW BOLD "    --copying" "         " RESET "        show copying information\n");
         printf("  " YELLOW BOLD "    --replace query=<str>\n");
-        printf("                repl=<str>  " RESET " find and replace `query' with `repl'\n");
+        printf("                repl=<str>  " RESET "    find and replace `query' with `repl'\n");
+        printf("  " YELLOW BOLD "    --create-default-config" RESET "   create a default config file to stdout\n");
         printf("\nTo quickly get started and see the help buffer, do `ww .'\n");
         exit(0);
 }
@@ -89,6 +91,14 @@ option_replace(argument **a)
         return;
  bad:
         fatal("incorrect usage for option `replace', see --help");
+}
+
+static void
+option_show_default_config(argument **_)
+{
+        (void)_;
+        printf(g_default_config_str);
+        exit(0);
 }
 
 static char *
@@ -207,6 +217,7 @@ parse_option2(argument **a)
                 option_version,
                 option_copying,
                 option_replace,
+                option_show_default_config,
         };
 
         static const char *options[] = FLAG2CPL;

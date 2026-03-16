@@ -5,6 +5,7 @@
 
 #define HELP_DEF "*** " "Help Buffer ***\n" \
 "\n" \
+"Called `ww' on a directory, use `C-x C-f' to find a file.\n\n" \
 "ww is a text editor similar to vim or nano but with\n" \
 "a *very* heavy Emacs influence. It's controls are mostly\n" \
 "default Emacs keybindings (see controls).\n" \
@@ -60,7 +61,7 @@
 "C-d           = delete char under cursor *\n" \
 "M-d           = delete word\n" \
 "C-SPACE | C-c = begin/end selection *\n" \
-"M-SPACE       = highlight word\n" \
+"M-.           = highlight word\n" \
 "M-w           = copy selection *\n" \
 "C-w           = cut selection\n" \
 "C-y           = paste *\n" \
@@ -72,14 +73,16 @@
 "M-c           = capitalize letter under cursor\n" \
 "M-l           = lowercase entire word\n" \
 "M-u           = capitalize entire word\n" \
-"C-t           = dupe current line\n" \
+"M-\\           = dupe current line\n" \
+"C-t           = swap with character behind cursor\n" \
 "\n" \
 "Buffer Manipulation:\n" \
 "\n" \
-"C-x s = save buffer (must have write permissions) *\n" \
-"C-x x = invoke compilation buffer\n" \
-"C-x b = switch to different buffer *\n" \
-"C-x k = kill current buffer\n" \
+"C-x s   = save buffer (must have write permissions) *\n" \
+"C-x x   = invoke compilation buffer *\n" \
+"M-SPACE = invoke a shell *\n" \
+"C-x b   = switch to different buffer *\n" \
+"C-x k   = kill current buffer\n" \
 "\n" \
 "Misc.:\n" \
 "\n" \

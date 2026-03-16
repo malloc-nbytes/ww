@@ -10,3 +10,4 @@
 - add: list all global symbols in source code files
 - add: absolute line numbers
 - add: relative line numbers
+- add: auto-indent

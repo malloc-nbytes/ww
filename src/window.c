@@ -32,8 +32,7 @@ typedef struct {
         size_t offset;
 } completion_state;
 
-static volatile sig_atomic_t
-g_resize_flag = 0;
+static volatile sig_atomic_t g_resize_flag = 0;
 
 static void
 resize_signal_handler(int sig)
@@ -321,13 +320,15 @@ change_buffer_by_name(window     *win,
 {
         for (size_t i = 0; i < win->bfrs.len; ++i) {
                 if (!strcmp(str_cstr(&win->bfrs.data[i]->name), name)) {
-                        win->pb = win->ab;
+                        win->pb  = win->ab;
                         win->pbi = win->abi;
                         win->abi = i;
-                        win->ab = win->bfrs.data[i];
-                        break;
+                        win->ab  = win->bfrs.data[i];
+                        return;
                 }
         }
+
+        assert(0);
 }
 
 static void
@@ -590,6 +591,48 @@ capture_command_output(str *input)
 }
 
 static void
+window_open_output_buffer(window *win, line_array lns)
+{
+#define OUTPUT_HEADER "*** Output ***\n\n"
+
+        buffer *b = NULL;
+
+        for (size_t i = 0; i < win->bfrs.len; ++i) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
+                        b        = win->bfrs.data[i];
+                        win->ab  = b;
+                        win->abi = i;
+                        break;
+                }
+        }
+
+        if (!b) {
+                b = buffer_alloc(win);
+                str_destroy(&b->name);
+                b->name = str_from("ww-output");
+                b->writable = 0;
+                window_add_buffer(win, b, 1);
+        } else {
+                for (size_t i = 0; i < b->lns.len; ++i)
+                        line_free(b->lns.data[i]);
+                dyn_array_free(b->lns);
+        }
+
+        b->lns = lns;
+
+        dyn_array_insert_at(win->ab->lns, 0, line_from_cstr(OUTPUT_HEADER));
+        dyn_array_insert_at(win->ab->lns, 1, line_from_cstr("\n"));
+
+        win->ab->cx = 0;
+        win->ab->al = 0;
+        win->ab->cy = 0;
+        adjust_scroll(win->ab);
+        buffer_dump(win->ab);
+
+#undef OUTPUT_HEADER
+}
+
+static void
 do_compilation(window *win)
 {
 #define COMPILATION_HEADER "*** Compilation [ %s ] [ (q)uit, a(g)ain, M-<tab>:switch-here ] ***\n\n"
@@ -603,6 +646,9 @@ do_compilation(window *win)
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
                 if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
+                        /*win->pb = win->ab;
+                        win->pbi = win->abi;*/
+
                         b = win->bfrs.data[i];
                         win->ab = b;
                         win->abi = i;
@@ -862,9 +908,11 @@ metax(window *win)
         } else if (!strcmp(selected, WINDCMD_DUPLINE)) {
                 buffer_dupline(win->ab);
                 buffer_dump(win->ab);
-        } else if (!strcmp(selected, WINDCMD_LISTIDS)) {
-                buffer_list_ids(win->ab);
+        } else if (!strcmp(selected, WINDCMD_TERM)) {
+                buffer_shell(win->ab);
                 buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINDCMD_INFOBUF)) {
+                window_open_output_buffer(win, buffer_info(win->ab));
         } else {
                 buffer_dump(win->ab);
         }
@@ -996,10 +1044,11 @@ window_handle(window *win)
 
                 ty = get_input(&ch);
                 int is_compilation = !strcmp(str_cstr(&win->ab->name), "ww-compilation");
+                int is_output      = !strcmp(str_cstr(&win->ab->name), "ww-output");
 
                 if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation) {
                         try_jump_to_error(win);
-                } else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && is_compilation) {
+                } else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && (is_compilation || is_output)) {
                         win->ab = win->pb;
                         win->abi = win->pbi;
                         buffer_dump(win->ab);

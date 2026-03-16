@@ -58,6 +58,7 @@ void         buffer_find_and_replace_in_selection(buffer *b, const char *from, c
 void         buffer_jump_to_verts(buffer *b, int x, int y);
 void         init_buffer_context(void);
 void         buffer_dupline(buffer *b);
-void         buffer_list_ids(buffer *b);
+void         buffer_shell(buffer *b);
+line_array   buffer_info(const buffer *b);
 
-#endif // BUFFER_H_INUCLUDED
+#endif

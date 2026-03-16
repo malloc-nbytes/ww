@@ -215,9 +215,6 @@ init(void)
 static int
 parse_config(void)
 {
-        //int space_amt;
-        //const char *compile_cmd;
-
         qcl_config config = qcl_parse_file(glconf.config_filepath);
         if (!qcl_ok(&config)) {
                 fprintf(stderr, "%s\n", qcl_geterr(&config));
@@ -231,17 +228,16 @@ parse_config(void)
         qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
         qcl_value *compile_command = qcl_value_get(&config, "compile-command");
         qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
+        qcl_value *line_squiggles  = qcl_value_get(&config, "empty-line-squiggles");
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
                 ok = 0;
         }
-
         if (tabmode && tabmode->kind != QCL_VALUE_KIND_BOOL) {
                 printf("spaces-are-tabs must be a boolean\n");
                 ok = 0;
         }
-
         if (space_amt && space_amt->kind != QCL_VALUE_KIND_STRING) {
                 printf("space-amt must be a number string\n");
                 ok = 0;
@@ -250,14 +246,16 @@ parse_config(void)
                 printf("space-amt must be a valid number string\n");
                 ok = 0;
         }
-
         if (compile_command && compile_command->kind != QCL_VALUE_KIND_STRING) {
                 printf("compile-command must be a string\n");
                 ok = 0;
         }
-
         if (to_clipboard && to_clipboard->kind != QCL_VALUE_KIND_STRING) {
                 printf("to-clipboard must be a string\n");
+                ok = 0;
+        }
+        if (line_squiggles && line_squiggles->kind != QCL_VALUE_KIND_BOOL) {
+                printf("empty-line-squiggles must be a boolean\n");
                 ok = 0;
         }
 
@@ -278,6 +276,9 @@ parse_config(void)
 
         if (to_clipboard)
                 glconf.defaults.to_clipboard = ((qcl_value_string *)to_clipboard)->s;
+
+        if (line_squiggles)
+                glconf.defaults.empty_line_squiggles = ((qcl_value_bool *)line_squiggles)->b;
 
         return 1;
 }
@@ -316,9 +317,6 @@ cleanup(void)
 int
 main(int argc, char *argv[])
 {
-        definition_array ar = get_global_identifiers("buffer.c");
-        return 0;
-
         char *filename;
 
         if (!setup_config_file())

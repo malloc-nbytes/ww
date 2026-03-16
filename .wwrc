@@ -23,3 +23,6 @@ compile-command = 'make';
 # to the system clipboard. The `%s' is the data
 # from the copy buffer.
 to-clipboard = "echo '%s' | xclip -selection clipboard";
+
+# Show the tilde character `~' on EOF lines.
+empty-line-squiggles = true;

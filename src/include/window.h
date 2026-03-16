@@ -19,7 +19,8 @@
 #define WINCMD_FINDFILE      "find-file"
 #define WINDCMD_TRAILMODE    "toggle-trails"
 #define WINDCMD_DUPLINE      "dup-line"
-#define WINDCMD_LISTIDS      "list-identifiers"
+#define WINDCMD_TERM         "terminal"
+#define WINDCMD_INFOBUF      "info-buffer"
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
@@ -35,7 +36,8 @@
         WINCMD_FINDFILE, \
         WINDCMD_TRAILMODE, \
         WINDCMD_DUPLINE, \
-        WINDCMD_LISTIDS, \
+        WINDCMD_TERM, \
+        WINDCMD_INFOBUF, \
 }
 
 typedef struct window {

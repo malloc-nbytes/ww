@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #ifdef __linux__
 #include <limits.h>
@@ -1467,6 +1468,30 @@ caps_word(buffer *b)
         adjust_scroll(b);
 }
 
+static void
+swap_chars(buffer *b)
+{
+        if (!writable(b))
+                return;
+
+        line *ln;
+        str  *s;
+        char  ch;
+
+        ln = b->lns.data[b->al];
+        s  = &ln->s;
+        ch = str_at(s, b->cx);
+
+        if (b->cx >= str_len(s)-1 || b->cx == 0)
+                return;
+
+        s->chars[b->cx]   = s->chars[b->cx-1];
+        s->chars[b->cx-1] = ch;
+
+        ++b->cx;
+        b->wish_col = b->cx;
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1535,14 +1560,17 @@ buffer_process(buffer     *b,
                 } else if (ch == 8) { // ctrl+backspace
                         assert(0);
                 } else if (ch == CTRL_T) {
-                        buffer_dupline(b);
-                        return BP_INSERTNL;
+                        swap_chars(b);
+                        return BP_INSERT;
                 }
-
         } break;
         case INPUT_TYPE_ALT: {
                 b->last_tab = 0;
-                if (ch == 'm') {
+                if (ch == '\\') {
+                        buffer_dupline(b);
+                        return BP_INSERTNL;
+                }
+                else if (ch == 'm') {
                         jump_to_first_char(b);
                         return BP_MOV;
                 } else if (ch == '<') {
@@ -1582,9 +1610,6 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (BACKSPACE(ch)) {
                         return super_backspace(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == ' ') {
-                        expand_region(b);
-                        return BP_MOV;
                 } else if (ch == 'n') {
                         movetxt_down(b);
                         return BP_INSERTNL;
@@ -1600,6 +1625,12 @@ buffer_process(buffer     *b,
                 } else if (ch == 'u') {
                         caps_word(b);
                         return BP_INSERT;
+                } else if (ch == '.') {
+                        expand_region(b);
+                        return BP_MOV;
+                } else if (ch == ' ') {
+                        buffer_shell(b);
+                        return BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
@@ -1847,7 +1878,8 @@ buffer_dump(const buffer *b)
                 if (i >= b->lns.len) {
                         gotoxy(0, i - b->vscrloff);
                         printf("\x1b[K");
-                        printf(DIM "~");
+                        if (glconf.defaults.empty_line_squiggles)
+                                printf(DIM "~");
                 } else {
                         const line *l = b->lns.data[i];
                         gotoxy(0, i - b->vscrloff);
@@ -1863,7 +1895,55 @@ buffer_dump(const buffer *b)
 }
 
 void
+buffer_shell(buffer *b)
+{
+        clear_terminal();
+        disable_raw_terminal(STDIN_FILENO, &glconf.term.old);
+        system("$SHELL");
+        enable_raw_terminal(STDIN_FILENO, &glconf.term.old);
+        buffer_dump(b);
+}
+
+void
 init_buffer_context(void)
 {
         g_cpy_buf = dyn_array_empty(char_array);
+}
+
+line_array
+buffer_info(const buffer *b)
+{
+        line_array  info;
+        str         name;
+        str         lines;
+        str         bytes;
+        size_t      bytes_n;
+        char        buf[256];
+
+        bytes_n = 0;
+
+        info = dyn_array_empty(line_array);
+
+        sprintf(buf, "%zu", b->lns.len);
+        lines = str_from("Line count: ");
+        str_concat(&lines, buf);
+        str_append(&lines, '\n');
+
+        name = str_from("Buffer name: ");
+        str_concat(&name, str_cstr(&b->name));
+        str_append(&name, '\n');
+
+        for (size_t i = 0; i < b->lns.len; ++i)
+                bytes_n += str_len(&b->lns.data[i]->s);
+        sprintf(buf, "%zu", bytes_n);
+        bytes = str_from("Bytes: ");
+        str_concat(&bytes, buf);
+        str_append(&bytes, '\n');
+
+        dyn_array_append(info, line_from(name));
+        dyn_array_append(info, line_from(lines));
+        dyn_array_append(info, line_from(bytes));
+        dyn_array_append(info, line_from_cstr(b->writable ? "Writable: Yes\n" : "Writable: No\n"));
+
+        return info;
 }

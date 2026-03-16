@@ -203,6 +203,4 @@ typedef struct {
 
 DYN_ARRAY_TYPE(definition *, definition_array);
 
-definition_array get_global_identifiers(const char *filepath);
-
 #endif
