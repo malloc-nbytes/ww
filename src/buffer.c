@@ -1460,6 +1460,30 @@ caps_word(buffer *b)
         adjust_scroll(b);
 }
 
+static void
+swap_chars(buffer *b)
+{
+        if (!writable(b))
+                return;
+
+        line *ln;
+        str  *s;
+        char  ch;
+
+        ln = b->lns.data[b->al];
+        s  = &ln->s;
+        ch = str_at(s, b->cx);
+
+        if (b->cx >= str_len(s)-1 || b->cx == 0)
+                return;
+
+        s->chars[b->cx]   = s->chars[b->cx-1];
+        s->chars[b->cx-1] = ch;
+
+        ++b->cx;
+        b->wish_col = b->cx;
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1528,14 +1552,17 @@ buffer_process(buffer     *b,
                 } else if (ch == 8) { // ctrl+backspace
                         assert(0);
                 } else if (ch == CTRL_T) {
-                        buffer_dupline(b);
-                        return BP_INSERTNL;
+                        swap_chars(b);
+                        return BP_INSERT;
                 }
-
         } break;
         case INPUT_TYPE_ALT: {
                 b->last_tab = 0;
-                if (ch == 'm') {
+                if (ch == '\\') {
+                        buffer_dupline(b);
+                        return BP_INSERTNL;
+                }
+                else if (ch == 'm') {
                         jump_to_first_char(b);
                         return BP_MOV;
                 } else if (ch == '<') {
