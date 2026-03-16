@@ -327,8 +327,6 @@ change_buffer_by_name(window     *win,
                         return;
                 }
         }
-
-        assert(0);
 }
 
 static void
@@ -646,9 +644,6 @@ do_compilation(window *win)
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
                 if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
-                        /*win->pb = win->ab;
-                        win->pbi = win->abi;*/
-
                         b = win->bfrs.data[i];
                         win->ab = b;
                         win->abi = i;
