@@ -5,6 +5,7 @@
 
 #define HELP_DEF "*** " "Help Buffer ***\n" \
 "\n" \
+"Called `ww' on a directory, use `C-x C-f' to find a file.\n\n" \
 "ww is a text editor similar to vim or nano but with\n" \
 "a *very* heavy Emacs influence. It's controls are mostly\n" \
 "default Emacs keybindings (see controls).\n" \
