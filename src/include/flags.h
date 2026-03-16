@@ -9,21 +9,23 @@
 #define FLAG1HELP     'h'
 #define FLAG1VERESION 'v'
 
-#define FLAG1CPL {                              \
-                FLAG1HELP,                      \
-                FLAG1VERESION,                  \
-        }
+#define FLAG1CPL { \
+        FLAG1HELP, \
+        FLAG1VERESION, \
+}
 
-#define FLAG2HELP    "help"
-#define FLAG2VERSION "version"
-#define FLAG2COPYING "copying"
-#define FLAG2REPLACE "replace"
+#define FLAG2HELP      "help"
+#define FLAG2VERSION   "version"
+#define FLAG2COPYING   "copying"
+#define FLAG2REPLACE   "replace"
+#define FLAG2DEFCONFIG "create-default-config"
 
-#define FLAG2CPL {                              \
-                FLAG2HELP,                      \
-                FLAG2VERSION,                   \
-                FLAG2COPYING,                   \
-                FLAG2REPLACE,                   \
+#define FLAG2CPL { \
+                FLAG2HELP, \
+                FLAG2VERSION, \
+                FLAG2COPYING, \
+                FLAG2REPLACE, \
+                FLAG2DEFCONFIG, \
         }
 
 enum {
