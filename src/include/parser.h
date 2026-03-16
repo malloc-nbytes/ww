@@ -32,7 +32,7 @@ typedef struct {
 typedef struct {
         expr  base;
         char  op;
-        expr *e;
+        expr *r;
 } expr_unary;
 
 typedef struct {
