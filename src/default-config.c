@@ -26,5 +26,5 @@ const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "# from the copy buffer.\n"
 "to-clipboard = \"echo '%%s' | xclip -selection clipboard\";\n"
 "\n"
-"Show the tilde character `~' on EOF lines.\n"
+"# Show the tilde character `~' on EOF lines.\n"
 "empty-line-squiggles = true;\n";
