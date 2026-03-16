@@ -214,9 +214,6 @@ init(void)
 static int
 parse_config(void)
 {
-        //int space_amt;
-        //const char *compile_cmd;
-
         qcl_config config = qcl_parse_file(glconf.config_filepath);
         if (!qcl_ok(&config)) {
                 fprintf(stderr, "%s\n", qcl_geterr(&config));
