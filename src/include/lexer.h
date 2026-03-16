@@ -196,11 +196,6 @@ typedef struct {
         lexer_cfg  cfg;
 } lexer;
 
-typedef struct {
-        str  s;
-        tloc loc;
-} definition;
-
-DYN_ARRAY_TYPE(definition *, definition_array);
+lexer lex_file(lexer_cfg cfg);
 
 #endif

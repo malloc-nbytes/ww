@@ -908,6 +908,8 @@ metax(window *win)
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINDCMD_INFOBUF)) {
                 window_open_output_buffer(win, buffer_info(win->ab));
+        } else if (!strcmp(selected, WINDCMD_CALC)) {
+                assert(0);
         } else {
                 buffer_dump(win->ab);
         }

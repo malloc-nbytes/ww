@@ -217,7 +217,7 @@ opmap_cmp(char **s0, char **s1)
         return strcmp(*s0, *s1);
 }
 
-static lexer
+lexer
 lex_file(lexer_cfg cfg)
 {
         lexer       l;
@@ -248,11 +248,11 @@ lex_file(lexer_cfg cfg)
         while (i < src_n) {
                 char ch = src[i];
 
-                if (memcmp(src+i, cfg.mlop, strlen(cfg.mlop)) == 0) {
+                if (cfg.mlop && memcmp(src+i, cfg.mlop, strlen(cfg.mlop)) == 0) {
                         assert(0);
-                } else if (memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl)) == 0) {
+                } else if (cfg.mlcl && memcmp(src+i, cfg.mlcl, strlen(cfg.mlcl)) == 0) {
                         assert(0);
-                } else if (memcmp(src+i, cfg.sl, strlen(cfg.sl)) == 0) {
+                } else if (cfg.sl && memcmp(src+i, cfg.sl, strlen(cfg.sl)) == 0) {
                         while (i < src_n && src[i] != '\n')
                                 ++i, ++c;
                         ++i;

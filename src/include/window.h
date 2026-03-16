@@ -21,6 +21,7 @@
 #define WINDCMD_DUPLINE      "dup-line"
 #define WINDCMD_TERM         "terminal"
 #define WINDCMD_INFOBUF      "info-buffer"
+#define WINDCMD_CALC         "calc"
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
@@ -38,6 +39,7 @@
         WINDCMD_DUPLINE, \
         WINDCMD_TERM, \
         WINDCMD_INFOBUF, \
+        WINDCMD_CALC, \
 }
 
 typedef struct window {
