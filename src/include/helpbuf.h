@@ -60,7 +60,7 @@
 "C-d           = delete char under cursor *\n" \
 "M-d           = delete word\n" \
 "C-SPACE | C-c = begin/end selection *\n" \
-"M-SPACE       = highlight word\n" \
+"M-.           = highlight word\n" \
 "M-w           = copy selection *\n" \
 "C-w           = cut selection\n" \
 "C-y           = paste *\n" \
@@ -77,10 +77,11 @@
 "\n" \
 "Buffer Manipulation:\n" \
 "\n" \
-"C-x s = save buffer (must have write permissions) *\n" \
-"C-x x = invoke compilation buffer\n" \
-"C-x b = switch to different buffer *\n" \
-"C-x k = kill current buffer\n" \
+"C-x s   = save buffer (must have write permissions) *\n" \
+"C-x x   = invoke compilation buffer *\n" \
+"M-SPACE = invoke a shell *\n" \
+"C-x b   = switch to different buffer *\n" \
+"C-x k   = kill current buffer\n" \
 "\n" \
 "Misc.:\n" \
 "\n" \

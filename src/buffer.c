@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #ifdef __linux__
 #include <limits.h>
@@ -1602,9 +1603,6 @@ buffer_process(buffer     *b,
                         return BP_INSERTNL;
                 } else if (BACKSPACE(ch)) {
                         return super_backspace(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == ' ') {
-                        expand_region(b);
-                        return BP_MOV;
                 } else if (ch == 'n') {
                         movetxt_down(b);
                         return BP_INSERTNL;
@@ -1620,6 +1618,12 @@ buffer_process(buffer     *b,
                 } else if (ch == 'u') {
                         caps_word(b);
                         return BP_INSERT;
+                } else if (ch == '.') {
+                        expand_region(b);
+                        return BP_MOV;
+                } else if (ch == ' ') {
+                        buffer_shell(b);
+                        return BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
@@ -1880,6 +1884,16 @@ buffer_dump(const buffer *b)
 
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         draw_status(b, NULL);
+}
+
+void
+buffer_shell(buffer *b)
+{
+        clear_terminal();
+        disable_raw_terminal(STDIN_FILENO, &glconf.term.old);
+        system("$SHELL");
+        enable_raw_terminal(STDIN_FILENO, &glconf.term.old);
+        buffer_dump(b);
 }
 
 void

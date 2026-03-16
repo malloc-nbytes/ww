@@ -862,6 +862,9 @@ metax(window *win)
         } else if (!strcmp(selected, WINDCMD_DUPLINE)) {
                 buffer_dupline(win->ab);
                 buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINDCMD_TERM)) {
+                buffer_shell(win->ab);
+                buffer_dump(win->ab);
         } else {
                 buffer_dump(win->ab);
         }
