@@ -33,10 +33,9 @@ Also, dependencies such as =ncurses= are not needed, just a =C= compiler and aut
 
 ** How to use
 
-Invoke by doing =ww [filepath]= to start editing/creating a file.
+Invoke by doing =ww <filepath>= to start editing/creating a file.
 
-To see the help buffer and to see the controls, either invoke =ww= without a file,
-or type =M-x help=.
+To see the help buffer and to see the controls, either invoke =ww= with a directory instead of a file, or type =M-x help=.
 
 A configuration file gets created upon first launch of =ww= at =$HOME/.wwrc= and is empty.
-It is advised to copy the contents of [[./.wwrc][.wwrc in this repository]] to get started with configuring it.
+It is advised to copy the contents of =ww --create-default-config= and add it to =$HOME/.wwrc= to get started with configuring it.
