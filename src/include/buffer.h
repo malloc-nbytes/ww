@@ -59,5 +59,6 @@ void         buffer_jump_to_verts(buffer *b, int x, int y);
 void         init_buffer_context(void);
 void         buffer_dupline(buffer *b);
 void         buffer_shell(buffer *b);
+line_array   buffer_info(const buffer *b);
 
 #endif // BUFFER_H_INUCLUDED

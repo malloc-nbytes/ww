@@ -20,6 +20,7 @@
 #define WINDCMD_TRAILMODE    "trail-mode"
 #define WINDCMD_DUPLINE      "dup-line"
 #define WINDCMD_TERM         "terminal"
+#define WINDCMD_INFOBUF      "info-buffer"
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
@@ -36,6 +37,7 @@
         WINDCMD_TRAILMODE, \
         WINDCMD_DUPLINE, \
         WINDCMD_TERM, \
+        WINDCMD_INFOBUF, \
 }
 
 typedef struct window {
