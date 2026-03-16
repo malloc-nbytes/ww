@@ -13,6 +13,7 @@ struct {
                 int         space_amt;
                 const char *compile_cmd;
                 const char *to_clipboard;
+                int         empty_line_squiggles;
         } defaults;
 
         struct {
@@ -31,9 +32,10 @@ struct {
         .config_filepath = {0},
         .starting_lineno = 0,
         .defaults = {
-                .space_amt    = DEFAULT_SPACE_AMT,
-                .compile_cmd  = DEFAULT_COMPILE_COMMAND,
-                .to_clipboard = DEFAULT_TO_CLIPBOARD_COMMAND,
+                .space_amt            = DEFAULT_SPACE_AMT,
+                .compile_cmd          = DEFAULT_COMPILE_COMMAND,
+                .to_clipboard         = DEFAULT_TO_CLIPBOARD_COMMAND,
+                .empty_line_squiggles = 1,
         },
         .term = {
                 .w   = 0,

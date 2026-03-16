@@ -1871,7 +1871,8 @@ buffer_dump(const buffer *b)
                 if (i >= b->lns.len) {
                         gotoxy(0, i - b->vscrloff);
                         printf("\x1b[K");
-                        printf(DIM "~");
+                        if (glconf.defaults.empty_line_squiggles)
+                                printf(DIM "~");
                 } else {
                         const line *l = b->lns.data[i];
                         gotoxy(0, i - b->vscrloff);
