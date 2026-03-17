@@ -191,3 +191,15 @@ anykey(void)
         char _;
         get_input(&_);
 }
+
+void
+term_fullscrn(void)
+{
+        printf("\x1b[?1049h");
+}
+
+void
+term_exit_fullscrn(void)
+{
+        printf("\x1b[?1049l");
+}

@@ -98,5 +98,7 @@ void       gotoxy(int x, int y);
 // dx, dy -> return coordinates after clearing line
 void       clear_line(size_t dx, size_t dy);
 void       anykey(void);
+void       term_fullscrn(void);
+void       term_exit_fullscrn(void);
 
 #endif // TERM_H_INCLUDED

@@ -220,6 +220,8 @@ sigint_handler(int sig)
 static int
 init(void)
 {
+        term_fullscrn();
+
         if (!enable_raw_terminal(STDIN_FILENO, &glconf.term.old)) {
                 perror("enable_raw_terminal");
                 return 0;
@@ -531,6 +533,7 @@ cleanup(void)
         clear_terminal();
         if (!disable_raw_terminal(STDIN_FILENO, &glconf.term.old))
                 perror("disable_raw_terminal");
+        term_exit_fullscrn();
 }
 
 int
