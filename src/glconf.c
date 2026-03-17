@@ -1,14 +1,16 @@
 #include "flags.h"
 #include "colors.h"
+#include "line.h"
 
 #include <stdint.h>
 #include <stddef.h>
 #include <termios.h>
 
 struct {
-        uint32_t flags;
-        char     config_filepath[512];
-        size_t   starting_lineno;
+        uint32_t    flags;
+        char        config_filepath[512];
+        size_t      starting_lineno;
+        line_array  cfgvars;
 
         struct {
                 int         space_amt;
@@ -38,6 +40,7 @@ struct {
         .flags           = 0x0000,
         .config_filepath = {0},
         .starting_lineno = 0,
+        .cfgvars         = {0},
         .defaults = {
                 .space_amt              = DEFAULT_SPACE_AMT,
                 .compile_cmd            = DEFAULT_COMPILE_COMMAND,

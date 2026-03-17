@@ -877,6 +877,12 @@ window_open_calc_buffer(window *win)
 }
 
 static void
+show_cfgvars(window *win)
+{
+        open_output_buffer(win, glconf.cfgvars);
+}
+
+static void
 metax(window *win)
 {
         // TODO: make `names' live in static memory
@@ -940,6 +946,8 @@ metax(window *win)
         } else if (!strcmp(selected, WINDCMD_CALC)) {
                 window_open_calc_buffer(win);
                 buffer_dump(win->ab);
+        } else if (!strcmp(selected, WINDCMD_SHOWCFGVARS)) {
+                show_cfgvars(win);
         } else {
                 buffer_dump(win->ab);
         }

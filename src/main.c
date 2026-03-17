@@ -325,9 +325,26 @@ set_default_color(const char       *dst,
         return 1;
 }
 
+static void
+add_cfgvar(qcl_config *cfg, const char *name)
+{
+        char value[512] = {0};
+
+        char **flat = qcl_value_flatten(cfg, name);
+        for (size_t i = 0; flat[i]; ++i) {
+                if (i)
+                        strcat(value, ", ");
+                strcat(value, flat[i]);
+        }
+
+        dyn_array_append(glconf.cfgvars, line_from(str_from_fmt("%s: %s\n", name, value)));
+}
+
 static int
 parse_config(void)
 {
+        glconf.cfgvars = dyn_array_empty(line_array);
+
         qcl_config config = qcl_parse_file(glconf.config_filepath);
         if (!qcl_ok(&config)) {
                 fprintf(stderr, "%s\n", qcl_geterr(&config));
@@ -336,18 +353,18 @@ parse_config(void)
 
         int ok = 1;
 
-        qcl_value *show_trails            = qcl_value_get(&config, "show-trails");
-        qcl_value *tabmode                = qcl_value_get(&config, "tab-mode");
-        qcl_value *space_amt              = qcl_value_get(&config, "space-amt");
-        qcl_value *compile_command        = qcl_value_get(&config, "compile-command");
-        qcl_value *to_clipboard           = qcl_value_get(&config, "to-clipboard");
-        qcl_value *line_squiggles         = qcl_value_get(&config, "empty-line-squiggles");
-        qcl_value *selection_highlight    = qcl_value_get(&config, "selection-highlight");
-        qcl_value *initial_buffers        = qcl_value_get(&config, "initial-buffers");
-        qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
-        qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
-        qcl_value *menu_highlight         = qcl_value_get(&config, "menu-highlight");
-        qcl_value *disable_quit_keybind   = qcl_value_get(&config, "disable-quit-keybind");
+        qcl_value *show_trails            = qcl_value_get(&config, CFGVAR_SHOW_TRAILS);
+        qcl_value *tabmode                = qcl_value_get(&config, CFGVAR_TAB_MODE);
+        qcl_value *space_amt              = qcl_value_get(&config, CFGVAR_SPACE_AMT);
+        qcl_value *compile_command        = qcl_value_get(&config, CFGVAR_COMPILE_COMMAND);
+        qcl_value *to_clipboard           = qcl_value_get(&config, CFGVAR_TO_CLIPBOARD);
+        qcl_value *line_squiggles         = qcl_value_get(&config, CFGVAR_EMPTY_LINE_SQUIGGLES);
+        qcl_value *selection_highlight    = qcl_value_get(&config, CFGVAR_SELECTION_HIGHLIGHT);
+        qcl_value *initial_buffers        = qcl_value_get(&config, CFGVAR_INITIAL_BUFFERS);
+        qcl_value *search_highlight       = qcl_value_get(&config, CFGVAR_SEARCH_HIGHLIGHT);
+        qcl_value *search_highlight_exact = qcl_value_get(&config, CFGVAR_SEARCH_HIGHLIGHT_EXACT);
+        qcl_value *menu_highlight         = qcl_value_get(&config, CFGVAR_MENU_HIGHLIGHT);
+        qcl_value *disable_quit_keybind   = qcl_value_get(&config, CFGVAR_DISABLE_QUIT_KEYBIND);
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
@@ -359,10 +376,6 @@ parse_config(void)
         }
         if (space_amt && space_amt->kind != QCL_VALUE_KIND_STRING) {
                 printf("space-amt must be a number string\n");
-                ok = 0;
-        }
-        if (space_amt && !cstr_isdigit(((qcl_value_string *)space_amt)->s)) {
-                printf("space-amt must be a valid number string\n");
                 ok = 0;
         }
         if (compile_command && compile_command->kind != QCL_VALUE_KIND_STRING) {
@@ -407,30 +420,44 @@ parse_config(void)
         if (!ok)
                 return 0;
 
-        if (show_trails && ((qcl_value_bool *)show_trails)->b)
+        if (show_trails && ((qcl_value_bool *)show_trails)->b) {
+                add_cfgvar(&config, CFGVAR_SHOW_TRAILS);
                 glconf.flags |= FT_SHOWTRAILS;
+        }
 
-        if (tabmode && ((qcl_value_bool *)tabmode)->b)
+        if (tabmode && ((qcl_value_bool *)tabmode)->b) {
+                add_cfgvar(&config, CFGVAR_TAB_MODE);
                 glconf.flags |= FT_TABMODE;
+        }
 
-        if (space_amt)
+        if (space_amt) {
+                add_cfgvar(&config, CFGVAR_SPACE_AMT);
                 glconf.defaults.space_amt = atoi(((qcl_value_string *)space_amt)->s);
+        }
 
-        if (compile_command)
+        if (compile_command) {
+                add_cfgvar(&config, CFGVAR_COMPILE_COMMAND);
                 glconf.defaults.compile_cmd = ((qcl_value_string *)compile_command)->s;
+        }
 
-        if (to_clipboard)
+        if (to_clipboard) {
+                add_cfgvar(&config, CFGVAR_TO_CLIPBOARD);
                 glconf.defaults.to_clipboard = ((qcl_value_string *)to_clipboard)->s;
+        }
 
-        if (line_squiggles)
+        if (line_squiggles) {
+                add_cfgvar(&config, CFGVAR_EMPTY_LINE_SQUIGGLES);
                 glconf.defaults.empty_line_squiggles = ((qcl_value_bool *)line_squiggles)->b;
+        }
 
         if (selection_highlight) {
+                add_cfgvar(&config, CFGVAR_SELECTION_HIGHLIGHT);
                 if (!set_default_color(glconf.defaults.selection_highlight, (qcl_value_string *)selection_highlight))
                         res = 0;
         }
 
         if (initial_buffers) {
+                add_cfgvar(&config, CFGVAR_INITIAL_BUFFERS);
                 char **lst = qcl_value_flatten(&config, "initial-buffers");
                 size_t i;
                 for (i = 0; lst[i]; ++i)
@@ -440,22 +467,27 @@ parse_config(void)
         }
 
         if (search_highlight) {
+                add_cfgvar(&config, CFGVAR_SEARCH_HIGHLIGHT);
                 if (!set_default_color(glconf.defaults.search_highlight, (qcl_value_string *)search_highlight))
                         res = 0;
         }
 
         if (search_highlight_exact) {
+                add_cfgvar(&config, CFGVAR_SEARCH_HIGHLIGHT_EXACT);
                 if (!set_default_color(glconf.defaults.search_highlight_exact, (qcl_value_string *)search_highlight_exact))
                         res = 0;
         }
 
         if (menu_highlight) {
+                add_cfgvar(&config, CFGVAR_MENU_HIGHLIGHT);
                 if (!set_default_color(glconf.defaults.menu_highlight, (qcl_value_string *)menu_highlight))
                         res = 0;
         }
 
-        if (disable_quit_keybind)
+        if (disable_quit_keybind) {
+                add_cfgvar(&config, CFGVAR_DISABLE_QUIT_KEYBIND);
                 glconf.defaults.disable_quit_keybind = ((qcl_value_bool *)disable_quit_keybind)->b;
+        }
 
         return res;
 }

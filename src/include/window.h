@@ -22,6 +22,7 @@
 #define WINDCMD_TERM         "terminal"
 #define WINDCMD_INFOBUF      "buffer-info"
 #define WINDCMD_CALC         "calc"
+#define WINDCMD_SHOWCFGVARS  "show-cfg-vars"
 
 #define WINCMDS { \
         WINCMD_SPCAMT, \
@@ -41,6 +42,7 @@
         WINDCMD_TERM, \
         WINDCMD_INFOBUF, \
         WINDCMD_CALC, \
+        WINDCMD_SHOWCFGVARS, \
 }
 
 typedef struct window {
