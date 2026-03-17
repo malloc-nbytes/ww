@@ -69,5 +69,5 @@ const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "# Artwork displayed in `ww-help'. Remove this variable to not have it\n"
 "# or set it to an empty string.\n"
 "# Valid options are:\n"
-"#   ww1, ww2, flag1"
-"ascii-art = 'ww1'\n";
+"#   ww1, ww2, flag1\n"
+"ascii-art = 'ww1';\n";
