@@ -596,7 +596,7 @@ window_open_output_buffer(window *win, line_array lns)
         buffer *b = NULL;
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
-                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-output")) {
                         b        = win->bfrs.data[i];
                         win->ab  = b;
                         win->abi = i;
@@ -1043,16 +1043,17 @@ window_handle(window *win)
                 int is_compilation = !strcmp(str_cstr(&win->ab->name), "ww-compilation");
                 int is_output      = !strcmp(str_cstr(&win->ab->name), "ww-output");
 
-                if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation) {
+                if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation)
                         try_jump_to_error(win);
-                } else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && (is_compilation || is_output)) {
+                else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && (is_compilation || is_output)) {
                         win->ab = win->pb;
                         win->abi = win->pbi;
                         buffer_dump(win->ab);
                 } else if (ty == INPUT_TYPE_ALT && ch == '\t' && !is_compilation) {
                         change_buffer_by_name(win, "ww-compilation");
                         buffer_dump(win->ab);
-                } else if (ty == INPUT_TYPE_NORMAL && ch == 'g' && is_compilation)
+                }
+                else if (ty == INPUT_TYPE_NORMAL && ch == 'g' && is_compilation)
                         do_compilation(win);
                 else if (ty == INPUT_TYPE_ALT && ch == 'x')
                         metax(win);

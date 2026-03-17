@@ -64,21 +64,25 @@ parse_primary_expr(lexer *l)
         left = NULL;
 
         while (1) {
-                const token *hd = lexer_hd(l);
+                const token *hd;
+
+                if (!(hd = lexer_hd(l)))
+                        goto done;
 
                 switch (hd->k) {
                 case TK_ID: {
                         const token *i = lexer_next(l);
-                        left = (expr *)expr_ident_alloc(str_cstr(&i->lx));
+                        left           = (expr *)expr_ident_alloc(str_cstr(&i->lx));
                 } break;
                 case TK_INTL: {
                         const token *i = lexer_next(l);
-                        left = (expr *)expr_intlit_alloc(atoi(str_cstr(&i->lx)));
+                        left           = (expr *)expr_intlit_alloc(atoi(str_cstr(&i->lx)));
                 } break;
-                default: break;
+                default: goto done;
                 }
         }
 
+done:
         return left;
 }
 

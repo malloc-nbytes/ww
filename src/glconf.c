@@ -15,7 +15,7 @@ struct {
                 const char *compile_cmd;
                 const char *to_clipboard;
                 int         empty_line_squiggles;
-                const char  selection_highlight[128];
+                char        selection_highlight[128];
         } defaults;
 
         struct {
