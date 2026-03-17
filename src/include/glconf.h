@@ -19,6 +19,8 @@ extern struct {
                 int         empty_line_squiggles;
                 char        selection_highlight[128];
                 const char *initial_buffers[32*sizeof(char *)];
+                char        search_highlight[128];
+                char        search_highlight_exact[128];
         } defaults;
 
         struct {

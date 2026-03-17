@@ -18,5 +18,6 @@ typedef struct {
 
 void calc_init(void);
 str  calc(str math);
+void calc_reset(void);
 
 #endif

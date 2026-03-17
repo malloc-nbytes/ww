@@ -17,6 +17,8 @@ struct {
                 int         empty_line_squiggles;
                 char        selection_highlight[128];
                 const char *initial_buffers[32*sizeof(char *)];
+                char        search_highlight[128];
+                char        search_highlight_exact[128];
         } defaults;
 
         struct {
@@ -35,12 +37,14 @@ struct {
         .config_filepath = {0},
         .starting_lineno = 0,
         .defaults = {
-                .space_amt            = DEFAULT_SPACE_AMT,
-                .compile_cmd          = DEFAULT_COMPILE_COMMAND,
-                .to_clipboard         = DEFAULT_TO_CLIPBOARD_COMMAND,
-                .empty_line_squiggles = DEFAULT_EMPTY_LINE_SQUIGGLES,
-                .selection_highlight  = DEFAULT_SELECTION_HIGHLIGHT,
-                .initial_buffers      = DEFAULT_INITIAL_BUFFERS,
+                .space_amt              = DEFAULT_SPACE_AMT,
+                .compile_cmd            = DEFAULT_COMPILE_COMMAND,
+                .to_clipboard           = DEFAULT_TO_CLIPBOARD_COMMAND,
+                .empty_line_squiggles   = DEFAULT_EMPTY_LINE_SQUIGGLES,
+                .selection_highlight    = DEFAULT_SELECTION_HIGHLIGHT,
+                .initial_buffers        = DEFAULT_INITIAL_BUFFERS,
+                .search_highlight       = DEFAULT_SEARCH_HIGHLIGHT,
+                .search_highlight_exact = DEFAULT_SEARCH_HIGHLIGHT_EXACT,
         },
         .term = {
                 .w   = 0,

@@ -43,17 +43,16 @@ interpret_expr_binary(expr_binary *e)
         calc_value_int *i0 = (calc_value_int *)l;
         calc_value_int *i1 = (calc_value_int *)r;
 
-        if (!strcmp(e->op, "+")) {
+        if (!strcmp(e->op, "+"))
                 res = (calc_value *)calc_value_int_alloc(i0->i + i1->i);
-        } else if (!strcmp(e->op, "-")) {
+        else if (!strcmp(e->op, "-"))
                 res = (calc_value *)calc_value_int_alloc(i0->i - i1->i);
-        } else if (!strcmp(e->op, "*")) {
+        else if (!strcmp(e->op, "*"))
                 res = (calc_value *)calc_value_int_alloc(i0->i * i1->i);
-        } else if (!strcmp(e->op, "/")) {
+        else if (!strcmp(e->op, "/"))
                 res = (calc_value *)calc_value_int_alloc(i0->i / i1->i);
-        } else {
+        else
                 goto done;
-        }
 
 done:
         if (l)
@@ -146,4 +145,9 @@ void
 calc_init(void)
 {
         symtbl = calc_symtbl_create(calc_symtbl_hash, calc_symtbl_cmp);
+}
+
+void
+calc_reset(void)
+{
 }

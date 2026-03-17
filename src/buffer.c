@@ -1733,9 +1733,9 @@ drawln(const buffer *b,
                         if (matches.len > 0 && (int)i == matches.data[0]) {
                                 if (b->cx >= i && b->cx <= matches.data[0] + str_len(&b->last_search)
                                     && (int)b->al == lineno)
-                                        printf(INVERT BOLD ORANGE "%s" RESET, str_cstr(&b->last_search));
+                                        printf("%s%s" RESET, glconf.defaults.search_highlight_exact, str_cstr(&b->last_search));
                                 else
-                                        printf(INVERT DIM YELLOW "%s" RESET, str_cstr(&b->last_search));
+                                        printf("%s%s" RESET, glconf.defaults.search_highlight, str_cstr(&b->last_search));
                                 dyn_array_rm_at(matches, 0);
                                 i += str_len(&b->last_search)-1;
                         } else {
