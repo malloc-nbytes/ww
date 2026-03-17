@@ -58,5 +58,7 @@ window window_create(size_t w, size_t h);
 void   window_add_buffer(window *win, buffer *b, int make_curr);
 void   window_handle(window *win);
 void   window_open_help_buffer(window *win);
+void   window_open_calc_buffer(window *win);
+void   window_compilation_buffer(window *win);
 
 #endif // WINDOW_H_INCLUDED

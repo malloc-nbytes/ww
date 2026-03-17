@@ -16,6 +16,7 @@ struct {
                 const char *to_clipboard;
                 int         empty_line_squiggles;
                 char        selection_highlight[128];
+                const char *initial_buffers[32*sizeof(char *)];
         } defaults;
 
         struct {
@@ -39,6 +40,7 @@ struct {
                 .to_clipboard         = DEFAULT_TO_CLIPBOARD_COMMAND,
                 .empty_line_squiggles = DEFAULT_EMPTY_LINE_SQUIGGLES,
                 .selection_highlight  = DEFAULT_SELECTION_HIGHLIGHT,
+                .initial_buffers      = DEFAULT_INITIAL_BUFFERS,
         },
         .term = {
                 .w   = 0,

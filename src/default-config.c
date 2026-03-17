@@ -37,4 +37,11 @@ const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "#  UNDERLINE, BOLD, ITALIC, DIM, INVERT, RESET.\n"
 "# You can mix-and-match them such as:\n"
 "#  selection-highlight = 'YELLOW INVERT BOLD'.\n"
-"selection-highlight = 'INVERT';\n";
+"selection-highlight = 'INVERT';\n"
+"\n"
+"# Which buffers to open when `ww' is called on a directory\n"
+"# or with no filepath provided at all. If this variable is\n"
+"# undefined or invalid buffers are given, it defaults to `ww-help'.\n"
+"# Some valid options are:\n"
+"#   ww-help, ww-calc, ww-compilation\n"
+"initial-buffers = ['ww-help'];\n";

@@ -14,3 +14,6 @@
 - add: color customization for fuzzy menu
 - add: color customization for search
 - add: variables to ww-calc
+- add: floats to ww-calc
+- add: bitwise to ww-calc
+- add: parenthesis to ww-calc

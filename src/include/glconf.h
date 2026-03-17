@@ -18,6 +18,7 @@ extern struct {
                 const char *to_clipboard;
                 int         empty_line_squiggles;
                 char        selection_highlight[128];
+                const char *initial_buffers[32*sizeof(char *)];
         } defaults;
 
         struct {

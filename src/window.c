@@ -727,8 +727,8 @@ done:
         return input;
 }
 
-static void
-compilation_buffer(window *win)
+void
+window_compilation_buffer(window *win)
 {
         const char *input_start;
 
@@ -846,8 +846,8 @@ destroy_calc_buffer(window *win)
         assert(win && 0);
 }
 
-static void
-open_calc_buffer(window *win)
+void
+window_open_calc_buffer(window *win)
 {
 #define CALC_BUF_HEADER "*** Calc ([ENTER | C-j] to eval) ***\n"
 
@@ -905,7 +905,7 @@ metax(window *win)
         } else if (!strcmp(selected, WINCMD_SWTCHBUF)) {
                 choose_buffer(win);
         } else if (!strcmp(selected, WINCMD_COMP)) {
-                compilation_buffer(win);
+                window_compilation_buffer(win);
         } else if (!strcmp(selected, WINCMD_SAVEBUF)) {
                 buffer_dump(win->ab);
                 buffer_save(win->ab);
@@ -939,7 +939,7 @@ metax(window *win)
         } else if (!strcmp(selected, WINDCMD_INFOBUF)) {
                 open_output_buffer(win, buffer_info(win->ab));
         } else if (!strcmp(selected, WINDCMD_CALC)) {
-                open_calc_buffer(win);
+                window_open_calc_buffer(win);
                 buffer_dump(win->ab);
         } else {
                 buffer_dump(win->ab);
@@ -962,7 +962,7 @@ ctrlx(window *win)
                 if (ch == 'b')
                         choose_buffer(win);
                 if (ch == 'x')
-                        compilation_buffer(win);
+                        window_compilation_buffer(win);
         } break;
         case INPUT_TYPE_CTRL:
                 if (ch == CTRL_S)

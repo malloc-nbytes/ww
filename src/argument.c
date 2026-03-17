@@ -27,7 +27,7 @@ option_usage(argument **_)
         printf("| path: " COMPILER_PATH "\n");
         printf("| ver.: " COMPILER_VERSION "\n\n");
 
-        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN BOLD "<FILEPATH>" RESET GRAY " [+LINENO]" RESET "\n\n");
+        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN BOLD "[FILEPATH]" RESET GRAY " [+LINENO]" RESET "\n\n");
         printf("Options:\n");
         printf("  " YELLOW BOLD "-h, --help" "            " RESET "        display this message\n");
         printf("  " YELLOW BOLD "-v, --version" "         " RESET "        show the version\n");
@@ -273,9 +273,12 @@ parse_args(int argc, char *argv[])
 
         if (glconf.flags & FT_REPLACE) {
                 if (!filename)
-                        fatal("option `far' requires a file or directory");
+                        fatal("option `replace' requires a file or directory");
                 glconf.replace.path = filename;
         }
+
+        if (!filename)
+                filename = strdup(".");
 
         return filename;
 }

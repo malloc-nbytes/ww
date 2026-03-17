@@ -19,6 +19,32 @@
 #define _GNU_SOURCE
 #include <unistd.h>
 
+static void
+open_initial_buffers(window *win)
+{
+        const char **def;
+        int          added;
+
+        def   = glconf.defaults.initial_buffers;
+        added = 0;
+
+        for (size_t i = 0; def[i]; ++i) {
+                if (!strcmp(def[i], "ww-help")) {
+                        window_open_help_buffer(win);
+                        added = 1;
+                } else if (!strcmp(def[i], "ww-calc")) {
+                        window_open_calc_buffer(win);
+                        added = 1;
+                } else if (!strcmp(def[i], "ww-compilation")) {
+                        window_compilation_buffer(win);
+                        added = 1;
+                }
+        }
+
+        if (!added)
+                window_open_help_buffer(win);
+}
+
 static int
 run(const char *filename)
 {
@@ -44,7 +70,7 @@ run(const char *filename)
                 fp = str_from(filename);
 
         if (!file_provided) {
-                window_open_help_buffer(&win);
+                open_initial_buffers(&win);
         } else {
 
                 if (!(buffer = buffer_from_file(fp, &win)))
@@ -59,6 +85,8 @@ run(const char *filename)
 
         init_buffer_context();
         calc_init();
+
+        clear_terminal();
         window_handle(&win);
 
         return 1;
@@ -299,6 +327,7 @@ parse_config(void)
         qcl_value *to_clipboard        = qcl_value_get(&config, "to-clipboard");
         qcl_value *line_squiggles      = qcl_value_get(&config, "empty-line-squiggles");
         qcl_value *selection_highlight = qcl_value_get(&config, "selection-highlight");
+        qcl_value *initial_buffers     = qcl_value_get(&config, "initial-buffers");
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
@@ -332,6 +361,10 @@ parse_config(void)
                 printf("selection-highlight must be a string\n");
                 ok = 0;
         }
+        if (initial_buffers && initial_buffers->kind != QCL_VALUE_KIND_LIST) {
+                printf("initial-buffers must be a list of strings\n");
+                ok = 0;
+        }
 
         int res = 1;
 
@@ -359,6 +392,15 @@ parse_config(void)
         if (selection_highlight)
                 if (!set_selection_highlight(((qcl_value_string *)selection_highlight)->s))
                         res = 0;
+
+        if (initial_buffers) {
+                char **lst = qcl_value_flatten(&config, "initial-buffers");
+                size_t i;
+                for (i = 0; lst[i]; ++i)
+                        glconf.defaults.initial_buffers[i] = lst[i];
+                glconf.defaults.initial_buffers[i] = NULL;
+                free(lst);
+        }
 
         return res;
 }
