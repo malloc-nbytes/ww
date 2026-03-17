@@ -11,6 +11,7 @@
 #include "helpbuf.h"
 #include "error.h"
 #include "calc.h"
+#include "art.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -811,7 +812,7 @@ window_open_help_buffer(window *win)
         buffer *b = NULL;
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
-                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-help")) {
                         b = win->bfrs.data[i];
                         win->ab = b;
                         win->abi = i;
@@ -825,9 +826,36 @@ window_open_help_buffer(window *win)
                 b->name = str_from("ww-help");
                 b->writable = 0;
                 window_add_buffer(win, b, 1);
+        } else {
+                for (size_t i = 0; i < b->lns.len; ++i)
+                        line_free(b->lns.data[i]);
+                dyn_array_free(b->lns);
         }
 
-        win->ab->lns = help;
+        win->ab->lns = dyn_array_empty(line_array);
+
+        if (glconf.defaults.ascii_art) {
+                line_array art;
+                if (!strcmp(glconf.defaults.ascii_art, "ww1")) {
+                        art = lines_of_cstr(g_art_ww1);
+                        for (size_t i = 0; i < art.len; ++i)
+                                dyn_array_append(win->ab->lns, art.data[i]);
+                        dyn_array_append(win->ab->lns, line_from_cstr("\n"));
+                } else if (!strcmp(glconf.defaults.ascii_art, "ww2")) {
+                        art = lines_of_cstr(g_art_ww2);
+                        for (size_t i = 0; i < art.len; ++i)
+                                dyn_array_append(win->ab->lns, art.data[i]);
+                        dyn_array_append(win->ab->lns, line_from_cstr("\n"));
+                } else if (!strcmp(glconf.defaults.ascii_art, "flag1")) {
+                        art = lines_of_cstr(g_art_flag1);
+                        for (size_t i = 0; i < art.len; ++i)
+                                dyn_array_append(win->ab->lns, art.data[i]);
+                        dyn_array_append(win->ab->lns, line_from_cstr("\n"));
+                }
+        }
+
+        for (size_t i = 0; i < help.len; ++i)
+                dyn_array_append(win->ab->lns, help.data[i]);
 
         for (size_t i = 0; i < controls.len; ++i)
                 dyn_array_append(win->ab->lns, controls.data[i]);

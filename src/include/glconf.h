@@ -19,6 +19,7 @@
 #define CFGVAR_SEARCH_HIGHLIGHT_EXACT "search-highlight-exact"
 #define CFGVAR_MENU_HIGHLIGHT         "menu-highlight"
 #define CFGVAR_DISABLE_QUIT_KEYBIND   "disable-quit-keybind"
+#define CFGVAR_ASCII_ART              "ascii-art"
 
 extern struct {
         uint32_t   flags;
@@ -37,6 +38,7 @@ extern struct {
                 char        search_highlight_exact[128];
                 char        menu_highlight[128];
                 int         disable_quit_keybind;
+                char       *ascii_art;
         } defaults;
 
         struct {

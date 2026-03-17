@@ -64,4 +64,10 @@ const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "\n"
 "# Disable the quit keybind if you somehow find yourself accidentally\n"
 "# hitting it a lot. If this is true, use `M-x quit' instead.\n"
-"disable-quit-keybind = false;\n";
+"disable-quit-keybind = false;\n"
+"\n"
+"# Artwork displayed in `ww-help'. Remove this variable to not have it\n"
+"# or set it to an empty string.\n"
+"# Valid options are:\n"
+"#   ww1, ww2, flag1"
+"ascii-art = 'ww1'\n";

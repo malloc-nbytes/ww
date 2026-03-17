@@ -23,6 +23,7 @@ struct {
                 char        search_highlight_exact[128];
                 char        menu_highlight[128];
                 int         disable_quit_keybind;
+                char       *ascii_art;
         } defaults;
 
         struct {
@@ -52,6 +53,7 @@ struct {
                 .search_highlight_exact = DEFAULT_SEARCH_HIGHLIGHT_EXACT,
                 .menu_highlight         = DEFAULT_MENU_HIGHLIGHT,
                 .disable_quit_keybind   = DEFAULT_DISABLE_QUIT_KEYBIND,
+                .ascii_art              = DEFAULT_ASCII_ART,
         },
         .term = {
                 .w   = 0,
