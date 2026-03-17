@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "helpbuf.h"
 #include "error.h"
+#include "calc.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -25,6 +26,7 @@
 #define MAX_COMPLETIONS_REQUEST  200
 #define MAX_VERTICAL_LINES        8
 #define FILE_SELECTION_PADDING 10
+#define CALC_PROMPT ">>> "
 
 typedef struct {
         str input;
@@ -857,7 +859,6 @@ static void
 open_calc_buffer(window *win)
 {
 #define CALC_BUF_HEADER "*** Calc ([ENTER | C-j] to eval) ***\n"
-#define CALC_PROMPT ">>> "
 
         buffer *b;
 
@@ -883,7 +884,6 @@ open_calc_buffer(window *win)
         win->ab->al = 2;
 
 #undef CALC_BUF_HEADER
-#undef CALC_PROMPT
 }
 
 static void
@@ -1053,6 +1053,34 @@ try_jump_to_error(window *win)
         buffer_dump(win->ab);
 }
 
+static void
+print_calc_line(window *win)
+{
+        const line *ln;
+        str         res;
+        str         math;
+
+        ln = buffer_getln(win->ab);
+
+        const char *it = str_cstr(&ln->s);
+
+        while (it && *it && (*it == ' ' || *it == '>' || *it == '\t'))
+                ++it;
+
+        math = str_from(it);
+
+        res = calc(math);
+        str_append(&res, '\n');
+
+        buffer_appendln(win->ab, line_from(res));
+
+        buffer_appendln(win->ab, line_from_cstr(CALC_PROMPT "\n"));
+
+        win->ab->cx = strlen(CALC_PROMPT);
+        win->ab->cy = win->ab->lns.len-1;
+        win->ab->al = win->ab->lns.len-1;
+}
+
 void
 window_handle(window *win)
 {
@@ -1082,8 +1110,12 @@ window_handle(window *win)
                 ty = get_input(&ch);
                 int is_compilation = !strcmp(str_cstr(&win->ab->name), "ww-compilation");
                 int is_output      = !strcmp(str_cstr(&win->ab->name), "ww-output");
+                int is_calc        = !strcmp(str_cstr(&win->ab->name), "ww-calc");
 
-                if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation)
+                if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_calc) {
+                        print_calc_line(win);
+                        buffer_dump(win->ab);
+                } else if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation)
                         try_jump_to_error(win);
                 else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && (is_compilation || is_output)) {
                         win->ab = win->pb;

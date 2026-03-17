@@ -60,5 +60,7 @@ void         init_buffer_context(void);
 void         buffer_dupline(buffer *b);
 void         buffer_shell(buffer *b);
 line_array   buffer_info(const buffer *b);
+line        *buffer_getln(const buffer *b);
+void         buffer_appendln(buffer *b, line *ln);
 
 #endif

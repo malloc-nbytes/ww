@@ -1947,3 +1947,15 @@ buffer_info(const buffer *b)
 
         return info;
 }
+
+line *
+buffer_getln(const buffer *b)
+{
+        return b->lns.data[b->al];
+}
+
+void
+buffer_appendln(buffer *b, line *ln)
+{
+        dyn_array_append(b->lns, ln);
+}
