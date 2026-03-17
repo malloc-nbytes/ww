@@ -640,6 +640,7 @@ del_char(buffer *b)
         if (b->cx > str_len(&ln->s)-1)
                 b->cx = str_len(&ln->s)-1;
 
+        add_to_popxy(b);
         return adjust_scroll(b) || newline;
 }
 
@@ -691,6 +692,7 @@ backspace(buffer *b)
         }
 
         adjust_scroll(b);
+        add_to_popxy(b);
         return newline;
 }
 
