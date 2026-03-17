@@ -1070,6 +1070,8 @@ print_calc_line(window *win)
         win->ab->cx = strlen(CALC_PROMPT);
         win->ab->cy = win->ab->lns.len-1;
         win->ab->al = win->ab->lns.len-1;
+
+        adjust_scroll(win->ab);
 }
 
 void
