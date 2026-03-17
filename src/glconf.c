@@ -37,8 +37,8 @@ struct {
                 .space_amt            = DEFAULT_SPACE_AMT,
                 .compile_cmd          = DEFAULT_COMPILE_COMMAND,
                 .to_clipboard         = DEFAULT_TO_CLIPBOARD_COMMAND,
-                .empty_line_squiggles = 1,
-                .selection_highlight  = INVERT,
+                .empty_line_squiggles = DEFAULT_EMPTY_LINE_SQUIGGLES,
+                .selection_highlight  = DEFAULT_SELECTION_HIGHLIGHT,
         },
         .term = {
                 .w   = 0,
