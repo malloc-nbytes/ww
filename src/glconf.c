@@ -1,4 +1,5 @@
 #include "flags.h"
+#include "colors.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -14,6 +15,7 @@ struct {
                 const char *compile_cmd;
                 const char *to_clipboard;
                 int         empty_line_squiggles;
+                const char  selection_highlight[128];
         } defaults;
 
         struct {
@@ -36,6 +38,7 @@ struct {
                 .compile_cmd          = DEFAULT_COMPILE_COMMAND,
                 .to_clipboard         = DEFAULT_TO_CLIPBOARD_COMMAND,
                 .empty_line_squiggles = 1,
+                .selection_highlight  = INVERT,
         },
         .term = {
                 .w   = 0,

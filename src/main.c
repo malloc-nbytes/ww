@@ -9,6 +9,7 @@
 #include "io.h"
 #include "glconf.h"
 #include "utils.h"
+#include "colors.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -212,6 +213,72 @@ init(void)
 }
 
 static int
+set_selection_highlight(const char *s)
+{
+        char *tok;
+
+        tok = strtok(s, " ");
+
+        memset(glconf.defaults.selection_highlight,
+                0, sizeof(glconf.defaults.selection_highlight));
+
+        while (tok) {
+                if (!strcmp(tok, "YELLOW"))
+                        strcat(glconf.defaults.selection_highlight, YELLOW);
+                else if (!strcmp(tok, "GREEN"))
+                        strcat(glconf.defaults.selection_highlight, GREEN);
+                else if (!strcmp(tok, "BRIGHT_GREEN"))
+                        strcat(glconf.defaults.selection_highlight, BRIGHT_GREEN);
+                else if (!strcmp(tok, "GRAY"))
+                        strcat(glconf.defaults.selection_highlight, GRAY);
+                else if (!strcmp(tok, "RED"))
+                        strcat(glconf.defaults.selection_highlight, RED);
+                else if (!strcmp(tok, "BLUE"))
+                        strcat(glconf.defaults.selection_highlight, BLUE);
+                else if (!strcmp(tok, "CYAN"))
+                        strcat(glconf.defaults.selection_highlight, CYAN);
+                else if (!strcmp(tok, "MAGENTA"))
+                        strcat(glconf.defaults.selection_highlight, MAGENTA);
+                else if (!strcmp(tok, "ORANGE"))
+                        strcat(glconf.defaults.selection_highlight, ORANGE);
+                else if (!strcmp(tok, "WHITE"))
+                        strcat(glconf.defaults.selection_highlight, WHITE);
+                else if (!strcmp(tok, "BLACK"))
+                        strcat(glconf.defaults.selection_highlight, BLACK);
+                else if (!strcmp(tok, "PINK"))
+                        strcat(glconf.defaults.selection_highlight, PINK);
+                else if (!strcmp(tok, "BRIGHT_PINK"))
+                        strcat(glconf.defaults.selection_highlight, BRIGHT_PINK);
+                else if (!strcmp(tok, "PURPLE"))
+                        strcat(glconf.defaults.selection_highlight, PURPLE);
+                else if (!strcmp(tok, "BRIGHT_PURPLE"))
+                        strcat(glconf.defaults.selection_highlight, BRIGHT_PURPLE);
+                else if (!strcmp(tok, "BROWN"))
+                        strcat(glconf.defaults.selection_highlight, BROWN);
+                else if (!strcmp(tok, "UNDERLINE"))
+                        strcat(glconf.defaults.selection_highlight, UNDERLINE);
+                else if (!strcmp(tok, "BOLD"))
+                        strcat(glconf.defaults.selection_highlight, BOLD);
+                else if (!strcmp(tok, "ITALIC"))
+                        strcat(glconf.defaults.selection_highlight, ITALIC);
+                else if (!strcmp(tok, "DIM"))
+                        strcat(glconf.defaults.selection_highlight, DIM);
+                else if (!strcmp(tok, "INVERT"))
+                        strcat(glconf.defaults.selection_highlight, INVERT);
+                else if (!strcmp(tok, "RESET"))
+                        strcat(glconf.defaults.selection_highlight, RESET);
+                else {
+                        printf("invalid selection-highlight: `%s'\n", tok);
+                        return 0;
+                }
+
+                tok = strtok(NULL, " ");
+        }
+
+        return 1;
+}
+
+static int
 parse_config(void)
 {
         qcl_config config = qcl_parse_file(glconf.config_filepath);
@@ -222,12 +289,13 @@ parse_config(void)
 
         int ok = 1;
 
-        qcl_value *show_trails     = qcl_value_get(&config, "show-trails");
-        qcl_value *tabmode         = qcl_value_get(&config, "tab-mode");
-        qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
-        qcl_value *compile_command = qcl_value_get(&config, "compile-command");
-        qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
-        qcl_value *line_squiggles  = qcl_value_get(&config, "empty-line-squiggles");
+        qcl_value *show_trails         = qcl_value_get(&config, "show-trails");
+        qcl_value *tabmode             = qcl_value_get(&config, "tab-mode");
+        qcl_value *space_amt           = qcl_value_get(&config, "space-amt");
+        qcl_value *compile_command     = qcl_value_get(&config, "compile-command");
+        qcl_value *to_clipboard        = qcl_value_get(&config, "to-clipboard");
+        qcl_value *line_squiggles      = qcl_value_get(&config, "empty-line-squiggles");
+        qcl_value *selection_highlight = qcl_value_get(&config, "selection-highlight");
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
@@ -257,6 +325,12 @@ parse_config(void)
                 printf("empty-line-squiggles must be a boolean\n");
                 ok = 0;
         }
+        if (selection_highlight && selection_highlight->kind != QCL_VALUE_KIND_STRING) {
+                printf("selection-highlight must be a string\n");
+                ok = 0;
+        }
+
+        int res = 1;
 
         if (!ok)
                 return 0;
@@ -279,7 +353,11 @@ parse_config(void)
         if (line_squiggles)
                 glconf.defaults.empty_line_squiggles = ((qcl_value_bool *)line_squiggles)->b;
 
-        return 1;
+        if (selection_highlight)
+                if (!set_selection_highlight(((qcl_value_string *)selection_highlight)->s))
+                        res = 0;
+
+        return res;
 }
 
 static int
