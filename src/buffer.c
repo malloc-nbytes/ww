@@ -1628,7 +1628,7 @@ buffer_process(buffer     *b,
                 } else if (ch == '.') {
                         expand_region(b);
                         return BP_MOV;
-                } else if (ch == ' ') {
+                } else if (ch == '\'') {
                         buffer_shell(b);
                         return BP_MOV;
                 }
@@ -1899,7 +1899,11 @@ buffer_shell(buffer *b)
 {
         clear_terminal();
         disable_raw_terminal(STDIN_FILENO, &glconf.term.old);
-        system("$SHELL");
+        system("bash --rcfile <("
+               "echo 'source ~/.bashrc 2>/dev/null || true'; "
+               "echo 'PS1=\"(ww-shell) $PS1\"'"
+               ") -i"
+        );
         enable_raw_terminal(STDIN_FILENO, &glconf.term.old);
         buffer_dump(b);
 }
