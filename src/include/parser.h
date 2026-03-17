@@ -8,7 +8,6 @@ typedef enum {
         EXPR_KIND_INTLIT,
         EXPR_KIND_BINARY,
         EXPR_KIND_UNARY,
-        EXPR_KIND_ASSIGN,
 } expr_kind;
 
 typedef struct {
@@ -37,12 +36,6 @@ typedef struct {
         char  op;
         expr *r;
 } expr_unary;
-
-typedef struct {
-        expr        base;
-        const char *id;
-        expr       *e;
-} expr_assign;
 
 expr *parse_expr(lexer *l);
 

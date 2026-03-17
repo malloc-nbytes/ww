@@ -69,11 +69,11 @@ handle_resize(window *win)
 }
 
 static void
-completion_draw(window *win,
-                const char *label,
-                completion_state *st,
-                char **completions,
-                size_t total_matches)
+completion_draw(window            *win,
+                const char        *label,
+                completion_state  *st,
+                char             **completions,
+                size_t             total_matches)
 {
         /* Keep indices sane */
         if (total_matches == 0) {
@@ -384,16 +384,7 @@ find_file(window *win)
                 goto done;
 
         if (strcmp(selected, "..") == 0) {
-                //char *slash = strrchr(str_cstr(&cwd), '/');
-
                 str_concat(&cwd, "/..");
-
-                /*if (slash && slash != str_cstr(&cwd))
-                        *slash = '\0';
-                else {
-                        str_destroy(&cwd);
-                        cwd = str_from(".");
-                }*/
 
                 free(selected);
                 dyn_array_free(files);
