@@ -1195,6 +1195,8 @@ cancel(buffer *b)
 static void
 cut_selection(buffer *b)
 {
+        if (!writable(b))
+                return;
         if (b->state != BS_SELECTION)
                 return;
         copy_selection(b);
