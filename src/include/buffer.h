@@ -5,8 +5,11 @@
 #include "str.h"
 #include "array.h"
 #include "term.h"
+#include "pair.h"
 
 #include <stddef.h>
+
+DYN_ARRAY_TYPE(int_pair, int_pair_array);
 
 typedef struct window window;
 
@@ -42,6 +45,7 @@ typedef struct {
         int          sx;          // the x position of selection mode
         int          writable;    // mutable buffer?
         int          last_tab;    // was the last character inserted a tab?
+        int_pair_array popxy;
 } buffer;
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);

@@ -19,4 +19,6 @@
                 }; \
         }
 
+PAIR_TYPE(int, int, int_pair)
+
 #endif // PAIR_H_INCLUDED

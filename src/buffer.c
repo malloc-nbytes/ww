@@ -32,10 +32,8 @@ static int_array
 find_line_matches(const buffer *b,
                   const str    *s);
 
-PAIR_TYPE(int, int, int_pair)
 PAIR_IMPL(int, int, int_pair)
 DYN_ARRAY_TYPE(int_array, int_array_array);
-DYN_ARRAY_TYPE(int_pair, int_pair_array);
 
 static char_array g_cpy_buf = {0};
 
@@ -55,6 +53,16 @@ static void
 clear_cpy(void)
 {
         dyn_array_clear(g_cpy_buf);
+}
+
+static void
+add_to_popxy(buffer *b)
+{
+        if (b->popxy.len > 0 && b->popxy.data[b->popxy.len-1].r == b->al) {
+                b->popxy.data[b->popxy.len-1].l = b->cx;
+                return;
+        }
+        dyn_array_append(b->popxy, int_pair_create(b->cx, b->al));
 }
 
 void
@@ -245,6 +253,8 @@ copy_selection(buffer *b) {
                         append_line_range_to_clipboard(ln, 0, end_x);
                 }
         }
+
+        add_to_popxy(b);
 }
 
 static int
@@ -281,6 +291,7 @@ buffer_alloc(window     *parent)
         b->sx          = 0;
         b->writable    = 1;
         b->last_tab    = 0;
+        b->popxy       = dyn_array_empty(int_pair_array);
 
         return b;
 }
@@ -506,6 +517,9 @@ insert_char(buffer *b,
         }
 
         b->wish_col = b->cx;
+
+        add_to_popxy(b);
+
         adjust_scroll(b);
 }
 
@@ -711,6 +725,8 @@ delete_until_eol(buffer *b)
 
         str_cut(&ln->s, b->cx);
         str_insert(&ln->s, b->cx, 10);
+
+        add_to_popxy(b);
 }
 
 static void
@@ -1100,6 +1116,9 @@ paste(buffer *b)
                         newline = 1;
         }
 
+        add_to_popxy(b);
+        adjust_scroll(b);
+
         return newline;
 }
 
@@ -1128,6 +1147,8 @@ combine_lines(buffer *b)
 
         b->cx = len-1;
         b->wish_col = b->cx;
+
+        add_to_popxy(b);
 }
 
 static void
@@ -1201,6 +1222,7 @@ cut_selection(buffer *b)
                 return;
         copy_selection(b);
         del_selection(b);
+        add_to_popxy(b);
 }
 
 static char *
@@ -1324,6 +1346,7 @@ super_backspace(buffer *b)
         b->cx       = start;
         b->last_tab = 0;
 
+        add_to_popxy(b);
         adjust_scroll(b);
 
         return 1;
@@ -1364,6 +1387,8 @@ buffer_dupline(buffer *b)
         dyn_array_insert_at(b->lns, b->al, newln);
         ++b->al;
         ++b->cy;
+
+        add_to_popxy(b);
         adjust_scroll(b);
 }
 
@@ -1384,6 +1409,7 @@ movetxt_up(buffer *b)
 
         --b->al;
         --b->cy;
+        add_to_popxy(b);
         adjust_scroll(b);
 }
 
@@ -1404,15 +1430,11 @@ movetxt_down(buffer *b)
 
         ++b->al;
         ++b->cy;
+
+        add_to_popxy(b);
         adjust_scroll(b);
 }
 
-void
-buffer_list_ids(buffer *b)
-{
-        (void)b;
-        assert(0);
-}
 static void
 upperlower_word(buffer *b,
                 int   (*fun)(int),
@@ -1441,6 +1463,8 @@ upperlower_word(buffer *b,
 
         b->cx = start;
         b->wish_col = b->cx;
+
+        add_to_popxy(b);
 }
 
 static void
@@ -1449,6 +1473,8 @@ uppercase_word(buffer *b)
         if (!writable(b))
                 return;
         upperlower_word(b, toupper, 0);
+
+        add_to_popxy(b);
         adjust_scroll(b);
 }
 
@@ -1458,6 +1484,8 @@ lowercase_word(buffer *b)
         if (!writable(b))
                 return;
         upperlower_word(b, tolower, 1);
+
+        add_to_popxy(b);
         adjust_scroll(b);
 }
 
@@ -1467,6 +1495,8 @@ caps_word(buffer *b)
         if (!writable(b))
                 return;
         upperlower_word(b, toupper, 1);
+
+        add_to_popxy(b);
         adjust_scroll(b);
 }
 
@@ -1492,6 +1522,34 @@ swap_chars(buffer *b)
 
         ++b->cx;
         b->wish_col = b->cx;
+
+        add_to_popxy(b);
+}
+
+static int
+popxy(buffer *b)
+{
+        if (!b->popxy.len)
+                return 0;
+
+        b->al = b->popxy.data[b->popxy.len-1].r;
+        if (b->al >= b->lns.len)
+                b->al = b->lns.len-1;
+
+        const str *s = &b->lns.data[b->al]->s;
+        b->cx = b->popxy.data[b->popxy.len-1].l;
+
+        if (b->cx > str_len(s)-1)
+                b->cx = str_len(s)-1;
+
+        b->cy = b->al;
+        b->wish_col = b->cx;
+
+        dyn_array_rm_at(b->popxy, b->popxy.len-1);
+
+        adjust_scroll(b);
+
+        return 1;
 }
 
 // entrypoint
@@ -1633,6 +1691,8 @@ buffer_process(buffer     *b,
                 } else if (ch == '\'') {
                         buffer_shell(b);
                         return BP_MOV;
+                } else if (ch == ' ') {
+                        return popxy(b) ? BP_INSERTNL : BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {

@@ -51,6 +51,7 @@
 "C-v         = page down\n" \
 "M-v         = page up\n" \
 "M-m         = go to first non-space char on line\n" \
+"M-SPCE      = pop to last (x, y) location\n" \
 "\n" \
 "Text Manipulation:\n" \
 "\n" \
