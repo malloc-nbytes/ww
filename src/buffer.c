@@ -1624,6 +1624,8 @@ buffer_process(buffer     *b,
                 } else if (ch == CTRL_T) {
                         swap_chars(b);
                         return BP_INSERT;
+                } else if (ch == CTRL_U) {
+                        return popxy(b) ? BP_INSERTNL : BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ALT: {
@@ -1693,8 +1695,6 @@ buffer_process(buffer     *b,
                 } else if (ch == '\'') {
                         buffer_shell(b);
                         return BP_MOV;
-                } else if (ch == ' ') {
-                        return popxy(b) ? BP_INSERTNL : BP_MOV;
                 }
         } break;
         case INPUT_TYPE_ARROW: {
