@@ -139,7 +139,6 @@ completion_draw(window            *win,
                         would_be += name_len;
 
                         if (would_be > win->w - FILE_SELECTION_PADDING) {
-
                                 size_t remaining = win->w - cursor_x;
 
                                 if (items_shown > 0)
@@ -157,7 +156,7 @@ completion_draw(window            *win,
                                         printf(" | ");
 
                                 if (i == st->selected_idx)
-                                        printf(YELLOW BOLD INVERT);
+                                        printf("%s", glconf.defaults.menu_highlight);
 
                                 printf("%.*s...",
                                        (int)display_chars,
@@ -173,7 +172,7 @@ completion_draw(window            *win,
                                 printf(" | ");
 
                         if (i == st->selected_idx)
-                                printf(YELLOW BOLD INVERT);
+                                printf("%s", glconf.defaults.menu_highlight);
 
                         printf("%s", name);
 

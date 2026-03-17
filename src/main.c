@@ -346,6 +346,7 @@ parse_config(void)
         qcl_value *initial_buffers        = qcl_value_get(&config, "initial-buffers");
         qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
         qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
+        qcl_value *menu_highlight         = qcl_value_get(&config, "menu-highlight");
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
@@ -389,6 +390,10 @@ parse_config(void)
         }
         if (search_highlight_exact && search_highlight_exact->kind != QCL_VALUE_KIND_STRING) {
                 printf("search-highlight-exact must be a string\n");
+                ok = 0;
+        }
+        if (menu_highlight && menu_highlight->kind != QCL_VALUE_KIND_STRING) {
+                printf("menu-highlight must be a string\n");
                 ok = 0;
         }
 
@@ -436,6 +441,11 @@ parse_config(void)
 
         if (search_highlight_exact) {
                 if (!set_default_color(glconf.defaults.search_highlight_exact, (qcl_value_string *)search_highlight_exact))
+                        res = 0;
+        }
+
+        if (menu_highlight) {
+                if (!set_default_color(glconf.defaults.menu_highlight, (qcl_value_string *)menu_highlight))
                         res = 0;
         }
 

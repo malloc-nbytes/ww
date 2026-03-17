@@ -19,6 +19,7 @@ struct {
                 const char *initial_buffers[32*sizeof(char *)];
                 char        search_highlight[128];
                 char        search_highlight_exact[128];
+                char        menu_highlight[128];
         } defaults;
 
         struct {
@@ -45,6 +46,7 @@ struct {
                 .initial_buffers        = DEFAULT_INITIAL_BUFFERS,
                 .search_highlight       = DEFAULT_SEARCH_HIGHLIGHT,
                 .search_highlight_exact = DEFAULT_SEARCH_HIGHLIGHT_EXACT,
+                .menu_highlight         = DEFAULT_MENU_HIGHLIGHT,
         },
         .term = {
                 .w   = 0,
