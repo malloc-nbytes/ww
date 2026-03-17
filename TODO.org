@@ -6,6 +6,7 @@
 - fix: handle tabs correctly and non-1-byte characters
 - fix: program segfaults when invoking =M-x show-cfg-vars= for the second time due to how clear_output_buffer works
 - fix: redraw buffer automatically after window resize
+- fix: insert buffers from =initial-buffers= cfg variable in reverse order
 - add: write the default config (=src/default-config.c=) instead of empty file when creating the config for the first time
 - add: highlight whole buffer
 - add: manually make buffer read-only
