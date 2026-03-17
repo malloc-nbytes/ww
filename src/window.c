@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "helpbuf.h"
 #include "error.h"
+#include "calc.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -25,6 +26,7 @@
 #define MAX_COMPLETIONS_REQUEST  200
 #define MAX_VERTICAL_LINES        8
 #define FILE_SELECTION_PADDING 10
+#define CALC_PROMPT ">>> "
 
 typedef struct {
         str input;
@@ -67,11 +69,11 @@ handle_resize(window *win)
 }
 
 static void
-completion_draw(window *win,
-                const char *label,
-                completion_state *st,
-                char **completions,
-                size_t total_matches)
+completion_draw(window            *win,
+                const char        *label,
+                completion_state  *st,
+                char             **completions,
+                size_t             total_matches)
 {
         /* Keep indices sane */
         if (total_matches == 0) {
@@ -382,16 +384,7 @@ find_file(window *win)
                 goto done;
 
         if (strcmp(selected, "..") == 0) {
-                //char *slash = strrchr(str_cstr(&cwd), '/');
-
                 str_concat(&cwd, "/..");
-
-                /*if (slash && slash != str_cstr(&cwd))
-                        *slash = '\0';
-                else {
-                        str_destroy(&cwd);
-                        cwd = str_from(".");
-                }*/
 
                 free(selected);
                 dyn_array_free(files);
@@ -589,14 +582,14 @@ capture_command_output(str *input)
 }
 
 static void
-window_open_output_buffer(window *win, line_array lns)
+open_output_buffer(window *win, line_array lns)
 {
 #define OUTPUT_HEADER "*** Output ***\n\n"
 
         buffer *b = NULL;
 
         for (size_t i = 0; i < win->bfrs.len; ++i) {
-                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-compilation")) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-output")) {
                         b        = win->bfrs.data[i];
                         win->ab  = b;
                         win->abi = i;
@@ -848,6 +841,43 @@ window_open_help_buffer(window *win)
 }
 
 static void
+destroy_calc_buffer(window *win)
+{
+        assert(win && 0);
+}
+
+static void
+open_calc_buffer(window *win)
+{
+#define CALC_BUF_HEADER "*** Calc ([ENTER | C-j] to eval) ***\n"
+
+        buffer *b;
+
+        for (size_t i = 0; i < win->bfrs.len; ++i) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-calc")) {
+                        destroy_calc_buffer(win);
+                        break;
+                }
+        }
+
+        b = buffer_alloc(win);
+        str_destroy(&b->name);
+        b->name = str_from("ww-calc");
+        b->writable = 1;
+        window_add_buffer(win, b, 1);
+
+        dyn_array_append(win->ab->lns, line_from_cstr(CALC_BUF_HEADER));
+        dyn_array_append(win->ab->lns, line_from_cstr("\n"));
+        dyn_array_append(win->ab->lns, line_from_cstr(CALC_PROMPT "\n"));
+
+        win->ab->cx = strlen(CALC_PROMPT);
+        win->ab->cy = 2;
+        win->ab->al = 2;
+
+#undef CALC_BUF_HEADER
+}
+
+static void
 metax(window *win)
 {
         // TODO: make `names' live in static memory
@@ -907,7 +937,10 @@ metax(window *win)
                 buffer_shell(win->ab);
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINDCMD_INFOBUF)) {
-                window_open_output_buffer(win, buffer_info(win->ab));
+                open_output_buffer(win, buffer_info(win->ab));
+        } else if (!strcmp(selected, WINDCMD_CALC)) {
+                open_calc_buffer(win);
+                buffer_dump(win->ab);
         } else {
                 buffer_dump(win->ab);
         }
@@ -1011,6 +1044,34 @@ try_jump_to_error(window *win)
         buffer_dump(win->ab);
 }
 
+static void
+print_calc_line(window *win)
+{
+        const line *ln;
+        str         res;
+        str         math;
+
+        ln = buffer_getln(win->ab);
+
+        const char *it = str_cstr(&ln->s);
+
+        while (it && *it && (*it == ' ' || *it == '>' || *it == '\t'))
+                ++it;
+
+        math = str_from(it);
+
+        res = calc(math);
+        str_append(&res, '\n');
+
+        buffer_appendln(win->ab, line_from(res));
+
+        buffer_appendln(win->ab, line_from_cstr(CALC_PROMPT "\n"));
+
+        win->ab->cx = strlen(CALC_PROMPT);
+        win->ab->cy = win->ab->lns.len-1;
+        win->ab->al = win->ab->lns.len-1;
+}
+
 void
 window_handle(window *win)
 {
@@ -1040,17 +1101,22 @@ window_handle(window *win)
                 ty = get_input(&ch);
                 int is_compilation = !strcmp(str_cstr(&win->ab->name), "ww-compilation");
                 int is_output      = !strcmp(str_cstr(&win->ab->name), "ww-output");
+                int is_calc        = !strcmp(str_cstr(&win->ab->name), "ww-calc");
 
-                if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation) {
+                if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_calc) {
+                        print_calc_line(win);
+                        buffer_dump(win->ab);
+                } else if (ty == INPUT_TYPE_NORMAL && ch == '\n' && is_compilation)
                         try_jump_to_error(win);
-                } else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && (is_compilation || is_output)) {
+                else if (ty == INPUT_TYPE_NORMAL && ch == 'q' && (is_compilation || is_output)) {
                         win->ab = win->pb;
                         win->abi = win->pbi;
                         buffer_dump(win->ab);
                 } else if (ty == INPUT_TYPE_ALT && ch == '\t' && !is_compilation) {
                         change_buffer_by_name(win, "ww-compilation");
                         buffer_dump(win->ab);
-                } else if (ty == INPUT_TYPE_NORMAL && ch == 'g' && is_compilation)
+                }
+                else if (ty == INPUT_TYPE_NORMAL && ch == 'g' && is_compilation)
                         do_compilation(win);
                 else if (ty == INPUT_TYPE_ALT && ch == 'x')
                         metax(win);

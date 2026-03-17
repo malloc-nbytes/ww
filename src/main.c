@@ -9,7 +9,9 @@
 #include "io.h"
 #include "glconf.h"
 #include "utils.h"
+#include "lexer.h"
 #include "colors.h"
+#include "calc.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -56,6 +58,7 @@ run(const char *filename)
         }
 
         init_buffer_context();
+        calc_init();
         window_handle(&win);
 
         return 1;

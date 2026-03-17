@@ -7,6 +7,7 @@
 #include "pair.h"
 #include "glconf.h"
 #include "flags.h"
+#include "lexer.h"
 #include "config.h"
 
 #include <assert.h>
@@ -1404,6 +1405,12 @@ movetxt_down(buffer *b)
         adjust_scroll(b);
 }
 
+void
+buffer_list_ids(buffer *b)
+{
+        (void)b;
+        assert(0);
+}
 static void
 upperlower_word(buffer *b,
                 int   (*fun)(int),
@@ -1939,4 +1946,16 @@ buffer_info(const buffer *b)
         dyn_array_append(info, line_from_cstr(b->writable ? "Writable: Yes\n" : "Writable: No\n"));
 
         return info;
+}
+
+line *
+buffer_getln(const buffer *b)
+{
+        return b->lns.data[b->al];
+}
+
+void
+buffer_appendln(buffer *b, line *ln)
+{
+        dyn_array_append(b->lns, ln);
 }

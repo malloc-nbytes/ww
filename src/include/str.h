@@ -1,6 +1,8 @@
 #ifndef STR_H_INCLUDED
 #define STR_H_INCLUDED
 
+#include "array.h"
+
 #include <stddef.h>
 
 typedef struct {
@@ -8,6 +10,8 @@ typedef struct {
         size_t  len;
         size_t  cap;
 } str;
+
+DYN_ARRAY_TYPE(str, str_array);
 
 str         str_create(void);
 str         str_from(const char *chars);

@@ -11,3 +11,6 @@
 - add: absolute line numbers
 - add: relative line numbers
 - add: auto-indent
+- add: color customization for fuzzy menu
+- add: color customization for search
+- add: variables to ww-calc

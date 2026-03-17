@@ -11,16 +11,18 @@
 #define WINCMD_COMP          "compile"
 #define WINCMD_SAVEBUF       "save-buffer"
 #define WINCMD_EXIT          "exit"
-#define WINCMD_COPYBUFTOCLIP "copybuffer-to-clipboard"
+#define WINCMD_COPYBUFTOCLIP "ww-clipboard-copy"
 #define WINCMD_TABMODE       "tab-mode"
 #define WINCMD_SPACEMODE     "space-mode"
 #define WINCMD_REPLACE       "replace"
 #define WINCMD_HELP          "help"
 #define WINCMD_FINDFILE      "find-file"
-#define WINDCMD_TRAILMODE    "trail-mode"
+#define WINDCMD_TRAILMODE    "toggle-trails"
 #define WINDCMD_DUPLINE      "dup-line"
 #define WINDCMD_TERM         "terminal"
-#define WINDCMD_INFOBUF      "info-buffer"
+#define WINDCMD_INFOBUF      "buffer-info"
+#define WINDCMD_CALC         "calc"
+
 #define WINCMDS { \
         WINCMD_SPCAMT, \
         WINCMD_KILLBUF, \
@@ -38,16 +40,17 @@
         WINDCMD_DUPLINE, \
         WINDCMD_TERM, \
         WINDCMD_INFOBUF, \
+        WINDCMD_CALC, \
 }
 
 typedef struct window {
-        buffer        *ab;      // active buffer (pointer)
+        buffer        *ab;      // active buffer
         size_t         abi;     // active buffer index
         bufferp_array  bfrs;    // buffers
         size_t         w;       // window width
         size_t         h;       // window height
         char          *compile; // current compile command
-        buffer        *pb;      // previous buffer (pointer)
+        buffer        *pb;      // previous buffer
         size_t         pbi;     // previous buffer index
 } window;
 
