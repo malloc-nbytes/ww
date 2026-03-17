@@ -21,5 +21,4 @@ const char *g_art_flag1 = "|* * * * * * * * * * OOOOOOOOOOOOOOOOOOOOOOOOO|\n"
 "|:::::::::::::::::::::::::::::::::::::::::::::|\n"
 "|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|\n"
 "|:::::::::::::::::::::::::::::::::::::::::::::|\n"
-"|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|\n"
-"------------------------------------------------\n";
+"|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|\n";
