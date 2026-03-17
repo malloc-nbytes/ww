@@ -589,7 +589,7 @@ capture_command_output(str *input)
 }
 
 static void
-window_open_output_buffer(window *win, line_array lns)
+open_output_buffer(window *win, line_array lns)
 {
 #define OUTPUT_HEADER "*** Output ***\n\n"
 
@@ -848,6 +848,45 @@ window_open_help_buffer(window *win)
 }
 
 static void
+destroy_calc_buffer(window *win)
+{
+        assert(win && 0);
+}
+
+static void
+open_calc_buffer(window *win)
+{
+#define CALC_BUF_HEADER "*** Calc ([ENTER | C-j] to eval) ***\n"
+#define CALC_PROMPT ">>> "
+
+        buffer *b;
+
+        for (size_t i = 0; i < win->bfrs.len; ++i) {
+                if (!strcmp(str_cstr(&win->bfrs.data[i]->name), "ww-calc")) {
+                        destroy_calc_buffer(win);
+                        break;
+                }
+        }
+
+        b = buffer_alloc(win);
+        str_destroy(&b->name);
+        b->name = str_from("ww-calc");
+        b->writable = 1;
+        window_add_buffer(win, b, 1);
+
+        dyn_array_append(win->ab->lns, line_from_cstr(CALC_BUF_HEADER));
+        dyn_array_append(win->ab->lns, line_from_cstr("\n"));
+        dyn_array_append(win->ab->lns, line_from_cstr(CALC_PROMPT "\n"));
+
+        win->ab->cx = strlen(CALC_PROMPT);
+        win->ab->cy = 2;
+        win->ab->al = 2;
+
+#undef CALC_BUF_HEADER
+#undef CALC_PROMPT
+}
+
+static void
 metax(window *win)
 {
         // TODO: make `names' live in static memory
@@ -907,9 +946,10 @@ metax(window *win)
                 buffer_shell(win->ab);
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINDCMD_INFOBUF)) {
-                window_open_output_buffer(win, buffer_info(win->ab));
+                open_output_buffer(win, buffer_info(win->ab));
         } else if (!strcmp(selected, WINDCMD_CALC)) {
-                assert(0);
+                open_calc_buffer(win);
+                buffer_dump(win->ab);
         } else {
                 buffer_dump(win->ab);
         }
