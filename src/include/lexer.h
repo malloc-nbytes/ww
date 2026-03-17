@@ -84,6 +84,7 @@
         "ifndef", \
         "ifdef", \
         "defined", \
+        NULL, \
 }
 
 #define LEXER_PY_KWDS { \
@@ -122,6 +123,7 @@
                 "while", \
                 "with", \
                 "yield", \
+                NULL, \
         }
 
 typedef enum {
@@ -190,8 +192,8 @@ typedef struct token {
 DYN_ARRAY_TYPE(token *, token_array);
 
 typedef struct {
-        const char  *fp;
-        const char  *src;
+        const char  *fp;   // source filepath
+        const char  *src;  // source code
         const char **kwds;
         const char  *mlop; // multiline comment open
         const char  *mlcl; // multiline comment close
@@ -207,9 +209,10 @@ typedef struct {
         lexer_cfg  cfg;
 } lexer;
 
-lexer lex_file(lexer_cfg cfg);
-token *lexer_hd(lexer *l);
+lexer        lex_file(lexer_cfg cfg);
+token       *lexer_hd(lexer *l);
 const token *lexer_peek(lexer *l, size_t k);
-token *lexer_next(lexer *l);
+token       *lexer_next(lexer *l);
+void         lexer_destroy(lexer *l);
 
 #endif

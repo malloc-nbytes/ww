@@ -1783,7 +1783,7 @@ drawln(const buffer *b,
                         }
 
                         char ch = str_at(s, i);
-                        const char *color = in_selection ? INVERT : RESET;
+                        const char *color = in_selection ? glconf.defaults.selection_highlight : RESET;
 
                         if (isprint(ch) || ch == '\n')
                                 printf("%s%c", color, ch);

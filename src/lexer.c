@@ -85,6 +85,13 @@ token_alloc(const char *st,
         return t;
 }
 
+static void
+token_free(token *t)
+{
+        str_destroy(&t->lx);
+        free(t);
+}
+
 static const char *
 tloc_cstr(tloc loc)
 {
@@ -164,10 +171,14 @@ lexer_cfg_from_filext(const char *ext)
 }
 
 static int
-iskwd(const char *st, size_t len)
+iskwd(const char  *st,
+      size_t       len,
+      const char **kwds)
 {
-        static char *kwds[] = LEXER_C_KWDS;
-        for (size_t i = 0; i < sizeof(kwds)/sizeof(*kwds); ++i) {
+        if (!kwds)
+                return 0;
+
+        for (size_t i = 0; kwds[i]; ++i) {
                 if (memcmp(kwds[i], st, len) == 0)
                         return 1;
         }
@@ -287,7 +298,7 @@ lex_file(lexer_cfg cfg)
                         ++c;
                 } else if (isalpha(ch) || ch == '_') {
                         size_t len = consume_while(src+i, isident);
-                        lexer_append(&l, token_alloc(src+i, len, iskwd(src+i, len) ? TK_KW : TK_ID, cfg.fp, r, c));
+                        lexer_append(&l, token_alloc(src+i, len, iskwd(src+i, len, l.cfg.kwds) ? TK_KW : TK_ID, cfg.fp, r, c));
                         i += len;
                         c += len;
                 } else if (isdigit(ch)) {
@@ -319,9 +330,12 @@ lex_file(lexer_cfg cfg)
         return l;
 }
 
-static void
-lexer_free(lexer *l)
+void
+lexer_destroy(lexer *l)
 {
-        (void)l;
-        assert(0);
+        while (l->hd) {
+                token *tmp = l->hd->n;
+                token_free(l->hd);
+                l->hd = tmp;
+        }
 }
