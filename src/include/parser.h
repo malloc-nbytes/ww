@@ -1,6 +1,8 @@
 #ifndef PARSER_H_INCLUDED
 #define PARSER_H_INCLUDED
 
+#include "lexer.h"
+
 typedef enum {
         EXPR_KIND_IDENT,
         EXPR_KIND_INTLIT,
@@ -24,9 +26,10 @@ typedef struct {
 } expr_intlit;
 
 typedef struct {
-        expr  base;
-        expr *l;
-        expr *r;
+        expr       base;
+        expr       *l;
+        const char *op;
+        expr       *r;
 } expr_binary;
 
 typedef struct {
@@ -40,5 +43,7 @@ typedef struct {
         const char *id;
         expr       *e;
 } expr_assign;
+
+expr *parse_expr(lexer *l);
 
 #endif

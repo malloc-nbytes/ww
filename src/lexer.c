@@ -42,6 +42,17 @@ opmap_init(opmap *m)
         opmap_insert(m, "?", TK_QUEST);
         opmap_insert(m, "%", TK_PERC);
         opmap_insert(m, "|", TK_PIPE);
+        opmap_insert(m, "+=", TK_PLUSEQ);
+        opmap_insert(m, "-=", TK_MINUSEQ);
+        opmap_insert(m, "*=", TK_ASTEQ);
+        opmap_insert(m, "/=", TK_FORSLEQ);
+        opmap_insert(m, "%=", TK_PERCEQ);
+        opmap_insert(m, "^", TK_UPTICK);
+        opmap_insert(m, "||", TK_PIPEPIPE);
+        opmap_insert(m, "&&", TK_AMPAMP);
+        opmap_insert(m, "&=", TK_AMPEQ);
+        opmap_insert(m, "|=", TK_PIPEEQ);
+        opmap_insert(m, "^=", TK_UPTICKEQ);
 }
 
 static token *
@@ -82,7 +93,7 @@ tloc_cstr(tloc loc)
         return buf;
 }
 
-static inline token *
+token *
 lexer_hd(lexer *l)
 {
         return l->hd;
@@ -101,7 +112,7 @@ lexer_append(lexer *l, token *t)
         }
 }
 
-static const token *
+const token *
 lexer_peek(lexer *l, size_t k)
 {
         token *it;
@@ -117,7 +128,7 @@ lexer_peek(lexer *l, size_t k)
         return it;
 }
 
-static token *
+token *
 lexer_next(lexer *l)
 {
         if (!lexer_hd(l))

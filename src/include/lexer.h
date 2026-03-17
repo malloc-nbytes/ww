@@ -161,6 +161,17 @@ typedef enum {
         TK_QUEST,
         TK_PERC,
         TK_PIPE,
+        TK_PLUSEQ,
+        TK_MINUSEQ,
+        TK_ASTEQ,
+        TK_FORSLEQ,
+        TK_PERCEQ,
+        TK_UPTICK,
+        TK_PIPEPIPE,
+        TK_AMPAMP,
+        TK_AMPEQ,
+        TK_PIPEEQ,
+        TK_UPTICKEQ,
 } token_kind;
 
 typedef struct {
@@ -197,5 +208,8 @@ typedef struct {
 } lexer;
 
 lexer lex_file(lexer_cfg cfg);
+token *lexer_hd(lexer *l);
+const token *lexer_peek(lexer *l, size_t k);
+token *lexer_next(lexer *l);
 
 #endif
