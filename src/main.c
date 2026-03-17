@@ -316,7 +316,7 @@ static int
 set_default_color(const char       *dst,
                   qcl_value_string *var)
 {
-        char *colors;
+        const char *colors;
         memset(dst, 0, sizeof(dst));
         if (!(colors = parse_colors_from_config(var->s)))
                 return 0;
@@ -347,6 +347,7 @@ parse_config(void)
         qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
         qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
         qcl_value *menu_highlight         = qcl_value_get(&config, "menu-highlight");
+        qcl_value *disable_quit_keybind   = qcl_value_get(&config, "disable-quit-keybind");
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
@@ -394,6 +395,10 @@ parse_config(void)
         }
         if (menu_highlight && menu_highlight->kind != QCL_VALUE_KIND_STRING) {
                 printf("menu-highlight must be a string\n");
+                ok = 0;
+        }
+        if (disable_quit_keybind && disable_quit_keybind->kind != QCL_VALUE_KIND_BOOL) {
+                printf("disable-quit-keybind must be a bool\n");
                 ok = 0;
         }
 
@@ -448,6 +453,9 @@ parse_config(void)
                 if (!set_default_color(glconf.defaults.menu_highlight, (qcl_value_string *)menu_highlight))
                         res = 0;
         }
+
+        if (disable_quit_keybind)
+                glconf.defaults.disable_quit_keybind = ((qcl_value_bool *)disable_quit_keybind)->b;
 
         return res;
 }

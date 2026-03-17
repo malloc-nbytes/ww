@@ -966,8 +966,10 @@ ctrlx(window *win)
         case INPUT_TYPE_CTRL:
                 if (ch == CTRL_S)
                         save_buffer(win);
-                if (ch == CTRL_Q)
-                        quit(win);
+                if (ch == CTRL_Q) {
+                        if (!glconf.defaults.disable_quit_keybind)
+                                quit(win);
+                }
                 if (ch == CTRL_F)
                         find_file(win);
         default: break;

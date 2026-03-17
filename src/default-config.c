@@ -60,4 +60,8 @@ const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "# undefined, invalid buffers are given, or it is `= ['']', it defaults to `ww-help'.\n"
 "# Some valid options are:\n"
 "#   ww-help, ww-calc\n"
-"initial-buffers = ['ww-help'];\n";
+"initial-buffers = ['ww-help'];\n"
+"\n"
+"# Disable the quit keybind if you somehow find yourself accidentally\n"
+"# hitting it a lot. If this is true, use `M-x quit' instead.\n"
+"disable-quit-keybind = false;\n";

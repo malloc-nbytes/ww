@@ -22,6 +22,7 @@ extern struct {
                 char        search_highlight[128];
                 char        search_highlight_exact[128];
                 char        menu_highlight[128];
+                int         disable_quit_keybind;
         } defaults;
 
         struct {

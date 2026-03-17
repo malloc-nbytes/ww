@@ -10,7 +10,7 @@
 #define WINCMD_SWTCHBUF      "switch-buffer"
 #define WINCMD_COMP          "compile"
 #define WINCMD_SAVEBUF       "save-buffer"
-#define WINCMD_EXIT          "exit"
+#define WINCMD_EXIT          "quit"
 #define WINCMD_COPYBUFTOCLIP "ww-clipboard-copy"
 #define WINCMD_TABMODE       "tab-mode"
 #define WINCMD_SPACEMODE     "space-mode"
