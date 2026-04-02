@@ -24,6 +24,7 @@ typedef enum {
         BS_NORMAL = 0,
         BS_SEARCH,
         BS_SELECTION,
+        BS_AUTO,
 } buffer_state;
 
 typedef struct {
@@ -46,6 +47,9 @@ typedef struct {
         int          writable;    // mutable buffer?
         int          last_tab;    // was the last character inserted a tab?
         int_pair_array popxy;
+        str          curword;
+        void        *ac;
+        size_t       ac_cycle;
 } buffer;
 
 DYN_ARRAY_TYPE(buffer *, bufferp_array);

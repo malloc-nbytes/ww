@@ -8,6 +8,7 @@
 #include "glconf.h"
 #include "flags.h"
 #include "lexer.h"
+#include "trie.h"
 #include "config.h"
 
 #include <assert.h>
@@ -24,6 +25,8 @@
 #define PATH_MAX 4096
 #endif
 
+#define MAX_AUTOCOMPLETE 32
+
 static void
 draw_status(const buffer *b,
             const char   *msg);
@@ -31,6 +34,9 @@ draw_status(const buffer *b,
 static int_array
 find_line_matches(const buffer *b,
                   const str    *s);
+
+static void
+commit_word_to_autocomplete(buffer *b);
 
 PAIR_IMPL(int, int, int_pair)
 DYN_ARRAY_TYPE(int_array, int_array_array);
@@ -44,6 +50,7 @@ state_to_cstr(const buffer *b)
         case BS_NORMAL:    return "normal";
         case BS_SELECTION: return "selection";
         case BS_SEARCH:    return "search";
+        case BS_AUTO:      return "auto";
         default:           return "unknown";
         }
         return "unknown";
@@ -292,6 +299,9 @@ buffer_alloc(window     *parent)
         b->writable    = 1;
         b->last_tab    = 0;
         b->popxy       = dyn_array_empty(int_pair_array);
+        b->curword     = str_create();
+        b->ac          = trie_alloc();
+        b->ac_cycle    = 0;
 
         return b;
 }
@@ -409,6 +419,7 @@ buffer_up(buffer *b)
         else
                 b->cx = b->wish_col;
 
+        commit_word_to_autocomplete(b);
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         return adjust_scroll(b) || b->state == BS_SELECTION;
 }
@@ -427,6 +438,7 @@ buffer_down(buffer *b)
         else
                 b->cx = b->wish_col;
 
+        commit_word_to_autocomplete(b);
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         return adjust_scroll(b) || b->state == BS_SELECTION;
 }
@@ -443,6 +455,8 @@ buffer_right(buffer *b)
         } else if (b->cx < str_len(s)-1) {
                 ++b->cx;
         }
+
+        commit_word_to_autocomplete(b);
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         return adjust_scroll(b) || b->state == BS_SELECTION;
@@ -458,6 +472,8 @@ buffer_left(buffer *b)
         }
         else if (b->cx > 0)
                 --b->cx;
+
+        commit_word_to_autocomplete(b);
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
         return adjust_scroll(b);
@@ -469,6 +485,7 @@ buffer_eol(buffer *b)
         b->cx = str_len(&b->lns.data[b->al]->s)-1;
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+        commit_word_to_autocomplete(b);
         return adjust_scroll(b);
 }
 
@@ -478,7 +495,70 @@ buffer_bol(buffer *b)
         b->cx = 0;
         b->wish_col = b->cx;
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+        commit_word_to_autocomplete(b);
         return adjust_scroll(b);
+}
+
+static void
+commit_word_to_autocomplete(buffer *b)
+{
+        if (str_len(&b->curword) > 0) {
+                trie_insert(b->ac, str_cstr(&b->curword));
+                str_clear(&b->curword);
+        }
+}
+
+static void
+display_autocomplete(buffer *b)
+{
+        size_t words_n = 0;
+        char **words = trie_get_completions(b->ac, str_cstr(&b->curword), MAX_AUTOCOMPLETE, &words_n);
+
+        if (words_n > 0) {
+                for (size_t i = 0; i < strlen(words[((b->ac_cycle-1)%words_n)]); ++i)
+                             putchar(' ');
+
+                gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+                printf(YELLOW DIM "%s " RESET, words[(b->ac_cycle++)%words_n]+str_len(&b->curword));
+                gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+                fflush(stdout);
+
+                b->state = BS_AUTO;
+        }
+
+        free(words);
+}
+
+static void
+accept_autocomplete(buffer *b)
+{
+        if (b->state != BS_AUTO)
+                return;
+
+        size_t words_n = 0;
+        char **words = trie_get_completions(b->ac, str_cstr(&b->curword), MAX_AUTOCOMPLETE, &words_n);
+
+        if (words_n == 0) {
+                goto done;
+        }
+
+        char *s = words[(b->ac_cycle-1)%words_n];
+        size_t n = strlen(s);
+        if (isspace(s[n-1]))
+                s[n-1] = 0;
+
+        for (size_t i = str_len(&b->curword); s[i]; ++i)
+                str_insert(&b->lns.data[b->al]->s, b->cx++, s[i]);
+
+        str_clear(&b->curword);
+
+ done:
+        free(words);
+
+        b->state = BS_NORMAL;
+        b->ac_cycle = 0;
+
+        b->wish_col = b->cx;
 }
 
 static void
@@ -491,6 +571,12 @@ insert_char(buffer *b,
 
         b->saved = 0;
 
+        if (ch == '\n' || ch == '\t' || ch == ' ') {
+                commit_word_to_autocomplete(b);
+        } else if (isalpha(ch) || ch == '_') {
+                str_append(&b->curword, ch);
+        }
+
         if (!b->lns.data) {
                 char tmp[2] = {10, 0};
                 dyn_array_append(b->lns, line_from(str_from(tmp)));
@@ -499,7 +585,7 @@ insert_char(buffer *b,
         str_insert(&b->lns.data[b->al]->s, b->cx, ch);
         ++b->cx;
 
-        if (ch == 10) {
+        if (ch == '\n') {
                 const char *rest;
                 line       *newln;
 
@@ -691,14 +777,21 @@ backspace(buffer *b)
                         b->cx = str_len(&ln->s)-1;
         }
 
+        str_pop(&b->curword);
+
         adjust_scroll(b);
         add_to_popxy(b);
         return newline;
 }
 
-static void
+static int
 tab(buffer *b)
 {
+        if (str_len(&b->curword) > 0) {
+                display_autocomplete(b);
+                return 0;
+        }
+
         ++b->last_tab;
 
         if ((glconf.flags & FT_TABMODE) == 0) {
@@ -707,6 +800,8 @@ tab(buffer *b)
         }
         else
                 insert_char(b, '\t', 1);
+
+        return 1;
 }
 
 static void
@@ -727,6 +822,8 @@ delete_until_eol(buffer *b)
 
         str_cut(&ln->s, b->cx);
         str_insert(&ln->s, b->cx, 10);
+
+        str_clear(&b->curword);
 
         add_to_popxy(b);
 }
@@ -749,6 +846,7 @@ jump_to_first_char(buffer *b)
 
         b->wish_col = b->cx;
 
+        commit_word_to_autocomplete(b);
         gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
 }
 
@@ -762,6 +860,7 @@ jump_to_top_of_buffer(buffer *b)
         b->cx = 0;
         b->wish_col = 0;
         b->al = b->lns.len-1;
+        commit_word_to_autocomplete(b);
         adjust_scroll(b);
 }
 
@@ -772,6 +871,7 @@ jump_to_bottom_of_buffer(buffer *b)
         b->cx = 0;
         b->wish_col = 0;
         b->al = 0;
+        commit_word_to_autocomplete(b);
         adjust_scroll(b);
 }
 
@@ -797,6 +897,8 @@ prev_paragraph(buffer *b)
         b->cx = 0;
         b->al = nextln;
 
+        commit_word_to_autocomplete(b);
+
         return adjust_scroll(b) || b->state == BS_SELECTION;
 }
 
@@ -821,6 +923,8 @@ next_paragraph(buffer *b)
         b->cy = nextln;
         b->cx = 0;
         b->al = nextln;
+
+        commit_word_to_autocomplete(b);
 
         return adjust_scroll(b) || b->state == BS_SELECTION;
 }
@@ -854,6 +958,8 @@ kill_line(buffer *b)
 
         b->cx       = 0;
         b->wish_col = 0;
+
+        str_clear(&b->curword);
 
         adjust_scroll(b);
 }
@@ -889,6 +995,8 @@ jump_next_word(buffer *b)
         else
                 b->cx = i;
 
+        commit_word_to_autocomplete(b);
+
         b->wish_col = b->cx;
 }
 
@@ -922,6 +1030,8 @@ jump_prev_word(buffer *b)
 
         if (!isalnum(sraw[b->cx]))
                 ++b->cx;
+
+        commit_word_to_autocomplete(b);
 
         b->wish_col = b->cx;
 }
@@ -1171,6 +1281,8 @@ page_down(buffer *b)
         b->cx       = 0;
         b->wish_col = 0;
 
+        commit_word_to_autocomplete(b);
+
         adjust_scroll(b);
 }
 
@@ -1191,6 +1303,8 @@ page_up(buffer *b)
 
         b->cx       = 0;
         b->wish_col = 0;
+
+        commit_word_to_autocomplete(b);
 
         adjust_scroll(b);
 }
@@ -1304,6 +1418,8 @@ jump_to_line(buffer *b)
         b->cy = no-1;
         b->al = no-1;
 
+        commit_word_to_autocomplete(b);
+
         adjust_scroll(b);
 }
 
@@ -1350,6 +1466,8 @@ super_backspace(buffer *b)
 
         add_to_popxy(b);
         adjust_scroll(b);
+
+        str_clear(&b->curword);
 
         return 1;
 }
@@ -1554,6 +1672,30 @@ popxy(buffer *b)
         return 1;
 }
 
+static void
+commit_buffer_to_autocomplete(buffer *b)
+{
+        for (size_t i = 0; i < b->lns.len; ++i) {
+                const line *ln       = b->lns.data[i];
+                const str  *s        = &ln->s;
+                const char *sraw     = str_cstr(s);
+                char        buf[256] = {0};
+                size_t      buf_n    = 0;
+
+                for (size_t j = 0; j < str_len(s); ++j) {
+                        char ch = sraw[j];
+                        if (isspace(ch) || (!isalpha(ch) && ch != '_')) {
+                                if (buf_n > 0)
+                                        trie_insert(b->ac, buf);
+                                memset(buf, 0, sizeof(buf));
+                                buf_n = 0;
+                        } else if (isalpha(ch) || ch == '_') {
+                                buf[buf_n++] = sraw[j];
+                        }
+                }
+        }
+}
+
 // entrypoint
 buffer_proc
 buffer_process(buffer     *b,
@@ -1569,10 +1711,14 @@ buffer_process(buffer     *b,
                 buffer_bol,
         };
 
+        if (trie_empty(b->ac))
+                commit_buffer_to_autocomplete(b);
+
         switch (ty) {
         case INPUT_TYPE_CTRL: {
                 if (TAB(ch)) {
-                        tab(b);
+                        if (!tab(b))
+                                return BP_NOP;
                         return BP_INSERT;
                 }
 
@@ -1695,6 +1841,9 @@ buffer_process(buffer     *b,
                 } else if (ch == '\'') {
                         buffer_shell(b);
                         return BP_MOV;
+                } else if (ch == '/') {
+                        accept_autocomplete(b);
+                        return BP_INSERTNL;
                 }
         } break;
         case INPUT_TYPE_ARROW: {

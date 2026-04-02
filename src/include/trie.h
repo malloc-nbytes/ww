@@ -17,6 +17,7 @@ char **trie_get_completions(void       *t,
                             const char *prefix,
                             size_t      max_results,
                             size_t     *out_count);
+int trie_empty(void *t);
 void trie_destroy(void *t);
 
 #endif // TRIE_H_INCLUDED

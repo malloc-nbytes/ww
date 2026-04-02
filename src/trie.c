@@ -13,6 +13,12 @@ struct node {
         node_array children;
 };
 
+int
+trie_empty(void *t)
+{
+        return !t || ((node *)t)->children.len == 0;
+}
+
 void *
 trie_alloc(void)
 {
