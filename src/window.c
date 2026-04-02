@@ -976,6 +976,9 @@ metax(window *win)
                 buffer_dump(win->ab);
         } else if (!strcmp(selected, WINDCMD_SHOWCFGVARS)) {
                 show_cfgvars(win);
+        } else if (!strcmp(selected, WINDCMD_TOGGLEAUTO)) {
+                glconf.defaults.enable_auto = !glconf.defaults.enable_auto;
+                buffer_dump(win->ab);
         } else {
                 buffer_dump(win->ab);
         }

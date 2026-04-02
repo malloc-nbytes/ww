@@ -69,6 +69,9 @@ add_to_popxy(buffer *b)
                 b->popxy.data[b->popxy.len-1].l = b->cx;
                 return;
         }
+
+        commit_word_to_autocomplete(b);
+
         dyn_array_append(b->popxy, int_pair_create(b->cx, b->al));
 }
 
@@ -519,7 +522,7 @@ display_autocomplete(buffer *b)
                              putchar(' ');
 
                 gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-                printf(YELLOW DIM "%s " RESET, words[(b->ac_cycle++)%words_n]+str_len(&b->curword));
+                printf(GRAY "%s " RESET, words[(b->ac_cycle++)%words_n]+str_len(&b->curword));
                 gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
                 fflush(stdout);
 
@@ -532,6 +535,9 @@ display_autocomplete(buffer *b)
 static void
 accept_autocomplete(buffer *b)
 {
+        if (!glconf.defaults.enable_auto)
+                return;
+
         if (b->state != BS_AUTO)
                 return;
 
@@ -787,7 +793,7 @@ backspace(buffer *b)
 static int
 tab(buffer *b)
 {
-        if (str_len(&b->curword) > 0) {
+        if (glconf.defaults.enable_auto && str_len(&b->curword) > 0) {
                 display_autocomplete(b);
                 return 0;
         }

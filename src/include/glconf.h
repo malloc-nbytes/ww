@@ -20,6 +20,7 @@
 #define CFGVAR_MENU_HIGHLIGHT         "menu-highlight"
 #define CFGVAR_DISABLE_QUIT_KEYBIND   "disable-quit-keybind"
 #define CFGVAR_ASCII_ART              "ascii-art"
+#define CFGVAR_ENABLE_AUTO            "enable-auto"
 
 extern struct {
         uint32_t   flags;
@@ -39,6 +40,7 @@ extern struct {
                 char        menu_highlight[128];
                 int         disable_quit_keybind;
                 char       *ascii_art;
+                int         enable_auto;
         } defaults;
 
         struct {

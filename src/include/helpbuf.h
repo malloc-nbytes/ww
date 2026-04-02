@@ -59,6 +59,8 @@
 "M-BACKSPC     = backspace word *\n" \
 "ENTER   | C-j = insert newline *\n" \
 "C-o           = insert newline (at cursor)\n" \
+"TAB           = display/cycle autocomplete (only works after typing characters) *\n" \
+"M-/           = accept current autocomplete entry *\n" \
 "C-d           = delete char under cursor *\n" \
 "M-d           = delete word\n" \
 "C-SPACE | C-c = begin/end selection *\n" \

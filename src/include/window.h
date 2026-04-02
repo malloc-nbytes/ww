@@ -23,6 +23,7 @@
 #define WINDCMD_INFOBUF      "buffer-info"
 #define WINDCMD_CALC         "calc"
 #define WINDCMD_SHOWCFGVARS  "show-cfg-vars"
+#define WINDCMD_TOGGLEAUTO   "toggle-autocomplete"
 
 #define WINCMDS { \
         WINCMD_SPCAMT, \
@@ -43,6 +44,7 @@
         WINDCMD_INFOBUF, \
         WINDCMD_CALC, \
         WINDCMD_SHOWCFGVARS, \
+        WINDCMD_TOGGLEAUTO, \
 }
 
 typedef struct window {

@@ -368,6 +368,7 @@ parse_config(void)
         qcl_value *menu_highlight         = qcl_value_get(&config, CFGVAR_MENU_HIGHLIGHT);
         qcl_value *disable_quit_keybind   = qcl_value_get(&config, CFGVAR_DISABLE_QUIT_KEYBIND);
         qcl_value *ascii_art              = qcl_value_get(&config, CFGVAR_ASCII_ART);
+        qcl_value *enable_auto            = qcl_value_get(&config, CFGVAR_ENABLE_AUTO);
 
         if (show_trails && show_trails->kind != QCL_VALUE_KIND_BOOL) {
                 printf("show-trails must be a boolean\n");
@@ -419,6 +420,10 @@ parse_config(void)
         }
         if (ascii_art && ascii_art->kind != QCL_VALUE_KIND_STRING) {
                 printf("ascii-art must be a string\n");
+                ok = 0;
+        }
+        if (enable_auto && enable_auto->kind != QCL_VALUE_KIND_BOOL) {
+                printf("enable_auto must be a bool\n");
                 ok = 0;
         }
 
@@ -499,6 +504,11 @@ parse_config(void)
         if (ascii_art) {
                 add_cfgvar(&config, CFGVAR_ASCII_ART);
                 glconf.defaults.ascii_art = ((qcl_value_string *)ascii_art)->s;
+        }
+
+        if (enable_auto) {
+                add_cfgvar(&config, CFGVAR_ENABLE_AUTO);
+                glconf.defaults.enable_auto = ((qcl_value_bool *)enable_auto)->b;
         }
 
         return res;

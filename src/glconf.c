@@ -24,6 +24,7 @@ struct {
                 char        menu_highlight[128];
                 int         disable_quit_keybind;
                 char       *ascii_art;
+                int         enable_auto;
         } defaults;
 
         struct {
@@ -54,6 +55,7 @@ struct {
                 .menu_highlight         = DEFAULT_MENU_HIGHLIGHT,
                 .disable_quit_keybind   = DEFAULT_DISABLE_QUIT_KEYBIND,
                 .ascii_art              = DEFAULT_ASCII_ART,
+                .enable_auto            = DEFAULT_ENABLE_AUTOCOMPLETE,
         },
         .term = {
                 .w   = 0,
