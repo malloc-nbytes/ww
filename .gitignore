@@ -3,8 +3,6 @@ src/tmp
 ww
 src/include/config.h.in
 ww-debug-build
-Makefile
-src/Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache
@@ -17,7 +15,6 @@ depcomp
 install-sh
 missing
 src/.deps/
-src/Makefile
 src/Makefile.in
 src/ww-debug-build
 src/include/config.h
