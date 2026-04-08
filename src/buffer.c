@@ -24,6 +24,11 @@ buffer_from(str      name,
         b->size.ws = ws;
         b->size.hs = hs;
         b->lines   = lns;
+        b->cx      = 0;
+        b->cy      = 0;
+        b->al      = 0;
+        b->hoff    = 0;
+        b->voff    = 0;
 
         return b;
 }
@@ -31,7 +36,13 @@ buffer_from(str      name,
 static unsigned
 get_win_hight(const buffer *b)
 {
-        return b->size.h-1;
+        return b->size.h > 0 ? b->size.h - 1 : 0;
+}
+
+static unsigned
+get_win_width(const buffer *b)
+{
+        return b->size.w > 0 ? b->size.w : 80;
 }
 
 static int
@@ -52,7 +63,7 @@ adjust_vscroll(buffer *b)
 static int
 adjust_hscroll(buffer *b)
 {
-        size_t win_w = get_win_hight(b);
+        size_t win_w = get_win_width(b);
 
         if (b->cx < b->hoff) {
                 b->hoff = b->cx;
@@ -99,6 +110,38 @@ down(buffer *b)
         return adjust_scroll(b);
 }
 
+static buffer_action
+right(buffer *b)
+{
+        str *s = &b->lines.data[b->al].txt;
+
+        if (b->cx == str_len(s)-1 && b->cy < b->lines.len-1) {
+                b->cx = 0;
+                ++b->cy;
+                ++b->al;
+        } else if (b->cx < str_len(s)-1) {
+                ++b->cx;
+        }
+
+        gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+        return adjust_scroll(b);
+}
+
+static buffer_action
+left(buffer *b)
+{
+        if (b->cx == 0 && b->cy > 0) {
+                b->cx = (unsigned)str_len(&b->lines.data[b->al-1].txt)-1;
+                --b->cy;
+                --b->al;
+        }
+        else if (b->cx > 0)
+                --b->cx;
+
+        gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+        return adjust_scroll(b);
+}
+
 buffer_action
 buffer_process(buffer *b)
 {
@@ -112,6 +155,10 @@ buffer_process(buffer *b)
                         return down(b);
                 } else if (ch == CTRL_P) {
                         return up(b);
+                } else if (ch == CTRL_F) {
+                        return right(b);
+                } else if (ch == CTRL_B) {
+                        return left(b);
                 }
         } break;
         default: break;
@@ -123,97 +170,64 @@ buffer_process(buffer *b)
 static void
 drawln(const buffer *b, size_t idx)
 {
-        if (idx >= b->lines.len) {
-                // Empty line
-                clear_line_imm();
+        if (idx < b->voff || idx >= b->voff + get_win_hight(b))
                 return;
-        }
 
         const line *ln = &b->lines.data[idx];
-        const str *s = &ln->txt;
+        unsigned y = b->size.hs + (unsigned)(idx - b->voff);
+        unsigned win_w = get_win_width(b);
 
-        // determine visible portion after horizontal offset
-        size_t start = b->hoff;
-        if (start >= s->len) {
-                clear_line_imm();
-                return;
+        // Clear line
+        gotoxy(b->size.ws, y);
+        for (unsigned x = 0; x < win_w; ++x)
+                putchar(' ');
+
+        // Draw text with horizontal scroll
+        if (b->hoff < ln->txt.len) {
+                size_t start = b->hoff;
+                size_t len = ln->txt.len - start;
+                if (len > win_w)
+                        len = win_w;
+
+                gotoxy(b->size.ws, y);
+                for (size_t i = 0; i < len; ++i)
+                        putchar(ln->txt.chars[start + i]);
         }
-
-        size_t visible_len = s->len - start;
-
-        // print the visible slice
-        fwrite(s->chars + start, 1, visible_len, stdout);
-        // printf("%.*s", (int)visible_len, s->chars + start);
-
-        clear_line_imm();
 }
 
 void
 buffer_drawxy(const buffer *b)
 {
-        // compute screen position of the cursor, accounting for scroll offsets and window start
-        unsigned screen_x = b->size.ws + (unsigned)(b->cx);
-        unsigned screen_y = b->size.hs + (unsigned)(b->cy);
+        drawln(b, b->cy);
 
-        // Move cursor to the start of the visible cursor line on screen
-        gotoxy(screen_x, screen_y);
-
-        // Now draw the remainder of the logical line starting at the cursor's x
-        if (b->cy >= b->lines.len) {
-                clear_line_imm();
-                return;
-        }
-
-        const line *ln = &b->lines.data[b->cy];
-        const str *s = &ln->txt;
-
-        if (b->cx >= s->len) {
-                clear_line_imm();
-                return;
-        }
-
-        size_t remaining = s->len - b->cx;
-        fwrite(s->chars + b->cx, 1, remaining, stdout);
-        clear_line_imm();
-
-        // Optionally move cursor back to exact position if your draw moved it
+        unsigned screen_x = b->size.ws + (unsigned)(b->cx > b->hoff ? b->cx - b->hoff : 0);
+        unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
         gotoxy(screen_x, screen_y);
 }
 
 void
 buffer_draw(const buffer *b)
 {
-        // Move to top-left of this buffer's window
-        gotoxy(b->size.ws, b->size.hs);
+        unsigned win_w = get_win_width(b);
+        unsigned win_h = get_win_hight(b);
 
-        // Determine how many screen rows this window has
-        // (You may want to add window height/width fields to buffer or pass them.
-        // For now we assume the caller manages the region size and we draw until
-        // we run out of lines or the window ends naturally.)
-        // A simple way: draw up to a reasonable max, or add `unsigned wh, ww;` to buffer.
-
-        size_t visible_rows = b->size.h;
-
-        for (size_t i = 0; i < visible_rows; ++i) {
-                size_t file_row = b->voff + i;
-
-                // Position cursor at start of this screen row
-                gotoxy(b->size.ws, b->size.hs + (unsigned)i);
-
-                if (file_row < b->lines.len) {
-                        drawln(b, file_row);
-                } else {
-                        // Beyond end of file → clear the line (often shown as ~ in editors)
-                        clear_line_imm();
-                        // Optional: printf("~"); or similar for "empty" marker
-                }
+        // Clear the entire buffer area
+        for (unsigned y = 0; y < win_h; ++y) {
+                gotoxy(b->size.ws, b->size.hs + y);
+                for (unsigned x = 0; x < win_w; ++x)
+                        putchar(' ');
         }
 
-        // After drawing the text, place the cursor at its correct screen position
-        unsigned cursor_screen_x = b->size.ws + (unsigned)(b->cx - b->hoff);
-        unsigned cursor_screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
+        // Draw all visible lines once
+        for (size_t i = 0; i < win_h; ++i) {
+                size_t idx = b->voff + i;
+                if (idx >= b->lines.len)
+                        break;
+                drawln(b, idx);
+        }
 
-        gotoxy(cursor_screen_x, cursor_screen_y);
-
-        fflush(stdout);
+        // Place cursor
+        unsigned screen_x = b->size.ws + (unsigned)(b->cx > b->hoff ? b->cx - b->hoff : 0);
+        unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
+        gotoxy(screen_x, screen_y);
 }
