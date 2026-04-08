@@ -4,6 +4,9 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <ctype.h>
+
+#define ADJUST_CURSOR gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
 
 buffer *
 buffer_from(str      name,
@@ -94,7 +97,10 @@ up(buffer *b)
                 --b->al;
         }
 
-        gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+        if (b->cx >= b->lines.data[b->al].txt.len)
+                b->cx = (unsigned)b->lines.data[b->al].txt.len-1;
+
+        ADJUST_CURSOR;
         return adjust_scroll(b);
 }
 
@@ -106,7 +112,10 @@ down(buffer *b)
                 ++b->al;
         }
 
-        gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+        if (b->cx >= b->lines.data[b->al].txt.len)
+                b->cx = (unsigned)b->lines.data[b->al].txt.len-1;
+
+        ADJUST_CURSOR;
         return adjust_scroll(b);
 }
 
@@ -123,7 +132,7 @@ right(buffer *b)
                 ++b->cx;
         }
 
-        gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+        ADJUST_CURSOR;
         return adjust_scroll(b);
 }
 
@@ -138,7 +147,93 @@ left(buffer *b)
         else if (b->cx > 0)
                 --b->cx;
 
-        gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+        ADJUST_CURSOR;
+        return adjust_scroll(b);
+}
+
+static buffer_action
+bol(buffer *b)
+{
+        b->cx = 0;
+        ADJUST_CURSOR;
+        return adjust_scroll(b);
+}
+
+static buffer_action
+eol(buffer *b)
+{
+        b->cx = (unsigned)b->lines.data[b->al].txt.len-1;
+        ADJUST_CURSOR;
+        return adjust_scroll(b);
+}
+
+static buffer_action
+jump_next_word(buffer *b)
+{
+        const line *ln;
+        const str  *s;
+        const char *sraw;
+        int         hitchars;
+        size_t      i;
+
+        ln       = &b->lines.data[b->al];
+        s        = &ln->txt;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx;
+
+        if (str_len(s) <= 0)
+                return BA_NOP;
+
+        while (i < str_len(s)) {
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (hitchars)
+                        break;
+                ++i;
+        }
+
+        if (i == str_len(s))
+                b->cx = (unsigned)str_len(s)-1;
+        else
+                b->cx = (unsigned)i;
+
+        ADJUST_CURSOR;
+        return adjust_scroll(b);
+}
+
+static buffer_action
+jump_prev_word(buffer *b)
+{
+        const line *ln;
+        const str  *s;
+        const char *sraw;
+        int         hitchars;
+        size_t      i;
+
+        ln       = &b->lines.data[b->al];
+        s        = &ln->txt;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx-1;
+
+        if (str_len(s) == 0 || b->cx == 0)
+                return BA_NOP;
+
+        while (i > 0) {
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (hitchars)
+                        break;
+                --i;
+        }
+
+        b->cx = (unsigned)i;
+
+        if (!isalnum(sraw[b->cx]))
+                ++b->cx;
+
+        ADJUST_CURSOR;
         return adjust_scroll(b);
 }
 
@@ -159,6 +254,17 @@ buffer_process(buffer *b)
                         return right(b);
                 } else if (ch == CTRL_B) {
                         return left(b);
+                } else if (ch == CTRL_E) {
+                        return eol(b);
+                } else if (ch == CTRL_A) {
+                        return bol(b);
+                }
+        } break;
+        case INPUT_TYPE_ALT: {
+                if (ch == 'f') {
+                        return jump_next_word(b);
+                } else if (ch == 'b') {
+                        return jump_prev_word(b);
                 }
         } break;
         default: break;

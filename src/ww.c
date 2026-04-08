@@ -104,6 +104,7 @@ ww_run(ww *ed)
                 else if (act == BA_XY) {
                         buffer_drawxy(b);
                 }
+
                 fflush(stdout);
         }
 }
