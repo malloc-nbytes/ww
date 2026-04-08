@@ -9,7 +9,7 @@ static char
 get_char(void)
 {
         char ch;
-        int _ = read(STDIN_FILENO, &ch, 1);
+        ssize_t _ = read(STDIN_FILENO, &ch, 1);
         (void)_;
         return ch;
 }
@@ -46,14 +46,14 @@ get_input(char *c)
                                         case RIGHT_ARROW:
                                         case LEFT_ARROW:
                                         case UP_ARROW:
-                                                *c = next1;
+                                                *c = (char)next1;
                                                 return INPUT_TYPE_ARROW;
                                         default:
                                                 return INPUT_TYPE_UNKNOWN;
                                         }
                                 }
                         } else { // [ALT] key
-                                *c = next0;
+                                *c = (char)next0;
                                 return INPUT_TYPE_ALT;
                         }
                 }
@@ -118,8 +118,8 @@ enable_raw_terminal(int               fd,
         raw = *old_termios;
 
         // Modify for raw mode: disable ECHO, ICANON, and IXON
-        raw.c_lflag &= ~(ECHO | ICANON);
-        raw.c_iflag &= ~IXON;
+        raw.c_lflag &= (tcflag_t)~(ECHO | ICANON);
+        raw.c_iflag &= (tcflag_t)~IXON;
 
         // Apply new settings
         if (tcsetattr(fd, TCSANOW, &raw) == -1) {
@@ -180,7 +180,7 @@ clear_line(size_t dx, size_t dy)
 {
         printf("\033[2K");
         printf("\033[0G");
-        gotoxy(dx, dy);
+        gotoxy((int)dx, (int)dy);
         fflush(stdout);
 }
 

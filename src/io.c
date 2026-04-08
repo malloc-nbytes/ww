@@ -70,7 +70,7 @@ load_file(const char *path)
 {
         FILE   *f;
         char   *buf;
-        size_t  size;
+        long int  size;
 
         if ((f = fopen(path, "rb")) == NULL)
                 return NULL;
@@ -79,8 +79,9 @@ load_file(const char *path)
         size = ftell(f);
         fseek(f, 0, SEEK_SET);
 
-        buf = (char *)malloc(size + 1);
-        fread(buf, 1, size, f);
+        buf = (char *)malloc((size_t)(size + 1));
+        size_t _ = fread(buf, 1, (size_t)size, f);
+        (void)_;
 
         fclose(f);
 
@@ -179,7 +180,7 @@ get_realpath(const char *fp)
 const char *
 get_basename(const char *name)
 {
-        for (int i = strlen(name)-2; i >= 0; --i) {
+        for (int i = (int)strlen(name)-2; i >= 0; --i) {
                 if (name[i] == '/')
                         return name+i+1;
         }

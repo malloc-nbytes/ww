@@ -1,3 +1,4 @@
+#include "trie.h"
 #include "array.h"
 
 #include <stdlib.h>

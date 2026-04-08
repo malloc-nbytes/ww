@@ -33,11 +33,11 @@ fuzzy_score(const char *word,
         int consecutive = 0;
 
         for (size_t qi = 0; qi < qlen; ++qi) {
-                char qc = tolower(query[qi]);
+                char qc = (char)tolower(query[qi]);
                 int found = 0;
 
                 while (wi < wlen) {
-                        char wc = tolower(word[wi]);
+                        char wc = (char)tolower(word[wi]);
 
                         if (wc == qc) {
                                 found = 1;
