@@ -2,7 +2,6 @@
 #include "error.h"
 #include "io.h"
 #include "colors.h"
-#include "config.h"
 #include "copying.h"
 
 #include <assert.h>

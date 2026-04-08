@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 ww
 ww_create(void)
@@ -76,8 +77,16 @@ ww_display_monitors(ww *ed)
                 }
         }
 
-        for (size_t i = 0; i < 4; ++i)
-                buffer_draw(ed->monitors[i]);
+        if (ed->monitors[1]) {
+                ed->monitors[0]->size.w /= 2;
+                ed->monitors[1]->size.w /= 2;
+                ed->monitors[1]->size.ws = (unsigned)glconf.term.w/2;
+        }
+
+        for (size_t i = 0; i < 4; ++i) {
+                if (ed->monitors[i])
+                        buffer_draw(ed->monitors[i]);
+        }
 }
 
 void
@@ -86,6 +95,33 @@ ww_run(ww *ed)
         ww_display_monitors(ed);
 
         while (1) {
-                ;
+                buffer *b = ed->buffers.data[ed->ab];
+                size_t visible_rows = glconf.term.h;
+                size_t window_width = glconf.term.w;
+
+                if (b->voff > b->lines.len)
+                        b->voff = b->lines.len ? b->lines.len - 1 : 0;
+                if (b->cy < b->voff)
+                        b->voff = b->cy;
+                if (b->cy >= b->voff + visible_rows)
+                        b->voff = b->cy - visible_rows + 1;
+
+                size_t line_len = (b->cy < b->lines.len) ? b->lines.data[b->cy].txt.len : 0;
+                if (b->hoff > line_len)
+                        b->hoff = line_len;
+                if (b->cx < b->hoff)
+                        b->hoff = b->cx;
+                if (b->cx >= b->hoff + window_width)
+                        b->hoff = b->cx - window_width + 1;
+
+                buffer_action act = buffer_process(b);
+
+                if (act == BA_REDRAW) {
+                        buffer_draw(b);
+                }
+                else if (act == BA_XY) {
+                        buffer_drawxy(b);
+                }
+                fflush(stdout);
         }
 }

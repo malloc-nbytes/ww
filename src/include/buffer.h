@@ -5,21 +5,28 @@
 #include "line.h"
 #include "str.h"
 
+typedef enum {
+        BA_NOP = 0,
+        BA_REDRAW,
+        BA_XY,
+} buffer_action;
+
 typedef struct {
-        str name;
-        str path;
+        str name; // name of buffer, can be same as path
+                  // if buffer by the same name exists
+        str path; // path to the file we are editing
         struct {
-                unsigned w;
-                unsigned h;
-                unsigned ws;
-                unsigned hs;
+                unsigned w;  // width
+                unsigned h;  // height
+                unsigned ws; // width start
+                unsigned hs; // height start
         } size;
-        line_ar lines;
-        size_t  cx;
-        size_t  cy;
-        size_t  al;
-        size_t  voff;
-        size_t  hoff;
+        line_ar  lines; // lines in the buffer
+        unsigned cx;    // cursor x
+        unsigned cy;    // cursor y
+        size_t   al;    // active line
+        size_t   voff;  // vertical scroll offset
+        size_t   hoff;  // horizontal scroll offset
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);
@@ -33,5 +40,7 @@ buffer *buffer_from(str      name,
                     line_ar  lns);
 
 void buffer_draw(const buffer *b);
+void buffer_drawxy(const buffer *b);
+buffer_action buffer_process(buffer *b);
 
 #endif // BUFFER_H_INCLUDED

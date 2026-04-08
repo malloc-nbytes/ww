@@ -36,7 +36,8 @@ init(void)
                 return 0;
         if (!enable_raw_terminal(STDIN_FILENO, &glconf.term.termios))
                 return 0;
-        term_fullscrn();
+        //term_fullscrn();
+        clear_terminal();
 
         return 1;
 }
@@ -45,7 +46,7 @@ static void
 cleanup(void)
 {
         (void)disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
-        term_exit_fullscrn();
+        //term_exit_fullscrn();
 }
 
 int

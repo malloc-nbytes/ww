@@ -94,9 +94,10 @@ int        enable_raw_terminal(int fd, struct termios *old_termios);
 int        disable_raw_terminal(int fd, struct termios *old_termios);
 input_type get_input(char *c);
 void       clear_terminal(void);
-void       gotoxy(int x, int y);
+void       gotoxy(unsigned x, unsigned y);
 // dx, dy -> return coordinates after clearing line
 void       clear_line(size_t dx, size_t dy);
+void       clear_line_imm(void);
 void       anykey(void);
 void       term_fullscrn(void);
 void       term_exit_fullscrn(void);

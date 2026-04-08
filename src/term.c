@@ -170,7 +170,7 @@ clear_terminal(void)
 }
 
 void
-gotoxy(int x, int y)
+gotoxy(unsigned x, unsigned y)
 {
         printf("\033[%d;%dH", y+1, x+1);
 }
@@ -180,7 +180,7 @@ clear_line(size_t dx, size_t dy)
 {
         printf("\033[2K");
         printf("\033[0G");
-        gotoxy((int)dx, (int)dy);
+        gotoxy((unsigned)dx, (unsigned)dy);
         fflush(stdout);
 }
 
@@ -202,4 +202,12 @@ void
 term_exit_fullscrn(void)
 {
         printf("\x1b[?1049l");
+}
+
+void
+clear_line_imm(void)
+{
+        printf("\033[2K");
+        printf("\033[0G");
+        fflush(stdout);
 }
