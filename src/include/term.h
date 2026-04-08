@@ -80,12 +80,12 @@
 
 // Different input types.
 typedef enum {
-    INPUT_TYPE_CTRL = 0,
-    INPUT_TYPE_ALT,
-    INPUT_TYPE_ARROW,
-    INPUT_TYPE_SHIFT_ARROW,
-    INPUT_TYPE_NORMAL,
-    INPUT_TYPE_UNKNOWN,
+        INPUT_TYPE_CTRL = 0,
+        INPUT_TYPE_ALT,
+        INPUT_TYPE_ARROW,
+        INPUT_TYPE_SHIFT_ARROW,
+        INPUT_TYPE_NORMAL,
+        INPUT_TYPE_UNKNOWN,
 } input_type;
 
 int        get_terminal_xy(size_t *win_width, size_t *win_height);
