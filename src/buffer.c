@@ -237,6 +237,121 @@ jump_prev_word(buffer *b)
         return adjust_scroll(b);
 }
 
+static buffer_action
+del_word(buffer *b)
+{
+        line        *ln;
+        str         *s;
+        const char  *sraw;
+        int          hitchars;
+        size_t       i;
+
+        ln       = &b->lines.data[b->al];
+        s        = &ln->txt;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx;
+
+        //clear_cpy();
+        while (i < str_len(s)) {
+                if (sraw[i] == 10)
+                        break;
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (!isalnum(sraw[i]) && hitchars)
+                        break;
+                //array_append(g_cpy_buf, str_at(s, i));
+                str_rm(s, i);
+        }
+
+        return adjust_scroll(b);
+}
+
+static buffer_action
+prev_paragraph(buffer *b)
+{
+        size_t nextln;
+
+        nextln = b->cy;
+
+        for (int i = (int)b->cy-1; i >= 0; --i) {
+                const line *l  = &b->lines.data[i];
+                const line *l2 = &b->lines.data[i+1];
+                nextln         = (size_t)i;
+                if (str_len(&l->txt) == 1 && l->txt.chars[0] == '\n') {
+                        if (i > 0 && l2 && l2->txt.chars[0] == '\n')
+                                continue;
+                        break;
+                }
+        }
+
+        b->cy = (unsigned)nextln;
+        b->cx = 0;
+        b->al = nextln;
+
+        ADJUST_CURSOR;
+        return adjust_scroll(b);
+}
+
+static buffer_action
+next_paragraph(buffer *b)
+{
+        size_t nextln;
+
+        nextln = b->cy;
+
+        for (size_t i = b->cy+1; i < b->lines.len; ++i) {
+                const line *l  = &b->lines.data[i];
+                const line *l2 = &b->lines.data[i+1];
+                nextln         = i;
+                if (str_len(&l->txt) == 1 && l->txt.chars[0] == 10) {
+                        if (i < b->lines.len && l2 && l2->txt.chars[0] == '\n')
+                                continue;
+                        break;
+                }
+        }
+
+        b->cy = (unsigned)nextln;
+        b->cx = 0;
+        b->al = nextln;
+
+        ADJUST_CURSOR;
+        return adjust_scroll(b);
+}
+
+static buffer_action
+kill_line(buffer *b)
+{
+        /* if (!writable(b)) */
+        /*         return; */
+
+        line *ln;
+        /* const str *s; */
+
+        if (b->lines.len <= 0)
+                return BA_NOP;
+
+        ln = &b->lines.data[b->al];
+        /* s  = &ln->txt; */
+
+        //clear_cpy();
+        /* for (size_t i = 0; i < str_len(s); ++i) */
+        /*         array_append(g_cpy_buf, str_at(s, i)); */
+
+        line_destroy(ln);
+        array_rm_at(b->lines, b->al);
+
+        if (b->al > b->lines.len-1) {
+                --b->al;
+                --b->cy;
+        }
+
+        b->cx = 0;
+
+        return adjust_scroll(b);
+}
+
+// entrypoint
 buffer_action
 buffer_process(buffer *b)
 {
@@ -258,14 +373,21 @@ buffer_process(buffer *b)
                         return eol(b);
                 } else if (ch == CTRL_A) {
                         return bol(b);
+                } else if (ch == CTRL_K) {
+                        return kill_line(b);
                 }
         } break;
         case INPUT_TYPE_ALT: {
-                if (ch == 'f') {
+                if (ch == 'f')
                         return jump_next_word(b);
-                } else if (ch == 'b') {
+                else if (ch == 'b')
                         return jump_prev_word(b);
-                }
+                else if (ch == 'd')
+                        return del_word(b);
+                else if (ch == '}')
+                        return next_paragraph(b);
+                else if (ch == '{')
+                        return prev_paragraph(b);
         } break;
         default: break;
         }

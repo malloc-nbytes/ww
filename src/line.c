@@ -65,3 +65,9 @@ lines_from(char *chars)
 
         return ar;
 }
+
+void
+line_destroy(line *ln)
+{
+        str_destroy(&ln->txt);
+}
