@@ -3,33 +3,20 @@
 
 #include <stdlib.h>
 
-#define DYN_ARRAY_TYPE(ty, name) \
+#define ARRAY_DEFINE(ty, name) \
     typedef struct name {        \
         ty *data;                \
         size_t len, cap;         \
     } name
 
-#define dyn_array_empty(arr_ty)                 \
+#define array_empty(arr_ty)                     \
         (arr_ty) {                              \
                 .data = NULL,                   \
-                .len = 0,                       \
-                .cap = 0,                       \
-        }
+                        .len = 0,               \
+                        .cap = 0,               \
+                        }
 
-#define dyn_array_init_type(da)                 \
-    do {                                        \
-        (da).data = malloc(sizeof(*(da).data)); \
-        (da).cap = 1;                           \
-        (da).len = 0;                           \
-    } while (0)
-
-#define dyn_array(ty, name)                                        \
-    struct {                                                       \
-        ty *data;                                                  \
-        size_t len, cap;                                           \
-    } (name) = { .data = (typeof(ty) *)malloc(sizeof(ty)), .len = 0, .cap = 1 };
-
-#define dyn_array_append(da, value)                                     \
+#define array_append(da, value)                                     \
     do {                                                                \
         if ((da).len >= (da).cap) {                                     \
             (da).cap = (da).cap ? (da).cap * 2 : 2;                     \
@@ -40,7 +27,7 @@
         (da).data[(da).len++] = (value);                                \
     } while (0)
 
-#define dyn_array_free(da)       \
+#define array_free(da)       \
     do {                         \
         if ((da).data != NULL) { \
                 free((da).data); \
@@ -48,27 +35,27 @@
         (da).len = (da).cap = 0; \
     } while (0)
 
-#define dyn_array_at_s(da, i)                                      \
+#define array_at_s(da, i)                                      \
     ((i) < (da).len ? (da).data[i] : (fprintf(stderr,              \
-    "[dyn_array error]: index %zu is out of bounds (len = %zu)\n", \
+    "[array error]: index %zu is out of bounds (len = %zu)\n", \
     (size_t)(i), (size_t)(da).len), exit(1), (da).data[0]))
 
-#define dyn_array_at(da, i) ((da).data[i])
+#define array_at(da, i) ((da).data[i])
 
-#define dyn_array_clear(da) (da).len = 0;
+#define array_clear(da) (da).len = 0;
 
-#define dyn_array_rm_at(da, idx) \
+#define array_rm_at(da, idx) \
     do {                                                     \
         for (size_t __i_ = (idx); __i_ < (da).len-1; ++__i_) \
             (da).data[__i_] = (da).data[__i_+1];             \
         (da).len--;                                          \
     } while (0)
 
-#define dyn_array_insert_at(da, idx, value) \
+#define array_insert_at(da, idx, value) \
     do { \
         if ((idx) > (da).len) { \
             fprintf(stderr, \
-                "[dyn_array error]: insert index %zu is out of bounds (len = %zu)\n", \
+                "[array error]: insert index %zu is out of bounds (len = %zu)\n", \
                 (size_t)(idx), (size_t)(da).len); \
             exit(1); \
         } \
@@ -77,7 +64,7 @@
             (da).data = (typeof(*((da).data)) *) \
                 realloc((da).data, (da).cap * sizeof(*((da).data))); \
             if ((da).data == NULL) { \
-                fprintf(stderr, "[dyn_array error]: realloc failed\n"); \
+                fprintf(stderr, "[array error]: realloc failed\n"); \
                 exit(1); \
             } \
         } \
@@ -90,15 +77,15 @@
 
 // Common types for arrays.
 
-DYN_ARRAY_TYPE(int,      int_array);
-DYN_ARRAY_TYPE(char,     char_array);
-DYN_ARRAY_TYPE(char *,   cstr_array);
-DYN_ARRAY_TYPE(size_t,   size_t_array);
-DYN_ARRAY_TYPE(float,    float_array);
-DYN_ARRAY_TYPE(double,   double_array);
-DYN_ARRAY_TYPE(long,     long_array);
-DYN_ARRAY_TYPE(unsigned, unsigned_array);
-DYN_ARRAY_TYPE(void *,   void_ptr_array);
-DYN_ARRAY_TYPE(const char *, const_cstr_array);
+ARRAY_DEFINE(int,      int_ar);
+ARRAY_DEFINE(char,     char_ar);
+ARRAY_DEFINE(char *,   cstr_ar);
+ARRAY_DEFINE(size_t,   size_t_ar);
+ARRAY_DEFINE(float,    float_ar);
+ARRAY_DEFINE(double,   double_ar);
+ARRAY_DEFINE(long,     long_ar);
+ARRAY_DEFINE(unsigned, unsigned_ar);
+ARRAY_DEFINE(void *,   voidp_ar);
+ARRAY_DEFINE(const char *, ccstr_ar);
 
 #endif // ARRAY_H_INCLUDED

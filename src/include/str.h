@@ -11,7 +11,7 @@ typedef struct {
         size_t  cap;
 } str;
 
-DYN_ARRAY_TYPE(str, str_array);
+ARRAY_DEFINE(str, str_ar);
 
 str         str_create(void);
 str         str_from(const char *chars);

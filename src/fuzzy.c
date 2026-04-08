@@ -76,11 +76,11 @@ cmp_match(const void *a,
         return mb->score - ma->score; // descending
 }
 
-cstr_array
-fuzzy_find(cstr_array  words,
+cstr_ar
+fuzzy_find(cstr_ar     words,
            const char *query)
 {
-        cstr_array result = dyn_array_empty(cstr_array);
+        cstr_ar result = array_empty(cstr_ar);
 
         if (words.len == 0)
                 return result;
@@ -104,7 +104,7 @@ fuzzy_find(cstr_array  words,
 
         // Build result array
         for (size_t i = 0; i < match_count; ++i)
-                dyn_array_append(result, matches[i].word);
+                array_append(result, matches[i].word);
 
         free(matches);
         return result;

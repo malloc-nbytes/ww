@@ -20,6 +20,13 @@ init(void)
         return 1;
 }
 
+static void
+cleanup(void)
+{
+        (void)disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
+        term_exit_fullscrn();
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -31,6 +38,7 @@ main(int argc, char *argv[])
 
         if (!init())
                 fatal("init");
+        atexit(cleanup);
 
         return 0;
 }

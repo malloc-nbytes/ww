@@ -6,7 +6,7 @@
 
 #define MAP_DEFAULT_CAPACITY 2048
 
-#define MAP_TYPE(ktype, vtype, mapname) \
+#define MAP_DEFINE(ktype, vtype, mapname) \
         typedef unsigned (*mapname##_hash_sig)(ktype *); \
         typedef int      (*mapname##_cmp_sig)(ktype *, ktype *); \
         \
@@ -31,8 +31,9 @@
         void mapname##_destroy(mapname *map); \
         void mapname##_insert(mapname *map, ktype k, vtype v); \
         int mapname##_contains(mapname *map, ktype k); \
-        vtype *mapname##_get(mapname *map, ktype k); \
-        \
+        vtype *mapname##_get(mapname *map, ktype k)
+
+#define MAP_IMPL(ktype, vtype, mapname) \
         mapname \
         mapname##_create(mapname##_hash_sig hash, \
                          mapname##_cmp_sig cmp) \
@@ -95,6 +96,6 @@
                         it = it->n; \
                 } \
                 return NULL; \
-        } \
+        }
 
 #endif // MAP_H_INCLUDED

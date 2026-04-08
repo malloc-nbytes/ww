@@ -90,20 +90,20 @@ load_file(const char *path)
         return buf;
 }
 
-cstr_array
+cstr_ar
 lsdir(const char *dir)
 {
         DIR           *dp;
         struct dirent *entry;
-        cstr_array     files;
+        cstr_ar        files;
 
-        files = dyn_array_empty(cstr_array);
+        files = array_empty(cstr_ar);
 
         if (!(dp = opendir(dir)))
                 return files;
 
         while ((entry = readdir(dp)))
-                dyn_array_append(files, strdup(entry->d_name));
+                array_append(files, strdup(entry->d_name));
 
         closedir(dp);
         return files;

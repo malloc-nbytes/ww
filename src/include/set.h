@@ -7,7 +7,7 @@
 
 #define SET_DEFAULT_CAPACITY 256
 
-#define SET_TYPE(type, setname) \
+#define SET_DEFINE(type, setname) \
         typedef unsigned (*setname##_hash_sig)(type *); \
         typedef int      (*setname##_cmp_sig)(type *, type *); \
         typedef void     (*setname##_vfree_sig)(type *); \
@@ -36,8 +36,9 @@
         void    setname##_destroy(setname *s); \
         void    setname##_print(const setname *s, void (*show)(type *t)); \
         size_t  setname##_size(const setname *s); \
-        type  **setname##_iter(const setname *s); \
-        \
+        type  **setname##_iter(const setname *s)
+
+#define SET_IMPL(type, setname) \
         setname \
         setname##_create(setname##_hash_sig hash, \
                          setname##_cmp_sig cmp, \
