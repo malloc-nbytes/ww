@@ -4,10 +4,12 @@
 #include "buffer.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct {
         bufferp_ar  buffers;
         buffer     *monitors[4];
+        uint8_t     ab;
 } ww;
 
 ww   ww_create(void);
@@ -17,5 +19,6 @@ void ww_add_buffer(ww *ed, buffer *b);
 void ww_make_buffer_primary(ww *ed, size_t idx);
 void ww_clear_monitors(ww *ed);
 void ww_display_monitors(ww *ed);
+void ww_run(ww *ed);
 
 #endif // WW_H_INCLUDED

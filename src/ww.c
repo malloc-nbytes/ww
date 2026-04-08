@@ -1,5 +1,6 @@
 #include "ww.h"
 #include "array.h"
+#include "glconf.h"
 
 #include <assert.h>
 #include <string.h>
@@ -8,8 +9,9 @@ ww
 ww_create(void)
 {
         return (ww) {
-                .buffers = array_empty(bufferp_ar),
+                .buffers  = array_empty(bufferp_ar),
                 .monitors = {NULL, NULL, NULL, NULL},
+                .ab       = 0,
         };
 }
 
@@ -65,4 +67,25 @@ ww_make_buffer_primary(ww *ed, size_t idx)
 void
 ww_display_monitors(ww *ed)
 {
+        for (size_t i = 0; i < 4; ++i) {
+                if (ed->monitors[i]) {
+                        ed->monitors[i]->size.w  = (unsigned)glconf.term.w;
+                        ed->monitors[i]->size.h  = (unsigned)glconf.term.h;
+                        ed->monitors[i]->size.ws = 0;
+                        ed->monitors[i]->size.hs = 0;
+                }
+        }
+
+        for (size_t i = 0; i < 4; ++i)
+                buffer_draw(ed->monitors[i]);
+}
+
+void
+ww_run(ww *ed)
+{
+        ww_display_monitors(ed);
+
+        while (1) {
+                ;
+        }
 }

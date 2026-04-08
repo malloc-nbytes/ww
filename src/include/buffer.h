@@ -32,4 +32,6 @@ buffer *buffer_from(str      name,
                     unsigned hs,
                     line_ar  lns);
 
+void buffer_draw(const buffer *b);
+
 #endif // BUFFER_H_INCLUDED

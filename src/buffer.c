@@ -1,6 +1,8 @@
 #include "buffer.h"
 #include "mem.h"
 
+#include <assert.h>
+
 buffer *
 buffer_from(str      name,
             str      path,
@@ -22,4 +24,10 @@ buffer_from(str      name,
         b->lines   = lns;
 
         return b;
+}
+
+void
+buffer_draw(const buffer *b)
+{
+        assert(b && 0);
 }

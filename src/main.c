@@ -14,20 +14,19 @@
 static void
 run(const char *path)
 {
-        ww      ed;
+        ww ed;
 
         ed = ww_create();
 
         ww_add_buffer(&ed, buffer_from(str_from(get_basename(path)),
                                        str_from(path),
-                                       0, 0, 0, 0,
+                                       (unsigned)glconf.term.w, (unsigned)glconf.term.h,
+                                       0, 0,
                                        lines_from(load_file(path))));
 
         ww_make_buffer_primary(&ed, 0);
 
-        while (1) {
-                ww_display_monitors(&ed);
-        }
+        ww_run(&ed);
 }
 
 static int
