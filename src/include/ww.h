@@ -3,9 +3,19 @@
 
 #include "buffer.h"
 
+#include <stddef.h>
+
 typedef struct {
-        bufferp_ar buffers;
-        buffer *monitors[4];
+        bufferp_ar  buffers;
+        buffer     *monitors[4];
 } ww;
+
+ww   ww_create(void);
+int  ww_buffer_exists_by_name(const ww *ed, const char *name);
+int  ww_buffer_exists_by_path(const ww *ed, const char *path);
+void ww_add_buffer(ww *ed, buffer *b);
+void ww_make_buffer_primary(ww *ed, size_t idx);
+void ww_clear_monitors(ww *ed);
+void ww_display_monitors(ww *ed);
 
 #endif // WW_H_INCLUDED

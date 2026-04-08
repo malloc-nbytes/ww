@@ -27,3 +27,5 @@ src/include/stamp-h1
 *.o
 src/include/config.h.in
 src/tmp.txt
+src/bin
+src/obj
