@@ -36,6 +36,20 @@ str_from(const char *chars)
         return s;
 }
 
+str
+str_to_owned(char *chars)
+{
+        str    s;
+        size_t n;
+
+        n        = strlen(chars);
+        s.chars = chars;
+        s.len   = n;
+        s.cap   = n;
+
+        return s;
+}
+
 inline const char *
 str_cstr(const str *s)
 {
@@ -212,4 +226,14 @@ str_remove_range(str *s, size_t start, size_t count)
 
       if (s->len < s->cap)
           s->chars[s->len] = 0;
+}
+
+str
+str_dup(str s)
+{
+        return (str) {
+                .chars = strdup(s.chars),
+                .len   = s.len,
+                .cap   = s.cap,
+        };
 }

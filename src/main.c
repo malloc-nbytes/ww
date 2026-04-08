@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
+static void
+run(const char *path)
+{
+}
+
 static int
 init(void)
 {
@@ -39,6 +44,8 @@ main(int argc, char *argv[])
         if (!init())
                 fatal("init");
         atexit(cleanup);
+
+        run(path);
 
         return 0;
 }
