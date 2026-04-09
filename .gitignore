@@ -1,5 +1,6 @@
 main
 src/tmp
+docs
 ww
 src/include/config.h.in
 src/config.mk
@@ -18,6 +19,7 @@ missing
 src/.deps/
 src/Makefile.in
 src/ww-debug-build
+*.html
 src/include/config.h
 src/include/stamp-h1
 *.bin
