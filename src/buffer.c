@@ -1209,7 +1209,9 @@ ctrlx(buffer *b)
                 if (ch == CTRL_S)
                         return save(b);
                 if (ch == CTRL_Q)
-                        exit(0);
+                        return BA_REQ_EXIT;
+                if (ch == CTRL_F)
+                        return BA_REQ_FINDFILE;
         } break;
         default: break;
         }
@@ -1454,7 +1456,7 @@ buffer_draw(const buffer *b)
         unsigned win_h = get_win_hight(b);
 
         // Clear the entire buffer area
-        for (unsigned y = 0; y < win_h; ++y) {
+        for (unsigned y = 0; y < win_h+1; ++y) {
                 gotoxy(b->size.ws, b->size.hs + y);
                 for (unsigned x = 0; x < win_w; ++x)
                         putchar(' ');
@@ -1469,7 +1471,7 @@ buffer_draw(const buffer *b)
         }
 
         // Place cursor
-        const str *s = &b->lines.data[b->al]->txt;
+        const str *s      = &b->lines.data[b->al]->txt;
         unsigned visual_x = visual_column(s, b->cx, TAB_WIDTH);
         unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
         unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);

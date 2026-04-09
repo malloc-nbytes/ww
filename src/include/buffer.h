@@ -11,6 +11,8 @@ typedef enum {
         BA_NOP = 0,
         BA_REDRAW,
         BA_XY,
+        BA_REQ_EXIT,
+        BA_REQ_FINDFILE,
 } buffer_action;
 
 typedef enum {
