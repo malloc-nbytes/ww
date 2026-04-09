@@ -326,7 +326,8 @@ del_word(buffer *b)
                 str_rm(s, i);
         }
 
-        return adjust_scroll(b);
+        adjust_scroll(b);
+        return BA_REDRAW;
 }
 
 static buffer_action
@@ -410,7 +411,8 @@ kill_line(buffer *b)
 
         b->cx = 0;
 
-        return adjust_scroll(b);
+        adjust_scroll(b);
+        return BA_REDRAW;
 }
 
 static buffer_action
@@ -451,6 +453,31 @@ insert_char(buffer *b, char ch, int newline_advance)
 
         adjust_cursor(b);
         return (adjust_scroll(b) == BA_REDRAW || ch == '\n') ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+jump_to_top_of_buffer(buffer *b)
+{
+        if (b->lines.len == 0) // not sure if this is required, but doesn't hurt
+                return BA_NOP;
+
+        b->cy = (unsigned)b->lines.len-1;
+        b->cx = 0;
+        //b->wish_col = 0;
+        b->al = b->lines.len-1;
+        adjust_cursor(b);
+        return adjust_scroll(b);
+}
+
+static buffer_action
+jump_to_bottom_of_buffer(buffer *b)
+{
+        b->cy = 0;
+        b->cx = 0;
+        //b->wish_col = 0;
+        b->al = 0;
+        adjust_cursor(b);
+        return adjust_scroll(b);
 }
 
 static buffer_action
@@ -550,6 +577,33 @@ backspace(buffer *b)
         return (adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
 }
 
+
+static buffer_action
+delete_until_eol(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+
+        line *ln;
+        //const str *s;
+
+        ln = b->lines.data[b->al];
+        //s  = &ln->txt;
+
+        /*clear_cpy();
+        for (size_t i = b->cx; i < str_len(s)-1; ++i)
+                array_append(g_cpy_buf, str_at(s, i));*/
+
+        str_cut(&ln->txt, b->cx);
+        str_insert(&ln->txt, b->cx, '\n');
+
+        //add_to_popxy(b);
+
+        adjust_scroll(b);
+
+        return BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -583,7 +637,7 @@ buffer_process(buffer *b)
                 } else if (ch == CTRL_A) {
                         return bol(b);
                 } else if (ch == CTRL_K) {
-                        return kill_line(b);
+                        return delete_until_eol(b);
                 } else if (ch == CTRL_O) {
                         insert_char(b, '\n', 0);
                         --b->cx;
@@ -607,6 +661,12 @@ buffer_process(buffer *b)
                         return next_paragraph(b);
                 else if (ch == '{')
                         return prev_paragraph(b);
+                else if (ch == '>')
+                        return jump_to_top_of_buffer(b);
+                else if (ch == '<')
+                        return jump_to_bottom_of_buffer(b);
+                else if (ch == 'k')
+                        return kill_line(b);
         } break;
         default: break;
         }
