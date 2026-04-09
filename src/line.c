@@ -1,36 +1,50 @@
 #include "line.h"
 #include "str.h"
+#include "mem.h"
 
-line
-line_create(void)
+line *
+line_alloc(void)
 {
-        return (line) {
-                .txt = str_from("\n"),
-        };
+        line *l;
+
+        l = (line *)alloc(sizeof(line));
+
+        l->txt = str_from("\n");
+
+        return l;
 }
 
-line
+line *
 line_create_nothing(void)
 {
-        return (line) {
-                .txt = str_create(),
-        };
+        line *l;
+
+        l      = (line *)alloc(sizeof(line));
+        l->txt = str_create();
+
+        return l;
 }
 
-line
+line *
 line_from(str s)
 {
-        return (line) {
-                .txt = s,
-        };
+        line *l;
+
+        l      = (line *)alloc(sizeof(line));
+        l->txt = s;
+
+        return l;
 }
 
-line
+line *
 line_from_cstr(const char *s)
 {
-        return (line) {
-                .txt = str_from(s),
-        };
+        line *l;
+
+        l      = (line *)alloc(sizeof(line));
+        l->txt = str_from(s);
+
+        return l;
 }
 
 void
@@ -39,13 +53,13 @@ line_append(line *ln, char ch)
         str_append(&ln->txt, ch);
 }
 
-line_ar
+linep_ar
 lines_from(char *chars)
 {
-        line_ar ar;
-        str     buf;
+        linep_ar ar;
+        str      buf;
 
-        ar  = array_empty(line_ar);
+        ar  = array_empty(linep_ar);
         buf = str_create();
 
         for (size_t i = 0; chars[i]; ++i) {
@@ -70,4 +84,5 @@ void
 line_destroy(line *ln)
 {
         str_destroy(&ln->txt);
+        free(ln);
 }

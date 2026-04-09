@@ -21,7 +21,7 @@ typedef struct {
                 unsigned ws; // width start
                 unsigned hs; // height start
         } size;
-        line_ar  lines; // lines in the buffer
+        linep_ar lines; // lines in the buffer
         unsigned cx;    // cursor x
         unsigned cy;    // cursor y (visual)
         size_t   al;    // active line
@@ -37,7 +37,7 @@ buffer *buffer_from(str      name,
                     unsigned h,
                     unsigned ws,
                     unsigned hs,
-                    line_ar  lns);
+                    linep_ar lns);
 
 void buffer_draw(const buffer *b);
 void buffer_drawxy(const buffer *b);

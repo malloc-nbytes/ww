@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 #define ADJUST_CURSOR do { \
-        const str *s__ = &b->lines.data[b->al].txt; \
+        const str *s__ = &b->lines.data[b->al]->txt; \
         unsigned visual_x__ = visual_column(s__, b->cx, TAB_WIDTH); \
         gotoxy(b->size.ws + (unsigned)(visual_x__ > b->hoff ? visual_x__ - b->hoff : 0U), \
                b->size.hs + (unsigned)(b->cy - b->voff)); \
@@ -21,7 +21,7 @@ buffer_from(str      name,
             unsigned h,
             unsigned ws,
             unsigned hs,
-            line_ar  lns)
+            linep_ar lns)
 {
         buffer *b;
 
@@ -112,7 +112,7 @@ static int
 adjust_hscroll(buffer *b)
 {
         const unsigned  tabw  = TAB_WIDTH;
-        const str      *s     = &b->lines.data[b->al].txt;
+        const str      *s     = &b->lines.data[b->al]->txt;
         unsigned        win_w = get_win_width(b);
 
         unsigned cursor_visual = visual_column(s, b->cx, tabw);
@@ -142,15 +142,15 @@ static buffer_action
 up(buffer *b)
 {
         if (b->cy > 0) {
-                const str *olds = &b->lines.data[b->al].txt;
+                const str *olds = &b->lines.data[b->al]->txt;
                 unsigned desired = visual_column(olds, b->cx, TAB_WIDTH);
                 --b->cy;
                 --b->al;
-                const str *news = &b->lines.data[b->al].txt;
+                const str *news = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
         } else {
                 // clamp if somehow cx is invalid
-                const str *s = &b->lines.data[b->al].txt;
+                const str *s = &b->lines.data[b->al]->txt;
                 if (b->cx > s->len)
                         b->cx = (unsigned)s->len-1;
         }
@@ -162,15 +162,15 @@ static buffer_action
 down(buffer *b)
 {
         if (b->cy < b->lines.len-1) {
-                const str *olds = &b->lines.data[b->al].txt;
+                const str *olds = &b->lines.data[b->al]->txt;
                 unsigned desired = visual_column(olds, b->cx, TAB_WIDTH);
                 ++b->cy;
                 ++b->al;
-                const str *news = &b->lines.data[b->al].txt;
+                const str *news = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
         } else {
                 // clamp if somehow cx is invalid
-                const str *s = &b->lines.data[b->al].txt;
+                const str *s = &b->lines.data[b->al]->txt;
                 if (b->cx > s->len)
                         b->cx = (unsigned)s->len-1;
         }
@@ -181,7 +181,7 @@ down(buffer *b)
 static buffer_action
 right(buffer *b)
 {
-        str *s = &b->lines.data[b->al].txt;
+        str *s = &b->lines.data[b->al]->txt;
 
         if (b->cx < str_len(s)-1) {
                 ++b->cx;
@@ -203,7 +203,7 @@ left(buffer *b)
         } else if (b->cy > 0) {
                 --b->cy;
                 --b->al;
-                str *prev = &b->lines.data[b->al].txt;
+                str *prev = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)str_len(prev)-1;
         }
 
@@ -222,7 +222,7 @@ bol(buffer *b)
 static buffer_action
 eol(buffer *b)
 {
-        str *s = &b->lines.data[b->al].txt;
+        str *s = &b->lines.data[b->al]->txt;
         b->cx = (unsigned)str_len(s)-1;
         ADJUST_CURSOR;
         return adjust_scroll(b);
@@ -237,7 +237,7 @@ jump_next_word(buffer *b)
         int         hitchars;
         size_t      i;
 
-        ln       = &b->lines.data[b->al];
+        ln       = b->lines.data[b->al];
         s        = &ln->txt;
         sraw     = str_cstr(s);
         hitchars = 0;
@@ -272,7 +272,7 @@ jump_prev_word(buffer *b)
         int         hitchars;
         size_t      i;
 
-        ln       = &b->lines.data[b->al];
+        ln       = b->lines.data[b->al];
         s        = &ln->txt;
         sraw     = str_cstr(s);
         hitchars = 0;
@@ -307,7 +307,7 @@ del_word(buffer *b)
         int          hitchars;
         size_t       i;
 
-        ln       = &b->lines.data[b->al];
+        ln       = b->lines.data[b->al];
         s        = &ln->txt;
         sraw     = str_cstr(s);
         hitchars = 0;
@@ -336,8 +336,8 @@ prev_paragraph(buffer *b)
         nextln = b->cy;
 
         for (int i = (int)b->cy-1; i >= 0; --i) {
-                const line *l  = &b->lines.data[i];
-                const line *l2 = &b->lines.data[i+1];
+                const line *l  = b->lines.data[i];
+                const line *l2 = b->lines.data[i+1];
                 nextln         = (size_t)i;
                 if (str_len(&l->txt) == 1 && l->txt.chars[0] == '\n') {
                         if (i > 0 && l2 && l2->txt.chars[0] == '\n')
@@ -362,8 +362,8 @@ next_paragraph(buffer *b)
         nextln = b->cy;
 
         for (size_t i = b->cy+1; i < b->lines.len; ++i) {
-                const line *l  = &b->lines.data[i];
-                const line *l2 = &b->lines.data[i+1];
+                const line *l  = b->lines.data[i];
+                const line *l2 = b->lines.data[i+1];
                 nextln         = i;
                 if (str_len(&l->txt) == 1 && l->txt.chars[0] == 10) {
                         if (i < b->lines.len && l2 && l2->txt.chars[0] == '\n')
@@ -392,7 +392,7 @@ kill_line(buffer *b)
         if (b->lines.len <= 0)
                 return BA_NOP;
 
-        ln = &b->lines.data[b->al];
+        ln = b->lines.data[b->al];
         /* s  = &ln->txt; */
 
         //clear_cpy();
@@ -424,18 +424,18 @@ insert_char(buffer *b, char ch, int newline_advance)
                 array_append(b->lines, line_from(str_from("\n")));
         }
 
-        str_insert(&b->lines.data[b->al].txt, b->cx, ch);
+        str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
         ++b->cx;
 
         if (ch == '\n') {
                 const char *rest;
-                line        newln;
+                line       *newln;
 
-                rest  = str_cstr(&b->lines.data[b->al].txt)+b->cx;
+                rest  = str_cstr(&b->lines.data[b->al]->txt)+b->cx;
                 newln = line_from(str_from(rest));
 
                 array_insert_at(b->lines, b->al+1, newln);
-                str_cut(&b->lines.data[b->al].txt, b->cx);
+                str_cut(&b->lines.data[b->al]->txt, b->cx);
 
                 if (newline_advance) {
                         b->cx = 0;
@@ -523,7 +523,7 @@ drawln(const buffer *b, size_t idx)
         if (idx < b->voff || idx >= b->voff + get_win_hight(b))
                 return;
 
-        const line *ln = &b->lines.data[idx];
+        const line *ln = b->lines.data[idx];
         const str *s = &ln->txt;
         unsigned y = b->size.hs + (unsigned)(idx - b->voff);
         unsigned win_w = get_win_width(b);
@@ -571,7 +571,7 @@ buffer_drawxy(const buffer *b)
 {
         drawln(b, b->cy);
 
-        const str *s = &b->lines.data[b->al].txt;
+        const str *s = &b->lines.data[b->al]->txt;
         unsigned visual_x = visual_column(s, b->cx, TAB_WIDTH);
 
         unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
@@ -602,7 +602,7 @@ buffer_draw(const buffer *b)
         }
 
         // Place cursor
-        const str *s = &b->lines.data[b->al].txt;
+        const str *s = &b->lines.data[b->al]->txt;
         unsigned visual_x = visual_column(s, b->cx, TAB_WIDTH);
         unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
         unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
