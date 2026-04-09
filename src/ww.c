@@ -1,6 +1,7 @@
 #include "ww.h"
 #include "array.h"
 #include "term.h"
+#include "buffer.h"
 #include "glconf.h"
 
 #include <assert.h>

@@ -6,12 +6,6 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#define ADJUST_CURSOR do { \
-        const str *s__ = &b->lines.data[b->al]->txt; \
-        unsigned visual_x__ = visual_column(s__, b->cx, TAB_WIDTH); \
-        gotoxy(b->size.ws + (unsigned)(visual_x__ > b->hoff ? visual_x__ - b->hoff : 0U), \
-               b->size.hs + (unsigned)(b->cy - b->voff)); \
-} while (0)
 #define TAB_WIDTH 8
 
 buffer *
@@ -81,6 +75,15 @@ char_index_at_visual_col(const str *s, unsigned target_col, unsigned tab_width)
         return s->len;
 }
 
+static void
+adjust_cursor(buffer *b)
+{
+        const str *s = &b->lines.data[b->al]->txt;
+        unsigned x = visual_column(s, b->cx, TAB_WIDTH);
+        gotoxy(b->size.ws + (unsigned)(x > b->hoff ? x - b->hoff : 0U),
+               b->size.hs + (unsigned)(b->cy - b->voff));
+}
+
 static unsigned
 get_win_hight(const buffer *b)
 {
@@ -148,13 +151,12 @@ up(buffer *b)
                 --b->al;
                 const str *news = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
-        } else {
-                // clamp if somehow cx is invalid
-                const str *s = &b->lines.data[b->al]->txt;
-                if (b->cx > s->len)
-                        b->cx = (unsigned)s->len-1;
         }
-        ADJUST_CURSOR;
+
+        if (b->cx > b->lines.data[b->al]->txt.len-1)
+                b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
+
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -168,13 +170,12 @@ down(buffer *b)
                 ++b->al;
                 const str *news = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
-        } else {
-                // clamp if somehow cx is invalid
-                const str *s = &b->lines.data[b->al]->txt;
-                if (b->cx > s->len)
-                        b->cx = (unsigned)s->len-1;
         }
-        ADJUST_CURSOR;
+
+        if (b->cx > b->lines.data[b->al]->txt.len-1)
+                b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
+
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -191,7 +192,7 @@ right(buffer *b)
                 b->cx = 0;
         }
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -207,7 +208,7 @@ left(buffer *b)
                 b->cx = (unsigned)str_len(prev)-1;
         }
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -215,7 +216,7 @@ static buffer_action
 bol(buffer *b)
 {
         b->cx = 0;
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -224,7 +225,7 @@ eol(buffer *b)
 {
         str *s = &b->lines.data[b->al]->txt;
         b->cx = (unsigned)str_len(s)-1;
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -259,7 +260,7 @@ jump_next_word(buffer *b)
         else
                 b->cx = (unsigned)i;
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -294,7 +295,7 @@ jump_prev_word(buffer *b)
         if (!isalnum(sraw[b->cx]))
                 ++b->cx;
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -350,7 +351,7 @@ prev_paragraph(buffer *b)
         b->cx = 0;
         b->al = nextln;
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -376,7 +377,7 @@ next_paragraph(buffer *b)
         b->cx = 0;
         b->al = nextln;
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return adjust_scroll(b);
 }
 
@@ -421,7 +422,9 @@ insert_char(buffer *b, char ch, int newline_advance)
         /* b->saved = 0; */
 
         if (!b->lines.data) {
-                array_append(b->lines, line_from(str_from("\n")));
+                char tmp[] = {'\n', 0};
+                array_append(b->lines, line_from(str_from(tmp)));
+                //array_append(b->lines, line_from(str_from("\n")));
         }
 
         str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
@@ -446,7 +449,7 @@ insert_char(buffer *b, char ch, int newline_advance)
 
         //add_to_popxy(b);
 
-        ADJUST_CURSOR;
+        adjust_cursor(b);
         return (adjust_scroll(b) == BA_REDRAW || ch == '\n') ? BA_REDRAW : BA_XY;
 }
 
@@ -497,6 +500,8 @@ buffer_process(buffer *b)
                         return BA_REDRAW;
                 } else if (ch == CTRL_Q) {
                         exit(0);
+                } else if (ch == CTRL_H) {
+                        return backspace(b);
                 }
         } break;
         case INPUT_TYPE_ALT: {

@@ -3,6 +3,7 @@ CC      := cc
 
 # Compilation flags (release)
 CFLAGS  := -Iinclude \
+	   -ggdb \
            -O2 \
            -Wall \
            -Wextra \

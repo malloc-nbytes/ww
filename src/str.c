@@ -129,8 +129,7 @@ str_cut(str *s, size_t i)
                 return;
 
         //memset(s->chars+i, 0, s->cap-i);
-        for (size_t it = i; it < s->cap; ++it)
-                s->chars[it] = 0;
+        memset(s->chars+i, 0, s->len-i);
         s->len = i;
 }
 
