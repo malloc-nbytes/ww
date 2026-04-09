@@ -11,6 +11,12 @@ typedef enum {
         BA_XY,
 } buffer_action;
 
+typedef enum {
+        BS_NORMAL,
+        BS_SEARCH,
+        BS_SELECTION,
+} buffer_state;
+
 typedef struct {
         str name; // name of buffer, can be same as path
                   // if buffer by the same name exists
@@ -21,12 +27,14 @@ typedef struct {
                 unsigned ws; // width start
                 unsigned hs; // height start
         } size;
-        linep_ar lines; // lines in the buffer
-        unsigned cx;    // cursor x
-        unsigned cy;    // cursor y (visual)
-        size_t   al;    // active line
-        size_t   voff;  // vertical scroll offset
-        size_t   hoff;  // horizontal scroll offset
+        linep_ar     lines; // lines in the buffer
+        unsigned     cx;    // cursor x
+        unsigned     cy;    // cursor y (visual)
+        size_t       al;    // active line
+        size_t       voff;  // vertical scroll offset
+        size_t       hoff;  // horizontal scroll offset
+        buffer_state state; // current state
+        int          saved; // is the buffer saved
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);

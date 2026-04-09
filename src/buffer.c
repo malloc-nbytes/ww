@@ -1,10 +1,18 @@
 #include "buffer.h"
 #include "mem.h"
 #include "term.h"
+#include "colors.h"
+#include "glconf.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
+#ifdef __linux__
+#include <limits.h>
+#else
+#define PATH_MAX 4096
+#endif
 
 #define TAB_WIDTH 8
 
@@ -32,8 +40,22 @@ buffer_from(str      name,
         b->al      = 0;
         b->hoff    = 0;
         b->voff    = 0;
+        b->state   = BS_NORMAL;
+        b->saved   = 1;
 
         return b;
+}
+
+static const char *
+state_to_cstr(const buffer *b)
+{
+        switch (b->state) {
+        case BS_NORMAL:    return "normal";
+        case BS_SELECTION: return "selection";
+        case BS_SEARCH:    return "search";
+        default:           return "unknown";
+        }
+        return "unknown";
 }
 
 static unsigned
@@ -905,6 +927,33 @@ caps_word(buffer *b)
         return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
+static buffer_action
+swap_chars(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+
+        line *ln;
+        str  *s;
+        char  ch;
+
+        ln = b->lines.data[b->al];
+        s  = &ln->txt;
+        ch = str_at(s, b->cx);
+
+        if (b->cx >= str_len(s)-1 || b->cx == 0)
+                return BA_NOP;
+
+        s->chars[b->cx]   = s->chars[b->cx-1];
+        s->chars[b->cx-1] = ch;
+
+        ++b->cx;
+        //b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+        return BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -953,6 +1002,8 @@ buffer_process(buffer *b)
                         return center_view(b);
                 else if (ch == CTRL_V)
                         return page_down(b);
+                else if (ch == CTRL_T)
+                        return swap_chars(b);
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')
@@ -996,6 +1047,44 @@ buffer_process(buffer *b)
         }
 
         return BA_NOP;
+}
+
+
+static void
+draw_status(const buffer *b,
+            const char   *msg)
+{
+        char   buf[PATH_MAX + 32];
+        size_t len;
+
+        len = 0;
+
+        gotoxy(0, b->size.h);
+
+        printf(INVERT);
+
+        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s",
+                str_cstr(&b->name),
+                b->cy+1,
+                b->cx+1,
+                !b->saved ? "*" : "",
+                state_to_cstr(b));
+        printf("%s", buf);
+        len += strlen(buf);
+
+        if (msg) {
+                sprintf(buf, " [%s" RESET INVERT "]", msg);
+                printf("%s", buf);
+                len += strlen(buf);
+        }
+
+        for (size_t i = len; i < b->size.w; ++i)
+                putchar(' ');
+
+        printf(RESET);
+
+        gotoxy(b->cx - (unsigned)b->hoff, b->cy - (unsigned)b->voff);
+        //fflush(stdout);
 }
 
 static void
@@ -1058,6 +1147,7 @@ buffer_drawxy(const buffer *b)
         unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
         unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
 
+        draw_status(b, NULL);
         gotoxy(screen_x, screen_y);
 }
 
@@ -1087,5 +1177,7 @@ buffer_draw(const buffer *b)
         unsigned visual_x = visual_column(s, b->cx, TAB_WIDTH);
         unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
         unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
+
+        draw_status(b, NULL);
         gotoxy(screen_x, screen_y);
 }
