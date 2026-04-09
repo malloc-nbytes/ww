@@ -5,6 +5,8 @@
 #include "line.h"
 #include "str.h"
 
+extern char_ar g_cpy_buf;
+
 typedef enum {
         BA_NOP = 0,
         BA_REDRAW,

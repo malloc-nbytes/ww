@@ -4,6 +4,7 @@
 #include "colors.h"
 #include "glconf.h"
 #include "config.h"
+#include "minibuffer.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -24,7 +25,7 @@ line_selection_range(const buffer *b,
                      size_t       *sel_start,
                      size_t       *sel_end);
 
-static char_ar g_cpy_buf = {0};
+char_ar g_cpy_buf = {0};
 
 buffer *
 buffer_from(str      name,
@@ -1200,6 +1201,7 @@ buffer_process(buffer *b)
                 else if (ch == 'l')     return lowercase_word(b);
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
+                else if (ch == ' ')     minibuffer_input("test", NULL, NULL);
         } break;
         default: break;
         }
