@@ -41,6 +41,7 @@ typedef struct {
 
 ARRAY_DEFINE(buffer *, bufferp_ar);
 
+void    init_buffer_translation_unit(void);
 buffer *buffer_from(str      name,
                     str      path,
                     unsigned w,

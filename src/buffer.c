@@ -16,6 +16,15 @@
 
 #define TAB_WIDTH 8
 
+static int
+line_selection_range(const buffer *b,
+                     size_t        idx,
+                     size_t        line_len,
+                     size_t       *sel_start,
+                     size_t       *sel_end);
+
+static char_ar g_cpy_buf = {0};
+
 buffer *
 buffer_from(str      name,
             str      path,
@@ -46,6 +55,12 @@ buffer_from(str      name,
         b->sy      = 0;
 
         return b;
+}
+
+static void
+clear_cpy(void)
+{
+        array_clear(g_cpy_buf);
 }
 
 static const char *
@@ -163,6 +178,67 @@ adjust_scroll(buffer *b)
         res = adjust_hscroll(b) || res;
 
         return res ? BA_REDRAW : BA_NOP;
+}
+
+static buffer_action
+del_selection(buffer *b)
+{
+        if (b->state != BS_SELECTION)
+                return BA_NOP;
+
+        size_t start_line, start_col, end_line, end_col;
+
+        // determine absolute selection bounds
+        if (b->sy < b->al || (b->sy == b->al && b->sx <= b->cx)) {
+                start_line = b->sy;
+                start_col  = b->sx;
+                end_line   = b->al;
+                end_col    = b->cx;
+        } else {
+                start_line = b->al;
+                start_col  = b->cx;
+                end_line   = b->sy;
+                end_col    = b->sx;
+        }
+
+        // single-line selection
+        if (start_line == end_line) {
+                str_remove_range(&b->lines.data[start_line]->txt, start_col, end_col - start_col);
+        } else {
+                // remove part from the first line
+                str_remove_range(&b->lines.data[start_line]->txt, start_col,
+                                 b->lines.data[start_line]->txt.len - start_col);
+
+                // remove part from the last line
+                str_remove_range(&b->lines.data[end_line]->txt, 0, end_col);
+
+                // merge lines: append remaining last line to first line
+                str_concat(&b->lines.data[start_line]->txt,
+                           b->lines.data[end_line]->txt.chars);
+
+                // Remove all lines between start_line + 1 and end_line
+                for (size_t i = start_line + 1; i <= end_line; ++i) {
+                        str_destroy(&b->lines.data[i]->txt);
+                        array_rm_at(b->lines, start_line + 1);
+                }
+        }
+
+        // move cursor to start of selection
+        b->al = start_line;
+        b->cy = (unsigned)start_line;
+        b->cx = (unsigned)start_col;
+
+        b->sx    = 0;
+        b->sy    = 0;
+        b->state = BS_NORMAL;
+
+        b->saved = 0;
+
+        adjust_cursor(b);
+        adjust_scroll(b);
+        return BA_REDRAW;
+        //return adjust_scroll(b) == BA_REDRAW
+        //        ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -510,10 +586,8 @@ del_char(buffer *b)
         //if (!writable(b))
         //        return 0;
 
-        /*if (b->state == BS_SELECTION) {
-                del_selection(b);
-                return 1;
-        }*/
+        if (b->state == BS_SELECTION)
+                return del_selection(b);
 
         line *ln;
         int   newline;
@@ -979,6 +1053,76 @@ selection(buffer *b)
         return BA_XY;
 }
 
+static buffer_action
+copy_selection(buffer *b)
+{
+        if (b->state != BS_SELECTION)
+                return BA_NOP;
+
+        clear_cpy();
+
+        size_t start_line, start_col, end_line, end_col;
+
+        (void)end_col;
+        (void)start_col;
+
+        // determine absolute selection bounds
+        if (b->sy < b->al || (b->sy == b->al && b->sx <= b->cx)) {
+                start_line = b->sy;
+                start_col  = b->sx;
+                end_line   = b->al;
+                end_col    = b->cx;
+        } else {
+                start_line = b->al;
+                start_col  = b->cx;
+                end_line   = b->sy;
+                end_col    = b->sx;
+        }
+
+        // copy lines
+        for (size_t i = start_line; i <= end_line; ++i) {
+                str *ln = &b->lines.data[i]->txt;
+                size_t sel_start, sel_end;
+
+                if (!line_selection_range(b, i, ln->len, &sel_start, &sel_end))
+                        continue;
+
+                for (size_t j = sel_start; j < sel_end; ++j)
+                        array_append(g_cpy_buf, ln->chars[j]);
+        }
+
+        b->state = BS_NORMAL;
+
+        return BA_REDRAW;
+}
+
+static buffer_action
+paste(buffer *b)
+{
+        //if (!writable(b))
+        //        return 0;
+
+        int newline;
+
+        newline = 0;
+
+        if (b->state == BS_SELECTION) {
+                del_selection(b);
+                newline = 1;
+        }
+
+        for (size_t i = 0; i < g_cpy_buf.len; ++i) {
+                insert_char(b, g_cpy_buf.data[i], 1);
+                if (g_cpy_buf.data[i] == '\n')
+                        newline = 1;
+        }
+
+        //add_to_popxy(b);
+
+        return (adjust_scroll(b) == BA_REDRAW || newline)
+                ? BA_REDRAW : BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -1015,6 +1159,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_V) return page_down(b);
                 else if (ch == CTRL_T) return swap_chars(b);
                 else if (ch == CTRL_G) return cancel(b);
+                else if (ch == CTRL_Y) return paste(b);
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')          return jump_next_word(b);
@@ -1035,6 +1180,7 @@ buffer_process(buffer *b)
                 else if (ch == 'u')     return caps_word(b);
                 else if (ch == 'l')     return lowercase_word(b);
                 else if (ch == 'c')     return uppercase_word(b);
+                else if (ch == 'w')     return copy_selection(b);
         } break;
         default: break;
         }
@@ -1164,7 +1310,7 @@ drawln(const buffer *b, size_t idx)
 
         // draw visible part
         while (char_i < s->len && screen_col < win_w) {
-                unsigned col_start = screen_col;
+                //unsigned col_start = screen_col;
                 char c = s->chars[char_i];
 
                 if (c == '\t') {
@@ -1233,4 +1379,10 @@ buffer_draw(const buffer *b)
 
         draw_status(b, NULL);
         gotoxy(screen_x, screen_y);
+}
+
+void
+init_buffer_translation_unit(void)
+{
+        g_cpy_buf = array_empty(char_ar);
 }

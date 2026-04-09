@@ -62,6 +62,8 @@ main(int argc, char *argv[])
                 fatal("init");
         atexit(cleanup);
 
+        init_buffer_translation_unit();
+
         run(path);
 
         return 0;
