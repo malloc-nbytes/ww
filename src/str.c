@@ -128,7 +128,9 @@ str_cut(str *s, size_t i)
         if (i >= s->len)
                 return;
 
-        memset(s->chars+i, 0, s->cap-i);
+        //memset(s->chars+i, 0, s->cap-i);
+        for (size_t it = i; it < s->cap; ++it)
+                s->chars[it] = 0;
         s->len = i;
 }
 

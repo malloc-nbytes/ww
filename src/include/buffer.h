@@ -23,7 +23,7 @@ typedef struct {
         } size;
         line_ar  lines; // lines in the buffer
         unsigned cx;    // cursor x
-        unsigned cy;    // cursor y
+        unsigned cy;    // cursor y (visual)
         size_t   al;    // active line
         size_t   voff;  // vertical scroll offset
         size_t   hoff;  // horizontal scroll offset

@@ -1,0 +1,12 @@
+/*
+	hello world	foo bar																										test
+		test	text
+*/
+
+int main(void)
+{
+	if (1) {
+		printf("hello world\n");
+	}
+	return 0;
+}
