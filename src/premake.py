@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# This is the file that should run before compiling ww.
+
 import subprocess
 import tempfile
 import shutil
