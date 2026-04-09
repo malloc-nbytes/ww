@@ -4,7 +4,8 @@
 		test	text
 */
 
-int main(void)
+int
+main(void)
 {
 	if (1) {
 		printf("hello world\n");

@@ -12,6 +12,8 @@ minibuffer_input(const char *prompt,
                  const str  *autofill,
                  str_ar     *ac_items)
 {
+        (void)ac_items;
+
         gotoxy(0, (unsigned)glconf.term.h);
 
         int    first;
@@ -27,7 +29,7 @@ minibuffer_input(const char *prompt,
         while (1) {
                 clear_line(0, glconf.term.h);
                 printf("%s [ %s", prompt ? prompt : "", buf.chars);
-                gotoxy(cx + prompt_n + strlen(" [ "), (unsigned)glconf.term.h);
+                gotoxy((unsigned)(cx + prompt_n + strlen(" [ ")), (unsigned)glconf.term.h);
                 fflush(stdout);
 
                 if (first) {
@@ -82,5 +84,7 @@ minibuffer_input(const char *prompt,
         }
 
  done:
+        clear_line(0, glconf.term.h);
+
         return buf.len > 0 ? buf.chars : NULL;
 }

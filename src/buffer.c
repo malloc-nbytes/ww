@@ -5,6 +5,7 @@
 #include "glconf.h"
 #include "config.h"
 #include "minibuffer.h"
+#include "io.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -25,6 +26,10 @@ line_selection_range(const buffer *b,
                      size_t       *sel_start,
                      size_t       *sel_end);
 
+static void
+draw_status(const buffer *b,
+            const char   *msg);
+
 char_ar g_cpy_buf = {0};
 
 buffer *
@@ -38,25 +43,45 @@ buffer_from(str      name,
 {
         buffer *b;
 
-        b          = (buffer *)alloc(sizeof(buffer));
-        b->name    = name;
-        b->path    = path;
-        b->size.w  = w;
-        b->size.h  = h;
-        b->size.ws = ws;
-        b->size.hs = hs;
-        b->lines   = lns;
-        b->cx      = 0;
-        b->cy      = 0;
-        b->al      = 0;
-        b->hoff    = 0;
-        b->voff    = 0;
-        b->state   = BS_NORMAL;
-        b->saved   = 1;
-        b->sx      = 0;
-        b->sy      = 0;
+        b           = (buffer *)alloc(sizeof(buffer));
+        b->name     = name;
+        b->path     = path;
+        b->size.w   = w;
+        b->size.h   = h;
+        b->size.ws  = ws;
+        b->size.hs  = hs;
+        b->lines    = lns;
+        b->cx       = 0;
+        b->cy       = 0;
+        b->wish_col = 0;
+        b->al       = 0;
+        b->hoff     = 0;
+        b->voff     = 0;
+        b->state    = BS_NORMAL;
+        b->saved    = 1;
+        b->sx       = 0;
+        b->sy       = 0;
+        b->writable = 1;
 
         return b;
+}
+
+void
+buffer_make_readonly(buffer *b)
+{
+        b->writable = 0;
+}
+
+static int
+writable(const buffer *b)
+{
+        if (!b->writable) {
+                draw_status(b, "buffer is read-only");
+                fflush(stdout);
+                return 0;
+        }
+
+        return 1;
 }
 
 static void
@@ -248,7 +273,7 @@ up(buffer *b)
 {
         if (b->cy > 0) {
                 const str *olds = &b->lines.data[b->al]->txt;
-                unsigned desired = visual_column(olds, b->cx, TAB_WIDTH);
+                unsigned desired = visual_column(olds, /*b->wish_col*/b->cx, TAB_WIDTH);
                 --b->cy;
                 --b->al;
                 const str *news = &b->lines.data[b->al]->txt;
@@ -267,7 +292,7 @@ down(buffer *b)
 {
         if (b->cy < b->lines.len-1) {
                 const str *olds = &b->lines.data[b->al]->txt;
-                unsigned desired = visual_column(olds, b->cx, TAB_WIDTH);
+                unsigned desired = visual_column(olds, /*b->wish_col*/b->cx, TAB_WIDTH);
                 ++b->cy;
                 ++b->al;
                 const str *news = &b->lines.data[b->al]->txt;
@@ -288,6 +313,7 @@ right(buffer *b)
 
         if (b->cx < str_len(s)-1) {
                 ++b->cx;
+                b->wish_col = b->cx;
         } else if (b->cy < b->lines.len-1) {
                 ++b->cy;
                 ++b->al;
@@ -303,6 +329,7 @@ left(buffer *b)
 {
         if (b->cx > 0) {
                 --b->cx;
+                b->wish_col = b->cx;
         } else if (b->cy > 0) {
                 --b->cy;
                 --b->al;
@@ -319,7 +346,7 @@ bol(buffer *b)
 {
         b->cx = 0;
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -328,7 +355,7 @@ eol(buffer *b)
         str *s = &b->lines.data[b->al]->txt;
         b->cx = (unsigned)str_len(s)-1;
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -487,21 +514,21 @@ next_paragraph(buffer *b)
 static buffer_action
 kill_line(buffer *b)
 {
-        /* if (!writable(b)) */
-        /*         return; */
+        if (!writable(b))
+                return BA_NOP;
 
         line *ln;
-        /* const str *s; */
+        const str *s;
 
         if (b->lines.len <= 0)
                 return BA_NOP;
 
         ln = b->lines.data[b->al];
-        /* s  = &ln->txt; */
+        s  = &ln->txt;
 
-        //clear_cpy();
-        /* for (size_t i = 0; i < str_len(s); ++i) */
-        /*         array_append(g_cpy_buf, str_at(s, i)); */
+        clear_cpy();
+        for (size_t i = 0; i < str_len(s); ++i)
+                array_append(g_cpy_buf, str_at(s, i));
 
         line_free(ln);
         array_rm_at(b->lines, b->al);
@@ -520,15 +547,15 @@ kill_line(buffer *b)
 static buffer_action
 insert_char(buffer *b, char ch, int newline_advance)
 {
-        /* if (!writable(b)) */
-        /*         return; */
+        if (!writable(b))
+                return BA_NOP;
 
-        /* b->saved = 0; */
+        b->saved = 0;
 
         if (!b->lines.data) {
                 char tmp[] = {'\n', 0};
                 array_append(b->lines, line_from(str_from(tmp)));
-                //array_append(b->lines, line_from(str_from("\n")));
+                /* array_append(b->lines, line_from(str_from("\n"))); */
         }
 
         str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
@@ -565,7 +592,7 @@ jump_to_top_of_buffer(buffer *b)
 
         b->cy = (unsigned)b->lines.len-1;
         b->cx = 0;
-        //b->wish_col = 0;
+        b->wish_col = 0;
         b->al = b->lines.len-1;
         adjust_cursor(b);
         return adjust_scroll(b);
@@ -576,7 +603,7 @@ jump_to_bottom_of_buffer(buffer *b)
 {
         b->cy = 0;
         b->cx = 0;
-        //b->wish_col = 0;
+        b->wish_col = 0;
         b->al = 0;
         adjust_cursor(b);
         return adjust_scroll(b);
@@ -585,8 +612,8 @@ jump_to_bottom_of_buffer(buffer *b)
 static buffer_action
 del_char(buffer *b)
 {
-        //if (!writable(b))
-        //        return 0;
+        if (!writable(b))
+                return BA_NOP;
 
         if (b->state == BS_SELECTION)
                 return del_selection(b);
@@ -596,7 +623,7 @@ del_char(buffer *b)
 
         ln       = b->lines.data[b->al];
         newline  = 0;
-        //b->saved = 0;
+        b->saved = 0;
 
         if (ln->txt.chars[b->cx] == '\n') {
                 newline = 1;
@@ -621,15 +648,15 @@ del_char(buffer *b)
 static buffer_action
 backspace(buffer *b)
 {
-        //if (!writable(b))
-        //        return 0;
+        if (!writable(b))
+                return BA_NOP;
 
         line *ln;
         int   newline;
 
         ln       = b->lines.data[b->al];
         newline  = 0;
-        //b->saved = 0;
+        b->saved = 0;
 
         if (b->cx == 0) {
                 if (b->al == 0)
@@ -681,18 +708,18 @@ backspace(buffer *b)
 static buffer_action
 delete_until_eol(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
 
         line *ln;
-        //const str *s;
+        const str *s;
 
         ln = b->lines.data[b->al];
-        //s  = &ln->txt;
+        s  = &ln->txt;
 
-        /*clear_cpy();
+        clear_cpy();
         for (size_t i = b->cx; i < str_len(s)-1; ++i)
-                array_append(g_cpy_buf, str_at(s, i));*/
+                array_append(g_cpy_buf, str_at(s, i));
 
         str_cut(&ln->txt, b->cx);
         str_insert(&ln->txt, b->cx, '\n');
@@ -720,7 +747,7 @@ jump_to_first_char(buffer *b)
                 }
         }
 
-        //b->wish_col = b->cx;
+        b->wish_col = b->cx;
 
         adjust_cursor(b);
         return adjust_scroll(b);
@@ -768,7 +795,7 @@ combine_lines(buffer *b)
         array_rm_at(b->lines, b->al+1);
 
         b->cx = (unsigned)len-1;
-        //b->wish_col = b->cx;
+        b->wish_col = b->cx;
 
         //add_to_popxy(b);
 
@@ -792,7 +819,7 @@ page_down(buffer *b)
         }
 
         b->cx       = 0;
-        //b->wish_col = 0;
+        b->wish_col = 0;
 
         adjust_scroll(b);
 
@@ -815,7 +842,7 @@ page_up(buffer *b)
         }
 
         b->cx       = 0;
-        //b->wish_col = 0;
+        b->wish_col = 0;
 
         adjust_scroll(b);
 
@@ -832,8 +859,8 @@ backspace_stop(unsigned char ch)
 static int
 super_backspace(buffer *b)
 {
-        //if (!writable(b))
-        //        return 0;
+        if (!writable(b))
+                return BA_NOP;
 
         line   *ln;
         size_t  start;
@@ -845,7 +872,7 @@ super_backspace(buffer *b)
         if (b->cx == 0)
                 return backspace(b);
 
-        //b->saved = 0;
+        b->saved = 0;
 
         while (start > 0 && backspace_stop((unsigned char)str_at(&ln->txt, start - 1)))
                 --start;
@@ -871,8 +898,8 @@ super_backspace(buffer *b)
 static buffer_action
 buffer_dupline(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
 
         line *ln;
         str  *s;
@@ -894,8 +921,8 @@ buffer_dupline(buffer *b)
 static buffer_action
 movetxt_up(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
 
         if (b->al <= 0)
                 return BA_NOP;
@@ -916,8 +943,8 @@ movetxt_up(buffer *b)
 static buffer_action
 movetxt_down(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
 
         if (b->al >= b->lines.len-1)
                 return BA_NOP;
@@ -963,7 +990,7 @@ upperlower_word(buffer *b,
         }
 
         b->cx = (unsigned)start;
-        //b->wish_col = b->cx;
+        b->wish_col = b->cx;
 
         //add_to_popxy(b);
 
@@ -973,8 +1000,9 @@ upperlower_word(buffer *b,
 static buffer_action
 uppercase_word(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
+
         upperlower_word(b, toupper, 0);
 
         //add_to_popxy(b);
@@ -985,8 +1013,9 @@ uppercase_word(buffer *b)
 static buffer_action
 lowercase_word(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
+
         upperlower_word(b, tolower, 1);
 
         //add_to_popxy(b);
@@ -997,8 +1026,9 @@ lowercase_word(buffer *b)
 static buffer_action
 caps_word(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
+
         upperlower_word(b, toupper, 1);
 
         //add_to_popxy(b);
@@ -1008,8 +1038,8 @@ caps_word(buffer *b)
 static buffer_action
 swap_chars(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
 
         line *ln;
         str  *s;
@@ -1026,7 +1056,7 @@ swap_chars(buffer *b)
         s->chars[b->cx-1] = ch;
 
         ++b->cx;
-        //b->wish_col = b->cx;
+        b->wish_col = b->cx;
 
         //add_to_popxy(b);
         return BA_XY;
@@ -1101,8 +1131,8 @@ copy_selection(buffer *b)
 static buffer_action
 cut_selection(buffer *b)
 {
-        //if (!writable(b))
-        //        return;
+        if (!writable(b))
+                return BA_NOP;
 
         if (b->state != BS_SELECTION)
                 return BA_NOP;
@@ -1118,8 +1148,8 @@ cut_selection(buffer *b)
 static buffer_action
 paste(buffer *b)
 {
-        //if (!writable(b))
-        //        return 0;
+        if (!writable(b))
+                return BA_NOP;
 
         int newline;
 
@@ -1140,6 +1170,51 @@ paste(buffer *b)
 
         return (adjust_scroll(b) == BA_REDRAW || newline)
                 ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+save(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        char_ar content = array_empty(char_ar);
+        for (size_t i = 0; i < b->lines.len; ++i) {
+                const line *ln = b->lines.data[i];
+                for (size_t j = 0; j < ln->txt.len; ++j) {
+                        array_append(content, ln->txt.chars[j]);
+                }
+        }
+        array_append(content, 0);
+        if (!write_file(b->path.chars, content.data)) {
+                perror("write_file");
+                return BA_NOP;
+        }
+
+        b->saved = 1;
+        draw_status(b, "saved");
+        return BA_NOP;
+}
+
+static buffer_action
+ctrlx(buffer *b)
+{
+        char       ch;
+        input_type ty;
+
+        switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_NORMAL: {
+        } break;
+        case INPUT_TYPE_CTRL: {
+                if (ch == CTRL_S)
+                        return save(b);
+                if (ch == CTRL_Q)
+                        exit(0);
+        } break;
+        default: break;
+        }
+
+        return BA_NOP;
 }
 
 // entrypoint
@@ -1167,11 +1242,12 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_A) return bol(b);
                 else if (ch == CTRL_K) return delete_until_eol(b);
                 else if (ch == CTRL_O) {
-                        insert_char(b, '\n', 0);
-                        --b->cx;
-                        return BA_REDRAW;
+                        if (insert_char(b, '\n', 0) != BA_NOP) {
+                                --b->cx;
+                                return BA_REDRAW;
+                        }
+                        return BA_NOP;
                 }
-                else if (ch == CTRL_Q) exit(0);
                 else if (ch == CTRL_H) return backspace(b);
                 else if (ch == CTRL_D) return del_char(b);
                 else if (ch == CTRL_L) return center_view(b);
@@ -1180,6 +1256,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_G) return cancel(b);
                 else if (ch == CTRL_Y) return paste(b);
                 else if (ch == CTRL_W) return cut_selection(b);
+                else if (ch == CTRL_X) return ctrlx(b);
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')          return jump_next_word(b);
@@ -1201,7 +1278,6 @@ buffer_process(buffer *b)
                 else if (ch == 'l')     return lowercase_word(b);
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
-                else if (ch == ' ')     minibuffer_input("test", NULL, NULL);
         } break;
         default: break;
         }

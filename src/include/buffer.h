@@ -29,16 +29,18 @@ typedef struct {
                 unsigned ws; // width start
                 unsigned hs; // height start
         } size;
-        linep_ar     lines; // lines in the buffer
-        unsigned     cx;    // cursor x
-        unsigned     cy;    // cursor y (visual)
-        size_t       al;    // active line
-        size_t       voff;  // vertical scroll offset
-        size_t       hoff;  // horizontal scroll offset
-        buffer_state state; // current state
-        int          saved; // is the buffer saved
-        unsigned     sx;    // buffer selection x
-        unsigned     sy;    // buffer selection y
+        linep_ar     lines;    // lines in the buffer
+        unsigned     cx;       // cursor x (logical & visual)
+        unsigned     cy;       // cursor y (visual)
+        unsigned     wish_col; // wished column to jump to
+        size_t       al;       // active line
+        size_t       voff;     // vertical scroll offset
+        size_t       hoff;     // horizontal scroll offset
+        buffer_state state;    // current state
+        int          saved;    // is the buffer saved
+        unsigned     sx;       // buffer selection x
+        unsigned     sy;       // buffer selection y
+        int          writable; // is buffer writable
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);
@@ -52,8 +54,9 @@ buffer *buffer_from(str      name,
                     unsigned hs,
                     linep_ar lns);
 
-void buffer_draw(const buffer *b);
-void buffer_drawxy(const buffer *b);
+void          buffer_draw(const buffer *b);
+void          buffer_drawxy(const buffer *b);
 buffer_action buffer_process(buffer *b);
+void          buffer_make_readonly(buffer *b);
 
 #endif // BUFFER_H_INCLUDED
