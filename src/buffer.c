@@ -626,6 +626,148 @@ jump_to_first_char(buffer *b)
         return adjust_scroll(b);
 }
 
+static buffer_action
+center_view(buffer *b)
+{
+        int rows = (int)b->size.h;
+        int vertical_offset = (int)b->cy - (rows/2);
+        if (vertical_offset < 0)
+                vertical_offset = 0;
+
+        int max_offset = (int)b->lines.len - rows;
+        if (max_offset < 0)
+                max_offset = 0;
+
+        b->voff = (unsigned)vertical_offset;
+        adjust_scroll(b);
+
+        return BA_REDRAW;
+}
+
+static buffer_action
+combine_lines(buffer *b)
+{
+        line   *l0;
+        line   *l1;
+        str    *s0;
+        str    *s1;
+        size_t len;
+
+        if (b->al >= b->lines.len-1)
+                return BA_NOP;
+
+        l0 = b->lines.data[b->al];
+        s0 = &l0->txt;
+        l1 = b->lines.data[b->al+1];
+        s1 = &l1->txt;
+        len = str_len(s0);
+
+        s0->chars[s0->len-1] = ' ';
+        str_trim_before(s1);
+        str_concat(s0, str_cstr(s1));
+        array_rm_at(b->lines, b->al+1);
+
+        b->cx = (unsigned)len-1;
+        //b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+
+        return BA_REDRAW;
+}
+
+
+static buffer_action
+page_down(buffer *b)
+{
+        size_t h;
+
+        h = b->size.h;
+
+        if (b->al + h > b->lines.len) {
+                b->al = b->lines.len-1;
+                b->cy = (unsigned)b->lines.len-1;
+        } else {
+                b->al += h;
+                b->cy += (unsigned)h;
+        }
+
+        b->cx       = 0;
+        //b->wish_col = 0;
+
+        adjust_scroll(b);
+
+        return BA_REDRAW;
+}
+
+static buffer_action
+page_up(buffer *b)
+{
+        size_t h;
+
+        h = b->size.h;
+
+        if ((int)b->al - (int)h < 0) {
+                b->al = 0;
+                b->cy = 0;
+        } else {
+                b->al -= h;
+                b->cy -= (unsigned)h;
+        }
+
+        b->cx       = 0;
+        //b->wish_col = 0;
+
+        adjust_scroll(b);
+
+        return BA_REDRAW;
+}
+
+
+static int
+backspace_stop(unsigned char ch)
+{
+        return isspace(ch) || !isalnum(ch);
+}
+
+static int
+super_backspace(buffer *b)
+{
+        //if (!writable(b))
+        //        return 0;
+
+        line   *ln;
+        size_t  start;
+
+        ln    = b->lines.data[b->al];
+        start = b->cx;
+
+        // cursor at beginning of line fall back to regular backspace
+        if (b->cx == 0)
+                return backspace(b);
+
+        //b->saved = 0;
+
+        while (start > 0 && backspace_stop((unsigned char)str_at(&ln->txt, start - 1)))
+                --start;
+
+        if (start > 0) {
+                while (start > 0 && !backspace_stop((unsigned char)str_at(&ln->txt, start - 1)))
+                        --start;
+        }
+
+        // nothing to remove
+        if (start == b->cx)
+                return 0;
+
+        str_remove_range(&ln->txt, start, b->cx - start);
+
+        b->cx       = (unsigned)start;
+        //b->last_tab = 0;
+
+        //add_to_popxy(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -670,6 +812,10 @@ buffer_process(buffer *b)
                         return backspace(b);
                 } else if (ch == CTRL_D) {
                         return del_char(b);
+                } else if (ch == CTRL_L) {
+                        return center_view(b);
+                } else if (ch == CTRL_V) {
+                        return page_down(b);
                 }
         } break;
         case INPUT_TYPE_ALT: {
@@ -691,6 +837,12 @@ buffer_process(buffer *b)
                         return kill_line(b);
                 else if (ch == 'm')
                         return jump_to_first_char(b);
+                else if (ch == 'j')
+                        return combine_lines(b);
+                else if (ch == 'v')
+                        return page_up(b);
+                else if (BACKSPACE(ch))
+                        return super_backspace(b);
         } break;
         default: break;
         }
