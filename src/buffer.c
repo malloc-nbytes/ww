@@ -768,6 +768,143 @@ super_backspace(buffer *b)
         return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
+static buffer_action
+buffer_dupline(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+
+        line *ln;
+        str  *s;
+        line *newln;
+
+        ln = b->lines.data[b->al];
+        s  = &ln->txt;
+        newln = line_from_cstr(str_cstr(s));
+
+        array_insert_at(b->lines, b->al, newln);
+        ++b->al;
+        ++b->cy;
+
+        //add_to_popxy(b);
+        adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+movetxt_up(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+
+        if (b->al <= 0)
+                return BA_NOP;
+
+        line *tmp;
+
+        tmp                    = b->lines.data[b->al];
+        b->lines.data[b->al]   = b->lines.data[b->al-1];
+        b->lines.data[b->al-1] = tmp;
+
+        --b->al;
+        --b->cy;
+        //add_to_popxy(b);
+        adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+movetxt_down(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+
+        if (b->al >= b->lines.len-1)
+                return BA_NOP;
+
+        line *tmp;
+
+        tmp                    = b->lines.data[b->al];
+        b->lines.data[b->al]   = b->lines.data[b->al+1];
+        b->lines.data[b->al+1] = tmp;
+
+        ++b->al;
+        ++b->cy;
+
+        //add_to_popxy(b);
+        adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+upperlower_word(buffer *b,
+                int   (*fun)(int),
+                int     all)
+{
+        size_t      start;
+        line       *ln;
+        str        *s;
+        const char *sraw;
+
+        start = b->cx;
+        ln    = b->lines.data[b->al];
+        s     = &ln->txt;
+        sraw  = str_cstr(s);
+
+        while (start < str_len(s) && !isalpha(sraw[start]))
+                ++start;
+
+        if (start >= str_len(s))
+                return BA_NOP;
+
+        for (size_t i = 0; start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'); ++i, ++start) {
+                if ((!all && !i) || all)
+                        s->chars[start] = (char)fun(s->chars[start]);
+        }
+
+        b->cx = (unsigned)start;
+        //b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+
+        return BA_XY;
+}
+
+static buffer_action
+uppercase_word(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+        upperlower_word(b, toupper, 0);
+
+        //add_to_popxy(b);
+        adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+lowercase_word(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+        upperlower_word(b, tolower, 1);
+
+        //add_to_popxy(b);
+        adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+caps_word(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+        upperlower_word(b, toupper, 1);
+
+        //add_to_popxy(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -788,35 +925,34 @@ buffer_process(buffer *b)
                 }
         } break;
         case INPUT_TYPE_CTRL: {
-                if (ch == CTRL_N) {
+                if (ch == CTRL_N)
                         return down(b);
-                } else if (ch == CTRL_P) {
+                else if (ch == CTRL_P)
                         return up(b);
-                } else if (ch == CTRL_F) {
+                else if (ch == CTRL_F)
                         return right(b);
-                } else if (ch == CTRL_B) {
+                else if (ch == CTRL_B)
                         return left(b);
-                } else if (ch == CTRL_E) {
+                else if (ch == CTRL_E)
                         return eol(b);
-                } else if (ch == CTRL_A) {
+                else if (ch == CTRL_A)
                         return bol(b);
-                } else if (ch == CTRL_K) {
+                else if (ch == CTRL_K)
                         return delete_until_eol(b);
-                } else if (ch == CTRL_O) {
+                else if (ch == CTRL_O) {
                         insert_char(b, '\n', 0);
                         --b->cx;
                         return BA_REDRAW;
-                } else if (ch == CTRL_Q) {
+                } else if (ch == CTRL_Q)
                         exit(0);
-                } else if (ch == CTRL_H) {
+                else if (ch == CTRL_H)
                         return backspace(b);
-                } else if (ch == CTRL_D) {
+                else if (ch == CTRL_D)
                         return del_char(b);
-                } else if (ch == CTRL_L) {
+                else if (ch == CTRL_L)
                         return center_view(b);
-                } else if (ch == CTRL_V) {
+                else if (ch == CTRL_V)
                         return page_down(b);
-                }
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')
@@ -843,6 +979,18 @@ buffer_process(buffer *b)
                         return page_up(b);
                 else if (BACKSPACE(ch))
                         return super_backspace(b);
+                else if (ch == '\\')
+                        return buffer_dupline(b);
+                else if (ch == 'n')
+                        return movetxt_down(b);
+                else if (ch == 'p')
+                        return movetxt_up(b);
+                else if (ch == 'u')
+                        return caps_word(b);
+                else if (ch == 'l')
+                        return lowercase_word(b);
+                else if (ch == 'c')
+                        return uppercase_word(b);
         } break;
         default: break;
         }
