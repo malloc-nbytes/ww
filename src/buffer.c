@@ -42,6 +42,8 @@ buffer_from(str      name,
         b->voff    = 0;
         b->state   = BS_NORMAL;
         b->saved   = 1;
+        b->sx      = 0;
+        b->sy      = 0;
 
         return b;
 }
@@ -954,6 +956,29 @@ swap_chars(buffer *b)
         return BA_XY;
 }
 
+static buffer_action
+cancel(buffer *b)
+{
+        b->state = BS_NORMAL;
+        return BA_REDRAW;
+}
+
+static buffer_action
+selection(buffer *b)
+{
+        if (b->state == BS_NORMAL)
+                b->state = BS_SELECTION;
+        else if (b->state == BS_SELECTION)
+                b->state = BS_NORMAL;
+        else
+                return BA_NOP;
+
+        b->sy = (unsigned)b->al;
+        b->sx = b->cx;
+
+        return BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -967,6 +992,7 @@ buffer_process(buffer *b)
         case INPUT_TYPE_NORMAL: {
                 if (ch == '\t')         assert(0);
                 else if (BACKSPACE(ch)) return backspace(b);
+                else if (ch == 0)       return selection(b);
                 else                    return insert_char(b, ch, 1);
         } break;
         case INPUT_TYPE_CTRL: {
@@ -988,6 +1014,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_L) return center_view(b);
                 else if (ch == CTRL_V) return page_down(b);
                 else if (ch == CTRL_T) return swap_chars(b);
+                else if (ch == CTRL_G) return cancel(b);
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')          return jump_next_word(b);
@@ -1050,7 +1077,6 @@ draw_status(const buffer *b,
         printf(RESET);
 
         gotoxy(b->cx - (unsigned)b->hoff, b->cy - (unsigned)b->voff);
-        //fflush(stdout);
 }
 
 static void

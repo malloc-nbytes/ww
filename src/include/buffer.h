@@ -35,6 +35,8 @@ typedef struct {
         size_t       hoff;  // horizontal scroll offset
         buffer_state state; // current state
         int          saved; // is the buffer saved
+        unsigned     sx;    // buffer selection x
+        unsigned     sy;    // buffer selection y
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);
