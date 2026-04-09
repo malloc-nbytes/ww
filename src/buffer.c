@@ -965,83 +965,49 @@ buffer_process(buffer *b)
 
         switch (ty = get_input(&ch)) {
         case INPUT_TYPE_NORMAL: {
-                if (ch == '\t') {
-                        assert(0);
-                } else if (BACKSPACE(ch)) {
-                        return backspace(b);
-                } else {
-                        return insert_char(b, ch, 1);
-                }
+                if (ch == '\t')         assert(0);
+                else if (BACKSPACE(ch)) return backspace(b);
+                else                    return insert_char(b, ch, 1);
         } break;
         case INPUT_TYPE_CTRL: {
-                if (ch == CTRL_N)
-                        return down(b);
-                else if (ch == CTRL_P)
-                        return up(b);
-                else if (ch == CTRL_F)
-                        return right(b);
-                else if (ch == CTRL_B)
-                        return left(b);
-                else if (ch == CTRL_E)
-                        return eol(b);
-                else if (ch == CTRL_A)
-                        return bol(b);
-                else if (ch == CTRL_K)
-                        return delete_until_eol(b);
+                if (ch == CTRL_N)      return down(b);
+                else if (ch == CTRL_P) return up(b);
+                else if (ch == CTRL_F) return right(b);
+                else if (ch == CTRL_B) return left(b);
+                else if (ch == CTRL_E) return eol(b);
+                else if (ch == CTRL_A) return bol(b);
+                else if (ch == CTRL_K) return delete_until_eol(b);
                 else if (ch == CTRL_O) {
                         insert_char(b, '\n', 0);
                         --b->cx;
                         return BA_REDRAW;
-                } else if (ch == CTRL_Q)
-                        exit(0);
-                else if (ch == CTRL_H)
-                        return backspace(b);
-                else if (ch == CTRL_D)
-                        return del_char(b);
-                else if (ch == CTRL_L)
-                        return center_view(b);
-                else if (ch == CTRL_V)
-                        return page_down(b);
-                else if (ch == CTRL_T)
-                        return swap_chars(b);
+                }
+                else if (ch == CTRL_Q) exit(0);
+                else if (ch == CTRL_H) return backspace(b);
+                else if (ch == CTRL_D) return del_char(b);
+                else if (ch == CTRL_L) return center_view(b);
+                else if (ch == CTRL_V) return page_down(b);
+                else if (ch == CTRL_T) return swap_chars(b);
         } break;
         case INPUT_TYPE_ALT: {
-                if (ch == 'f')
-                        return jump_next_word(b);
-                else if (ch == 'b')
-                        return jump_prev_word(b);
-                else if (ch == 'd')
-                        return del_word(b);
-                else if (ch == '}')
-                        return next_paragraph(b);
-                else if (ch == '{')
-                        return prev_paragraph(b);
-                else if (ch == '>')
-                        return jump_to_top_of_buffer(b);
-                else if (ch == '<')
-                        return jump_to_bottom_of_buffer(b);
-                else if (ch == 'k')
-                        return kill_line(b);
-                else if (ch == 'm')
-                        return jump_to_first_char(b);
-                else if (ch == 'j')
-                        return combine_lines(b);
-                else if (ch == 'v')
-                        return page_up(b);
-                else if (BACKSPACE(ch))
-                        return super_backspace(b);
-                else if (ch == '\\')
-                        return buffer_dupline(b);
-                else if (ch == 'n')
-                        return movetxt_down(b);
-                else if (ch == 'p')
-                        return movetxt_up(b);
-                else if (ch == 'u')
-                        return caps_word(b);
-                else if (ch == 'l')
-                        return lowercase_word(b);
-                else if (ch == 'c')
-                        return uppercase_word(b);
+                if (ch == 'f')          return jump_next_word(b);
+                else if (ch == 'b')     return jump_prev_word(b);
+                else if (ch == 'd')     return del_word(b);
+                else if (ch == '}')     return next_paragraph(b);
+                else if (ch == '{')     return prev_paragraph(b);
+                else if (ch == '>')     return jump_to_top_of_buffer(b);
+                else if (ch == '<')     return jump_to_bottom_of_buffer(b);
+                else if (ch == 'k')     return kill_line(b);
+                else if (ch == 'm')     return jump_to_first_char(b);
+                else if (ch == 'j')     return combine_lines(b);
+                else if (ch == 'v')     return page_up(b);
+                else if (BACKSPACE(ch)) return super_backspace(b);
+                else if (ch == '\\')    return buffer_dupline(b);
+                else if (ch == 'n')     return movetxt_down(b);
+                else if (ch == 'p')     return movetxt_up(b);
+                else if (ch == 'u')     return caps_word(b);
+                else if (ch == 'l')     return lowercase_word(b);
+                else if (ch == 'c')     return uppercase_word(b);
         } break;
         default: break;
         }
