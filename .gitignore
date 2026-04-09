@@ -2,6 +2,7 @@ main
 src/tmp
 ww
 src/include/config.h.in
+src/config.mk
 ww-debug-build
 Makefile.in
 aclocal.m4

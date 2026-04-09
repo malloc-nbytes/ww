@@ -1,34 +1,7 @@
 # Compiler and flags
-CC      := cc
+# CC := cc
 
-# Compilation flags (release)
-CFLAGS  := -Iinclude \
-	   -ggdb \
-           -O2 \
-           -Wall \
-           -Wextra \
-           -pedantic \
-           -std=gnu17 \
-           -Wshadow \
-           -Wconversion \
-           -Wsign-conversion \
-           -Wunused \
-           -Wuninitialized \
-           -Wstrict-prototypes \
-           -Wmissing-prototypes \
-           -Wmissing-declarations \
-           -Wredundant-decls \
-           -Wfloat-equal \
-           -Wdouble-promotion \
-           -Wformat=2 \
-           -Wformat-truncation \
-           -Wformat-overflow \
-           -Wundef \
-           -Wcast-align \
-           -Wcast-qual \
-           -Wpointer-arith \
-           -fstack-protector-strong \
-           -D_FORTIFY_SOURCE=2
+-include config.mk
 
 # Debug flags
 DEBUG_FLAGS := -O0 -g3
@@ -75,6 +48,10 @@ debug: all
 .PHONY: clean
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)
+
+.PHONY: distclean
+distclean:
+	rm -f config.mk
 
 # Run the program
 .PHONY: run
