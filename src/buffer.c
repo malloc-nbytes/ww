@@ -604,6 +604,28 @@ delete_until_eol(buffer *b)
         return BA_XY;
 }
 
+static buffer_action
+jump_to_first_char(buffer *b)
+{
+        const str  *s;
+        const char *sraw;
+
+        s    = &b->lines.data[b->al]->txt;
+        sraw = str_cstr(s);
+
+        for (size_t i = 0; i < str_len(s); ++i) {
+                if (sraw[i] != ' ' && sraw[i] != '\n' && sraw[i] != '\t' && sraw[i] != '\r') {
+                        b->cx = (unsigned)i;
+                        break;
+                }
+        }
+
+        //b->wish_col = b->cx;
+
+        adjust_cursor(b);
+        return adjust_scroll(b);
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -667,6 +689,8 @@ buffer_process(buffer *b)
                         return jump_to_bottom_of_buffer(b);
                 else if (ch == 'k')
                         return kill_line(b);
+                else if (ch == 'm')
+                        return jump_to_first_char(b);
         } break;
         default: break;
         }
