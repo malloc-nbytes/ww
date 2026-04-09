@@ -4,8 +4,6 @@
 #include <stddef.h>
 #include <termios.h>
 
-#define VERSION "1.0.0"
-
 extern struct {
         struct {
                 size_t w;

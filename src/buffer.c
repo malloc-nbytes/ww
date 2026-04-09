@@ -3,6 +3,7 @@
 #include "term.h"
 #include "colors.h"
 #include "glconf.h"
+#include "config.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -1097,6 +1098,23 @@ copy_selection(buffer *b)
 }
 
 static buffer_action
+cut_selection(buffer *b)
+{
+        //if (!writable(b))
+        //        return;
+
+        if (b->state != BS_SELECTION)
+                return BA_NOP;
+
+        copy_selection(b);
+        b->state = BS_SELECTION;
+        buffer_action a = del_selection(b);
+        //add_to_popxy(b);
+        return a == BA_REDRAW
+                ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
 paste(buffer *b)
 {
         //if (!writable(b))
@@ -1160,6 +1178,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_T) return swap_chars(b);
                 else if (ch == CTRL_G) return cancel(b);
                 else if (ch == CTRL_Y) return paste(b);
+                else if (ch == CTRL_W) return cut_selection(b);
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')          return jump_next_word(b);
