@@ -181,7 +181,7 @@ up(buffer *b)
                 b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -200,7 +200,7 @@ down(buffer *b)
                 b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -217,7 +217,7 @@ right(buffer *b)
         }
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -233,7 +233,7 @@ left(buffer *b)
         }
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1079,19 +1079,67 @@ draw_status(const buffer *b,
         gotoxy(b->cx - (unsigned)b->hoff, b->cy - (unsigned)b->voff);
 }
 
+static int
+line_selection_range(const buffer *b,
+                     size_t        idx,
+                     size_t        line_len,
+                     size_t       *sel_start,
+                     size_t       *sel_end)
+{
+        // Computes the selection range for a given line
+        // Returns 1 if there is a selection on this line, 0 otherwise
+
+        if (b->state != BS_SELECTION)
+                return 0;
+
+        size_t start_line, start_col, end_line, end_col;
+
+        // absolute selection bounds
+        if (b->sy < b->al || (b->sy == b->al && b->sx <= b->cx)) {
+                start_line = b->sy;
+                start_col  = b->sx;
+                end_line   = b->al;
+                end_col    = b->cx;
+        } else {
+                start_line = b->al;
+                start_col  = b->cx;
+                end_line   = b->sy;
+                end_col    = b->sx;
+        }
+
+        if (idx < start_line || idx > end_line)
+                return 0; // no selection on this line
+
+        if (start_line == end_line) {
+                *sel_start = start_col;
+                *sel_end   = end_col;
+        } else if (idx == start_line) {
+                *sel_start = start_col;
+                *sel_end   = line_len;
+        } else if (idx == end_line) {
+                *sel_start = 0;
+                *sel_end   = end_col;
+        } else {
+                *sel_start = 0;
+                *sel_end   = line_len;
+        }
+
+        return 1;
+}
+
 static void
 drawln(const buffer *b, size_t idx)
 {
         if (idx < b->voff || idx >= b->voff + get_win_hight(b))
                 return;
 
-        const line *ln = b->lines.data[idx];
-        const str *s = &ln->txt;
-        unsigned y = b->size.hs + (unsigned)(idx - b->voff);
-        unsigned win_w = get_win_width(b);
-        unsigned tabw = TAB_WIDTH;
+        const line *ln    = b->lines.data[idx];
+        const str  *s     = &ln->txt;
+        unsigned    y     = b->size.hs + (unsigned)(idx - b->voff);
+        unsigned    win_w = get_win_width(b);
+        unsigned    tabw  = TAB_WIDTH;
 
-        // Clear line
+        // clear line
         gotoxy(b->size.ws, y);
         for (unsigned x = 0; x < win_w; ++x)
                 putchar(' ');
@@ -1099,29 +1147,42 @@ drawln(const buffer *b, size_t idx)
         if (b->hoff >= visual_column(s, s->len, tabw))
                 return;
 
-        // Draw text with horizontal scroll + tab expansion
         gotoxy(b->size.ws, y);
 
         unsigned screen_col = 0;
-        unsigned char_i = 0;
+        size_t char_i = 0;
 
-        // Skip characters until we reach the horizontal scroll offset (visual)
+        // skip characters until horizontal scroll offset
         while (char_i < s->len && visual_column(s, char_i, tabw) < b->hoff) {
                 ++char_i;
         }
 
+        // determine selection range on this line
+        int line_has_selection = 0;
+        size_t sel_start = 0, sel_end = 0;
+        line_has_selection = line_selection_range(b, idx, s->len, &sel_start, &sel_end);
+
         // draw visible part
         while (char_i < s->len && screen_col < win_w) {
+                unsigned col_start = screen_col;
                 char c = s->chars[char_i];
 
                 if (c == '\t') {
                         unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
                         for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
-                                putchar(' ');
+                                if (line_has_selection && char_i >= sel_start && char_i < sel_end) {
+                                        printf(INVERT YELLOW BOLD " " RESET);
+                                } else {
+                                        putchar(' ');
+                                }
                                 ++screen_col;
                         }
                 } else {
-                        putchar(c);
+                        if (line_has_selection && char_i >= sel_start && char_i < sel_end) {
+                                printf(INVERT YELLOW BOLD "%c" RESET, c);
+                        } else {
+                                putchar(c);
+                        }
                         ++screen_col;
                 }
                 ++char_i;
