@@ -36,20 +36,6 @@ str_from(const char *chars)
         return s;
 }
 
-str
-str_to_owned(char *chars)
-{
-        str    s;
-        size_t n;
-
-        n        = strlen(chars);
-        s.chars = chars;
-        s.len   = n;
-        s.cap   = n;
-
-        return s;
-}
-
 inline const char *
 str_cstr(const str *s)
 {
@@ -128,7 +114,6 @@ str_cut(str *s, size_t i)
         if (i >= s->len)
                 return;
 
-        //memset(s->chars+i, 0, s->cap-i);
         memset(s->chars+i, 0, s->len-i);
         s->len = i;
 }

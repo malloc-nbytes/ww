@@ -65,7 +65,7 @@ lines_from(char *chars)
         for (size_t i = 0; chars[i]; ++i) {
                 str_append(&buf, chars[i]);
                 if (chars[i] == '\n') {
-                        array_append(ar, line_from(str_dup(buf)));
+                        array_append(ar, line_from(str_from(buf.chars)));
                         str_clear(&buf);
                 }
         }
@@ -81,7 +81,7 @@ lines_from(char *chars)
 }
 
 void
-line_destroy(line *ln)
+line_free(line *ln)
 {
         str_destroy(&ln->txt);
         free(ln);

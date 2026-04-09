@@ -15,7 +15,6 @@ ARRAY_DEFINE(str, str_ar);
 
 str         str_create(void);
 str         str_from(const char *chars);
-str         str_to_owned(char *chars);
 const char *str_cstr(const str *s);
 void        str_append(str *s, char c);
 void        str_concat(str *s, const char *chars);

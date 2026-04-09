@@ -400,7 +400,7 @@ kill_line(buffer *b)
         /* for (size_t i = 0; i < str_len(s); ++i) */
         /*         array_append(g_cpy_buf, str_at(s, i)); */
 
-        line_destroy(ln);
+        line_free(ln);
         array_rm_at(b->lines, b->al);
 
         if (b->al > b->lines.len-1) {
@@ -454,10 +454,100 @@ insert_char(buffer *b, char ch, int newline_advance)
 }
 
 static buffer_action
+del_char(buffer *b)
+{
+        //if (!writable(b))
+        //        return 0;
+
+        /*if (b->state == BS_SELECTION) {
+                del_selection(b);
+                return 1;
+        }*/
+
+        line *ln;
+        int   newline;
+
+        ln       = b->lines.data[b->al];
+        newline  = 0;
+        //b->saved = 0;
+
+        if (ln->txt.chars[b->cx] == '\n') {
+                newline = 1;
+                if (b->al < b->lines.len-1) {
+                        str *s = &ln->txt;
+                        str_concat(s, str_cstr(&b->lines.data[b->al+1]->txt));
+                        line_free(b->lines.data[b->al+1]);
+                        array_rm_at(b->lines, b->al+1);
+                } else {
+                        return 0;
+                }
+        }
+
+        str_rm(&ln->txt, b->cx);
+        if (b->cx > str_len(&ln->txt)-1)
+                b->cx = (unsigned)str_len(&ln->txt)-1;
+
+        //add_to_popxy(b);
+        return (adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
 backspace(buffer *b)
 {
-        assert(b && 0);
-        return 0;
+        //if (!writable(b))
+        //        return 0;
+
+        line *ln;
+        int   newline;
+
+        ln       = b->lines.data[b->al];
+        newline  = 0;
+        //b->saved = 0;
+
+        if (b->cx == 0) {
+                if (b->al == 0)
+                        return 0;
+                line   *prevln     = b->lines.data[b->al-1];
+                size_t  prevln_len = str_len(&prevln->txt);
+
+                str_rm(&prevln->txt, prevln_len-1);
+                str_concat(&prevln->txt, str_cstr(&ln->txt));
+                line_free(b->lines.data[b->al]);
+                array_rm_at(b->lines, b->al);
+
+                --b->al;
+                b->cx = (unsigned)prevln_len-1;
+                --b->cy;
+
+                adjust_scroll(b);
+                return 1;
+        }
+
+        /*if (b->last_tab > 0 && (glconf.flags & FT_TABMODE) == 0) {
+                --b->last_tab;
+                for (size_t i = 0; i < (size_t)glconf.defaults.space_amt; ++i) {
+                        buffer_left(b);
+                        str_rm(&ln->s, b->cx);
+                        if (b->cx > str_len(&ln->s)-1)
+                                b->cx = str_len(&ln->s)-1;
+                }
+        } else {
+                buffer_left(b);
+                str_rm(&ln->s, b->cx);
+                if (b->cx > str_len(&ln->s)-1)
+                        b->cx = str_len(&ln->s)-1;
+        }*/
+
+        // TODO: remove this
+        {
+                left(b);
+                str_rm(&ln->txt, b->cx);
+                if (b->cx > str_len(&ln->txt)-1)
+                        b->cx = (unsigned)str_len(&ln->txt)-1;
+        }
+
+        //add_to_popxy(b);
+        return (adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
 }
 
 // entrypoint
@@ -502,6 +592,8 @@ buffer_process(buffer *b)
                         exit(0);
                 } else if (ch == CTRL_H) {
                         return backspace(b);
+                } else if (ch == CTRL_D) {
+                        return del_char(b);
                 }
         } break;
         case INPUT_TYPE_ALT: {
