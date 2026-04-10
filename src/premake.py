@@ -10,7 +10,7 @@ import os
 CONFIG_H_PATH = 'include/config.h'
 
 CFLAGS = [
-    "-Iinclude", "-ggdb", "-O2", "-Wall", "-Wextra", "-pedantic", "-std=gnu17",
+    "-Iinclude", "-ggdb", "-O2", "-Wall", "-Wextra", "-std=gnu17",
     "-Wshadow", "-Wconversion", "-Wsign-conversion", "-Wunused", "-Wuninitialized",
     "-Wstrict-prototypes", "-Wmissing-prototypes", "-Wmissing-declarations",
     "-Wredundant-decls", "-Wfloat-equal", "-Wdouble-promotion", "-Wformat=2",

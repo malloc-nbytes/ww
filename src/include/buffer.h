@@ -44,6 +44,7 @@ typedef struct {
         unsigned     sx;       // buffer selection x
         unsigned     sy;       // buffer selection y
         int          writable; // is buffer writable
+        str          last_search; // last search query
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);

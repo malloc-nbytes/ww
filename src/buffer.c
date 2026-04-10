@@ -6,6 +6,7 @@
 #include "config.h"
 #include "minibuffer.h"
 #include "io.h"
+#include "pair.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -19,6 +20,11 @@
 
 #define TAB_WIDTH 8
 
+PAIR_DEFINE(int, int, int_pair);
+PAIR_IMPL(int, int, int_pair);
+
+ARRAY_DEFINE(int_pair, int_pair_ar);
+
 static int
 line_selection_range(const buffer *b,
                      size_t        idx,
@@ -29,6 +35,12 @@ line_selection_range(const buffer *b,
 static void
 draw_status(const buffer *b,
             const char   *msg);
+
+static buffer_action
+adjust_scroll(buffer *b);
+
+static buffer_action
+center_view(buffer *b);
 
 char_ar g_cpy_buf = {0};
 
@@ -43,25 +55,26 @@ buffer_from(str      name,
 {
         buffer *b;
 
-        b           = (buffer *)alloc(sizeof(buffer));
-        b->name     = name;
-        b->path     = path;
-        b->size.w   = w;
-        b->size.h   = h;
-        b->size.ws  = ws;
-        b->size.hs  = hs;
-        b->lines    = lns;
-        b->cx       = 0;
-        b->cy       = 0;
-        b->wish_col = 0;
-        b->al       = 0;
-        b->hoff     = 0;
-        b->voff     = 0;
-        b->state    = BS_NORMAL;
-        b->saved    = 1;
-        b->sx       = 0;
-        b->sy       = 0;
-        b->writable = 1;
+        b              = (buffer *)alloc(sizeof(buffer));
+        b->name        = name;
+        b->path        = path;
+        b->size.w      = w;
+        b->size.h      = h;
+        b->size.ws     = ws;
+        b->size.hs     = hs;
+        b->lines       = lns;
+        b->cx          = 0;
+        b->cy          = 0;
+        b->wish_col    = 0;
+        b->al          = 0;
+        b->hoff        = 0;
+        b->voff        = 0;
+        b->state       = BS_NORMAL;
+        b->saved       = 1;
+        b->sx          = 0;
+        b->sy          = 0;
+        b->writable    = 1;
+        b->last_search = str_create();
 
         return b;
 }
@@ -70,6 +83,158 @@ void
 buffer_make_readonly(buffer *b)
 {
         b->writable = 0;
+}
+
+
+static int_ar
+find_line_matches(const buffer *b,
+                  const str    *s)
+{
+        assert(b->state == BS_SEARCH);
+
+        static int_ar     ar;
+        const char       *sraw;
+        const char       *query;
+
+        ar    = array_empty(int_ar);
+        sraw  = str_cstr(s);
+        query = str_cstr(&b->last_search);
+
+        if (!sraw || !query || !str_len(&b->last_search))
+                return ar;
+
+        for (size_t i = 0; i < str_len(s); ++i) {
+                if (!memcmp(query, sraw+i, str_len(&b->last_search))) {
+                        array_append(ar, (int)i);
+                        i += str_len(&b->last_search)-1;
+                }
+        }
+
+        return ar;
+}
+
+static int_pair_ar
+find_all_matches_in_buffer(buffer *b)
+{
+        int_pair_ar pairs = array_empty(int_pair_ar);
+        for (size_t i = 0; i < b->lines.len; ++i) {
+                int_ar verts = find_line_matches(b, &b->lines.data[i]->txt);
+                for (size_t j = 0; j < verts.len; ++j)
+                        array_append(pairs, int_pair_create((int)i, verts.data[j]));
+        }
+        return pairs;
+}
+
+static void
+search(buffer *b, int reverse)
+{
+        input_type  ty;
+        char        ch;
+        str        *input;
+        int         first;
+        unsigned    old_cx;
+        unsigned    old_cy;
+        size_t      old_al;
+        int         step;
+        int         adjust;
+
+        input       = &b->last_search;
+        b->state    = BS_SEARCH;
+        first       = 1;
+        old_cx      = b->cx;
+        old_cy      = b->cy;
+        old_al      = b->al;
+        step        = 0;
+        adjust      = 1;
+
+        while (1) {
+                int_pair_ar pairs = find_all_matches_in_buffer(b);
+
+                if (adjust) {
+                        step = 0;
+
+                        for (size_t i = 0; i < pairs.len; ++i) {
+                                if (pairs.data[i].l < (int)b->al)
+                                        ++step;
+                                else
+                                        break;
+                        }
+
+                        if (reverse && step > 0) {
+                                reverse = 0;
+                                --step;
+                        }
+                }
+
+                adjust = 0;
+
+                if (pairs.len > 0 && step < (int)pairs.len) {
+                        b->al = (size_t)pairs.data[step].l;
+                        b->cy = (unsigned)pairs.data[step].l;
+                        b->cx = (unsigned)pairs.data[step].r;
+                        adjust_scroll(b);
+                }
+
+                center_view(b);
+                buffer_draw(b);
+
+                gotoxy(0, b->size.h);
+                clear_line(0, b->size.h);
+                printf("Search [ %s", str_cstr(input));
+                fflush(stdout);
+
+                ty = get_input(&ch);
+                if (ty == INPUT_TYPE_NORMAL) {
+                        if (first && (BACKSPACE(ch)
+                                      || (ty == INPUT_TYPE_NORMAL && ch != '\n'))) {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                str_clear(&b->last_search);
+                                first  = 0;
+                                adjust = 1;
+                        }
+                        if (BACKSPACE(ch)) {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                if (str_len(input) > 0)
+                                        str_pop(input);
+                                adjust = 1;
+                        } else if (ENTER(ch)) {
+                                if (pairs.len > 0 && step < (int)pairs.len) {
+                                        b->al       = (size_t)pairs.data[step].l;
+                                        b->cy       = (unsigned)pairs.data[step].l;
+                                        b->cx       = (unsigned)pairs.data[step].r;
+                                        b->wish_col = b->cx;
+                                }
+                                break;
+                        } else {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                adjust = 1;
+                                str_append(input, ch);
+                        }
+                } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_S) {
+                        if (step < (int)pairs.len-1)
+                                ++step;
+                } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_R) {
+                        if (step > 0)
+                                --step;
+                } else if (ty == INPUT_TYPE_CTRL && ch == CTRL_Y && g_cpy_buf.len > 0) {
+                        if (first) {
+                                b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                                str_clear(&b->last_search);
+                                first  = 0;
+                                adjust = 1;
+                        }
+                        for (size_t i = 0; i < g_cpy_buf.len; ++i)
+                                str_append(input, g_cpy_buf.data[i]);
+                } else {
+                        b->cx = old_cx; b->cy = old_cy; b->al = old_al;
+                        break;
+                }
+        }
+
+        b->state = BS_NORMAL;
+
+        center_view(b);
+        adjust_scroll(b);
 }
 
 static int
@@ -1261,6 +1426,10 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_Y) return paste(b);
                 else if (ch == CTRL_W) return cut_selection(b);
                 else if (ch == CTRL_X) return ctrlx(b);
+                else if (ch == CTRL_S || ch == CTRL_R) {
+                        search(b, ch == CTRL_R);
+                        return BA_REDRAW;
+                }
         } break;
         case INPUT_TYPE_ALT: {
                 if (ch == 'f')          return jump_next_word(b);
@@ -1405,19 +1574,56 @@ drawln(const buffer *b, size_t idx)
         }
 
         // determine selection range on this line
-        int line_has_selection = 0;
-        size_t sel_start = 0, sel_end = 0;
-        line_has_selection = line_selection_range(b, idx, s->len, &sel_start, &sel_end);
+        size_t sel_start          = 0, sel_end = 0;
+        int    cursor_on_line     = ((size_t)b->cy == idx);
+        int    line_has_selection = line_selection_range(b, idx, s->len, &sel_start, &sel_end);
+
+        int_ar search_matches = {0};
+        size_t qlen           = str_len(&b->last_search);
+        size_t match_idx      = 0;
+
+        if (b->state == BS_SEARCH)
+                search_matches = find_line_matches(b, s);
 
         // draw visible part
         while (char_i < s->len && screen_col < win_w) {
                 //unsigned col_start = screen_col;
                 char c = s->chars[char_i];
 
+                int in_search = 0;
+                int in_cursor_match = 0;
+
+                if (b->state == BS_SEARCH && search_matches.len > 0) {
+                        if (match_idx < search_matches.len) {
+                                int mstart = search_matches.data[match_idx];
+                                int mend   = mstart + (int)qlen;
+
+                                if ((int)char_i >= mstart && (int)char_i < mend) {
+                                        in_search = 1;
+
+                                        if (cursor_on_line &&
+                                            (int)b->cx >= mstart &&
+                                            (int)b->cx < mend) {
+                                                in_cursor_match = 1;
+                                        }
+
+                                } else if ((int)char_i >= mend) {
+                                        ++match_idx;
+                                }
+                        }
+                }
+
+                int in_selection = line_has_selection &&
+                        char_i >= sel_start && char_i < sel_end;
+
                 if (c == '\t') {
                         unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
                         for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
-                                if (line_has_selection && char_i >= sel_start && char_i < sel_end) {
+                                if (in_selection) {
+                                        printf(INVERT YELLOW BOLD " " RESET);
+                                } else if (in_cursor_match) {
+                                        printf(INVERT ORANGE BOLD " " RESET);
+                                } else if (in_search) {
                                         printf(INVERT YELLOW BOLD " " RESET);
                                 } else {
                                         putchar(' ');
@@ -1425,7 +1631,11 @@ drawln(const buffer *b, size_t idx)
                                 ++screen_col;
                         }
                 } else {
-                        if (line_has_selection && char_i >= sel_start && char_i < sel_end) {
+                        if (in_selection) {
+                                printf(INVERT YELLOW BOLD "%c" RESET, c);
+                        } else if (in_cursor_match) {
+                                printf(INVERT ORANGE BOLD "%c" RESET, c);
+                        } else if (in_search) {
                                 printf(INVERT YELLOW BOLD "%c" RESET, c);
                         } else {
                                 putchar(c);
@@ -1434,6 +1644,9 @@ drawln(const buffer *b, size_t idx)
                 }
                 ++char_i;
         }
+
+        if (search_matches.data)
+                array_free(search_matches);
 }
 
 void

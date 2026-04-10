@@ -206,6 +206,7 @@ ww_make_buffer_primary(ww *ed, size_t idx)
 
         ww_clear_monitors(ed);
         ed->monitors[0] = ed->buffers.data[idx];
+        ed->ab = 0;
 }
 
 void
@@ -242,10 +243,10 @@ ww_run(ww *ed)
 
                 buffer_action act = buffer_process(b);
 
-                if (act == BA_REDRAW) buffer_draw(b);
-                else if (act == BA_XY) buffer_drawxy(b);
-                else if (act == BA_REQ_EXIT) break;
-                else if (act == BA_REQ_FINDFILE) find_file(ed);
+                if (act == BA_REDRAW)                buffer_draw(b);
+                else if (act == BA_XY)               buffer_drawxy(b);
+                else if (act == BA_REQ_EXIT)         break;
+                else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
 
                 fflush(stdout);
