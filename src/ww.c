@@ -185,12 +185,13 @@ ww_add_buffer(ww *ed, buffer *b)
         if (ww_buffer_exists_by_name(ed, b->name.chars))
                 str_overwrite(&b->name, b->path.chars);
 
-        array_append(ed->buffers, NULL);
+        //array_append(ed->buffers, NULL);
+        array_append(ed->buffers, b);
 
-        for (size_t i = ed->buffers.len-1; i > 0; --i)
-                ed->buffers.data[i] = ed->buffers.data[i-1];
+        //for (size_t i = ed->buffers.len-1; i > 0; --i)
+        //        ed->buffers.data[i] = ed->buffers.data[i-1];
 
-        ed->buffers.data[0] = b;
+        //ed->buffers.data[0] = b;
 }
 
 void
@@ -206,6 +207,7 @@ ww_make_buffer_primary(ww *ed, size_t idx)
 
         ww_clear_monitors(ed);
         ed->monitors[0] = ed->buffers.data[idx];
+        ed->ab = (uint8_t)idx;
 }
 
 void
