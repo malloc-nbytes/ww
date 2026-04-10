@@ -32,7 +32,7 @@ find_file(ww *ed)
  reload_dir:
 
         files          = lsdir(str_cstr(&cwd));
-        char *selected = minibuffer_completion_run(ed, "find-file", files);
+        char *selected = minibuffer_input(ed, "find-file", files);
 
         if (!selected)
                 goto done;
@@ -99,7 +99,7 @@ ww_switch_buffer(ww *ed)
         for (size_t i = 0; i < ed->buffers.len; ++i)
                 array_append(names, strdup(str_cstr(&ed->buffers.data[i]->name)));
 
-        char *selected = minibuffer_completion_run(ed, "switch-buffer", names);
+        char *selected = minibuffer_input(ed, "switch-buffer", names);
 
         if (!selected)
                 goto done;
@@ -229,6 +229,29 @@ ww_display_monitors(ww *ed)
         fflush(stdout);
 }
 
+static void
+metax(ww *ed)
+{
+        char *inp;
+
+        static char *cmds_raw[] = WW_CMD_CPL;
+        cstr_ar            cmds = array_empty(cstr_ar);
+
+        for (size_t i = 0; i < sizeof(cmds_raw)/sizeof(*cmds_raw); ++i)
+                array_append(cmds, cmds_raw[i]);
+
+        if (!(inp = minibuffer_input(ed, "M-x", cmds)))
+                return;
+
+        if (!strcmp(inp, WW_CMD_SAVE))
+                buffer_save(ed->monitors[ed->ab]);
+        else if (!strcmp(inp, WW_CMD_FIND_FILE))
+                find_file(ed);
+
+        free(inp);
+        array_free(cmds);
+}
+
 void
 ww_run(ww *ed)
 {
@@ -248,7 +271,12 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_EXIT)         break;
                 else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
+                else if (act == BA_REQ_METAX) {
+                        metax(ed);
+                        buffer_draw(ed->monitors[ed->ab]);
+                }
 
-                fflush(stdout);
+                if (act != BA_NOP)
+                        fflush(stdout);
         }
 }

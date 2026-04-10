@@ -14,6 +14,7 @@ typedef enum {
         BA_REQ_EXIT,
         BA_REQ_FINDFILE,
         BA_REQ_SWITCHBUFFER,
+        BA_REQ_METAX,
 } buffer_action;
 
 typedef enum {
@@ -62,5 +63,6 @@ void          buffer_draw(const buffer *b);
 void          buffer_drawxy(const buffer *b);
 buffer_action buffer_process(buffer *b);
 void          buffer_make_readonly(buffer *b);
+buffer_action buffer_save(buffer *b);
 
 #endif // BUFFER_H_INCLUDED

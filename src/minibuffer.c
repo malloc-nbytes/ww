@@ -75,9 +75,7 @@ completion_draw(ww                *ed,
         gotoxy(0, (unsigned)glconf.term.h - 1);
         clear_line(0, glconf.term.h - 1);
 
-        if (total_matches == 0) {
-                printf("(no matches)");
-        } else {
+        if (total_matches > 0) {
                 size_t cursor_x = 0;
                 size_t items_shown = 0;
                 const size_t sep_len = strlen(" | ");
@@ -151,14 +149,16 @@ completion_draw(ww                *ed,
 }
 
 char *
-minibuffer_completion_run(ww         *ed,
-                          const char *label,
-                          cstr_ar     items)
+minibuffer_input(ww         *ed,
+                 const char *label,
+                 cstr_ar     items)
 {
         completion_state st;
-        st.input = str_create();
+        st.input        = str_create();
         st.selected_idx = 0;
-        st.offset = 0;
+        st.offset       = 0;
+
+        size_t cx = 0;
 
         while (1) {
                 char ch;
@@ -168,7 +168,6 @@ minibuffer_completion_run(ww         *ed,
                         fuzzy_find(items, str_cstr(&st.input));
 
                 size_t total_matches = matches.len;
-
                 if (total_matches > MAX_COMPLETIONS_REQUEST)
                         total_matches = MAX_COMPLETIONS_REQUEST;
 
@@ -178,33 +177,41 @@ minibuffer_completion_run(ww         *ed,
                                 matches.data,
                                 total_matches);
 
+                /* gotoxy((unsigned)(cx), (unsigned)glconf.term.h); */
+                //printf("%s [ %s", prompt ? prompt : "", buf.chars);
+                gotoxy((unsigned)(cx + (label?strlen(label):0) + strlen(" [ ")), (unsigned)glconf.term.h);
+                fflush(stdout);
+
                 ty = get_input(&ch);
 
                 switch (ty) {
                 case INPUT_TYPE_NORMAL:
                         if (ENTER(ch)) {
+                                char *res;
                                 if (total_matches > 0 &&
                                     st.selected_idx < total_matches) {
-                                        char *res = strdup(matches.data[st.selected_idx]);
-                                        array_free(matches);
-                                        str_destroy(&st.input);
-                                        return res;
+                                        res = strdup(matches.data[st.selected_idx]);
                                 } else {
-                                        char *res = strdup(str_cstr(&st.input));
-                                        str_destroy(&st.input);
-                                        array_free(matches);
-                                        return res;
+                                        res = strdup(str_cstr(&st.input));
                                 }
-                        } else if (BACKSPACE(ch)) {
-                                if (str_len(&st.input) > 0) {
-                                        str_pop(&st.input);
+
+                                array_free(matches);
+                                str_destroy(&st.input);
+                                return res;
+                        }
+                        else if (BACKSPACE(ch)) {
+                                if (cx > 0 && st.input.len > 0) {
+                                        str_rm(&st.input, cx - 1);
+                                        cx--;
                                         st.selected_idx = 0;
-                                        st.offset = 0;
+                                        st.offset       = 0;
                                 }
-                        } else if (isprint(ch) || ch == ' ') {
-                                str_append(&st.input, ch);
+                        }
+                        else if (isprint(ch) || ch == ' ') {
+                                str_insert(&st.input, cx, ch);
+                                cx++;
                                 st.selected_idx = 0;
-                                st.offset = 0;
+                                st.offset       = 0;
                         }
                         break;
 
@@ -221,94 +228,34 @@ minibuffer_completion_run(ww         *ed,
                                 array_free(matches);
                                 str_destroy(&st.input);
                                 return NULL;
+                        } else if (ch == CTRL_B && cx > 0) {
+                                --cx;
+                        } else if (ch == CTRL_F && cx < st.input.len) {
+                                ++cx;
+                        } else if (ch == CTRL_A) {
+                                cx = 0;
+                        } else if (ch == CTRL_E) {
+                                cx = st.input.len;
+                        } else if (ch == CTRL_D) {
+                                str_rm(&st.input, cx);
+                        } else if (ch == CTRL_Y) {
+                                if (g_cpy_buf.len > 0) {
+                                        char cpy[1024] = {0};
+                                        memcpy(cpy, g_cpy_buf.data, g_cpy_buf.len);
+                                        str_concat(&st.input, g_cpy_buf.data);
+
+                                        cx += g_cpy_buf.len;
+
+                                        st.selected_idx = 0;
+                                        st.offset       = 0;
+                                }
                         }
                         break;
 
-                default: break;
+                default:
+                        break;
                 }
 
                 array_free(matches);
         }
-}
-
-char *
-minibuffer_input(const char *prompt,
-                 const str  *autofill,
-                 str_ar     *ac_items)
-{
-        (void)ac_items;
-
-        gotoxy(0, (unsigned)glconf.term.h);
-
-        int    first;
-        str    buf;
-        size_t prompt_n;
-        size_t cx;
-
-        first    = 1;
-        buf      = str_create();
-        prompt_n = prompt ? strlen(prompt) : 0;
-        cx       = 0;
-
-        while (1) {
-                clear_line(0, glconf.term.h);
-                printf("%s [ %s", prompt ? prompt : "", buf.chars);
-                gotoxy((unsigned)(cx + prompt_n + strlen(" [ ")), (unsigned)glconf.term.h);
-                fflush(stdout);
-
-                if (first) {
-                        if (autofill)
-                                str_overwrite(&buf, autofill->chars);
-                        else
-                                buf = str_create();
-                        first = 0;
-                        cx    = buf.len > 0 ? buf.len : 0;
-                }
-
-                char       ch;
-                input_type ty;
-
-                switch (ty = get_input(&ch)) {
-                case INPUT_TYPE_NORMAL: {
-                        if (BACKSPACE(ch)) {
-                                if (buf.len > 0) {
-                                        str_rm(&buf, cx-1);
-                                        --cx;
-                                }
-                        } else if (ch == '\n')
-                                goto done;
-                        else {
-                                str_insert(&buf, cx, ch);
-                                ++cx;
-                        }
-                } break;
-                case INPUT_TYPE_CTRL: {
-                        if (ch == CTRL_Y) {
-                                if (g_cpy_buf.len > 0) {
-                                        char cpy[1024] = {0};
-                                        memcpy(cpy, g_cpy_buf.data, g_cpy_buf.len);
-                                        str_concat(&buf, g_cpy_buf.data);
-                                        cx = buf.len;
-                                }
-                        } else if (ch == CTRL_B && cx > 0)
-                                --cx;
-                        else if (ch == CTRL_F && cx < buf.len)
-                                ++cx;
-                        else if (ch == CTRL_A)
-                                cx = 0;
-                        else if (ch == CTRL_E)
-                                cx = buf.len;
-                } break;
-                case INPUT_TYPE_ALT: {
-                } break;
-                case INPUT_TYPE_ARROW: {
-                } break;
-                default: break;
-                }
-        }
-
- done:
-        clear_line(0, glconf.term.h);
-
-        return buf.len > 0 ? buf.chars : NULL;
 }

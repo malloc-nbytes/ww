@@ -1337,8 +1337,8 @@ paste(buffer *b)
                 ? BA_REDRAW : BA_XY;
 }
 
-static buffer_action
-save(buffer *b)
+buffer_action
+buffer_save(buffer *b)
 {
         if (!writable(b))
                 return BA_NOP;
@@ -1374,7 +1374,7 @@ ctrlx(buffer *b)
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)
-                        return save(b);
+                        return buffer_save(b);
                 if (ch == CTRL_Q)
                         return BA_REQ_EXIT;
                 if (ch == CTRL_F)
@@ -1451,6 +1451,7 @@ buffer_process(buffer *b)
                 else if (ch == 'l')     return lowercase_word(b);
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
+                else if (ch == 'x')     return BA_REQ_METAX;
         } break;
         default: break;
         }
