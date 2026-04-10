@@ -21,5 +21,7 @@ void ww_make_buffer_primary(ww *ed, size_t idx);
 void ww_make_buffer_primary_by_path(ww *ed, const char *path);
 void ww_clear_monitors(ww *ed);
 void ww_display_monitors(ww *ed);
+void ww_switch_buffer(ww *ed);
+void ww_make_buffer_primary_by_name(ww *ed, const char *name);
 
 #endif // WW_H_INCLUDED

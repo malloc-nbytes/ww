@@ -13,6 +13,7 @@ typedef enum {
         BA_XY,
         BA_REQ_EXIT,
         BA_REQ_FINDFILE,
+        BA_REQ_SWITCHBUFFER,
 } buffer_action;
 
 typedef enum {

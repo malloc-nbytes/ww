@@ -1204,6 +1204,8 @@ ctrlx(buffer *b)
 
         switch (ty = get_input(&ch)) {
         case INPUT_TYPE_NORMAL: {
+                if (ch == 'b')
+                        return BA_REQ_SWITCHBUFFER;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)

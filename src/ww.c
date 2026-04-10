@@ -92,6 +92,46 @@ find_file(ww *ed)
 }
 
 void
+ww_switch_buffer(ww *ed)
+{
+        cstr_ar names = array_empty(cstr_ar);
+
+        for (size_t i = 0; i < ed->buffers.len; ++i)
+                array_append(names, strdup(str_cstr(&ed->buffers.data[i]->name)));
+
+        char *selected = minibuffer_completion_run(ed, "switch-buffer", names);
+
+        if (!selected)
+                goto done;
+
+        ww_make_buffer_primary_by_name(ed, selected);
+        buffer_draw(ed->buffers.data[ed->ab]);
+ done:
+        free(selected);
+        for (size_t i = 0; i < names.len; ++i)
+                free(names.data[i]);
+        array_free(names);
+}
+
+void
+ww_make_buffer_primary_by_name(ww *ed, const char *name)
+{
+        ssize_t idx;
+
+        idx = -1;
+
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                if (!strcmp(ed->buffers.data[i]->name.chars, name)) {
+                        idx = (ssize_t)i;
+                }
+        }
+
+        if (idx != -1) {
+                ww_make_buffer_primary(ed, (size_t)idx);
+        }
+}
+
+void
 ww_make_buffer_primary_by_path(ww *ed, const char *path)
 {
         ssize_t idx;
@@ -202,15 +242,11 @@ ww_run(ww *ed)
 
                 buffer_action act = buffer_process(b);
 
-                if (act == BA_REDRAW) {
-                        buffer_draw(b);
-                } else if (act == BA_XY) {
-                        buffer_drawxy(b);
-                } else if (act == BA_REQ_EXIT) {
-                        break;
-                } else if (act == BA_REQ_FINDFILE) {
-                        find_file(ed);
-                }
+                if (act == BA_REDRAW) buffer_draw(b);
+                else if (act == BA_XY) buffer_drawxy(b);
+                else if (act == BA_REQ_EXIT) break;
+                else if (act == BA_REQ_FINDFILE) find_file(ed);
+                else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
 
                 fflush(stdout);
         }
