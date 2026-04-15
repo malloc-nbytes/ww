@@ -129,7 +129,9 @@ visual_width_up_to(const str *s,
 }
 
 static size_t
-char_index_at_visual_col(const str *s, unsigned target_col, unsigned tab_width)
+char_index_at_visual_col(const str *s,
+                         unsigned   target_col,
+                         unsigned   tab_width)
 {
         // Find the character index for a given visual column
         unsigned col = 0;

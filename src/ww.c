@@ -91,6 +91,17 @@ find_file(ww *ed)
         buffer_draw(ed->buffers.data[ed->ab]);
 }
 
+static buffer *
+get_buffer_by_name(ww         *ed,
+                   const char *name)
+{
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                if (!strcmp(ed->buffers.data[i]->name.chars, name))
+                        return ed->buffers.data[i];
+        }
+        return NULL;
+}
+
 void
 ww_switch_buffer(ww *ed)
 {
@@ -104,8 +115,8 @@ ww_switch_buffer(ww *ed)
         if (!selected)
                 goto done;
 
-        ww_make_buffer_primary_by_name(ed, selected);
-        buffer_draw(ed->buffers.data[ed->ab]);
+        ed->monitors[ed->ab] = get_buffer_by_name(ed, selected);
+
  done:
         free(selected);
         for (size_t i = 0; i < names.len; ++i)
@@ -221,7 +232,8 @@ draw_monitor_based_on_action(ww            *ed,
         if (ba == BA_REDRAW
             || ba == BA_REQ_SPLITHOR
             || ba == BA_REQ_JMPBUF
-            || ba == BA_REQ_SWITCHBUFFER)
+            || ba == BA_REQ_SWITCHBUFFER
+            || ba == BA_REQ_FINDFILE)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -240,7 +252,6 @@ ww_display_monitors(ww *ed, buffer_action ba)
         }
 
         if (ed->monitors[1]) {
-                ed->monitors[0]->size.ws  = 0;
                 ed->monitors[0]->size.w  /= 2;
                 ed->monitors[1]->size.w  /= 2;
                 ed->monitors[1]->size.ws  = (unsigned)glconf.term.w/2;
@@ -261,9 +272,36 @@ ww_display_monitors(ww *ed, buffer_action ba)
 }
 
 static void
-split_horizontal(ww *ed)
+split_vertical(ww *ed)
 {
-        ed->monitors[1] = ed->monitors[ed->ab];
+        // TODO: check for monitor[2]
+        if (ed->buffers.len <= 1)
+                return;
+
+        buffer *b = NULL;
+
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                b = ed->buffers.data[i];
+
+                for (size_t j = 0; j < 4; ++j) {
+                        if (!ed->monitors[j])
+                                continue;
+                        if (!strcmp(ed->monitors[j]->name.chars,
+                                    ed->buffers.data[i]->name.chars)) {
+                                b = NULL;
+                                break;
+                        }
+                }
+
+                if (b)
+                        break;
+        }
+
+        if (!b)
+                return;
+
+        ed->monitors[1] = b;
+        //ed->monitors[1] = ed->monitors[ed->ab];
         ed->ab = 1;
 }
 
@@ -294,7 +332,7 @@ ww_run(ww *ed)
                 if      (act == BA_REQ_EXIT)         break;
                 else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
-                else if (act == BA_REQ_SPLITHOR)     split_horizontal(ed);
+                else if (act == BA_REQ_SPLITHOR)     split_vertical(ed);
                 else if (act == BA_REQ_JMPBUF)       jump_buffer(ed);
 
                 ww_display_monitors(ed, act);
