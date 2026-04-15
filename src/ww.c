@@ -115,7 +115,20 @@ ww_switch_buffer(ww *ed)
         if (!selected)
                 goto done;
 
-        ed->monitors[ed->ab] = get_buffer_by_name(ed, selected);
+        int open = 0;
+        for (size_t i = 0; i < 4; ++i) {
+                if (!ed->monitors[i])
+                        continue;
+                if (!strcmp(ed->monitors[i]->name.chars, selected)) {
+                        open = 1;
+                        break;
+                }
+        }
+
+        if (!open)
+                ed->monitors[ed->ab] = get_buffer_by_name(ed, selected);
+        else
+                ww_make_buffer_primary_by_name(ed, selected);
 
  done:
         free(selected);

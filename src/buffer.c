@@ -396,7 +396,7 @@ jump_next_word(buffer *b)
                 b->cx = (unsigned)i;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -431,7 +431,7 @@ jump_prev_word(buffer *b)
                 ++b->cx;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
