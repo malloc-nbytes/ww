@@ -41,6 +41,12 @@ center_view(buffer *b);
 
 char_ar g_cpy_buf = {0};
 
+void
+buffer_make_builtin(buffer *b)
+{
+        b->builtin = 1;
+}
+
 buffer *
 buffer_from(str      name,
             str      path,
@@ -56,6 +62,7 @@ buffer_from(str      name,
         b              = (buffer *)alloc(sizeof(buffer));
         b->name        = name;
         b->path        = path;
+        b->builtin     = 0;
         b->size.w      = w;
         b->size.h      = h;
         b->size.ws     = ws;
@@ -1397,6 +1404,18 @@ ctrlx(buffer *b)
         return BA_NOP;
 }
 
+static buffer_action
+handle_normal_input_while_builtin(buffer *b, char ch)
+{
+        if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == 'g')
+                return BA_REQ_RECOMPILE;
+
+        if (ch == 'q')
+                return BA_REQ_CLOSE_BUILTIN;
+
+        return BA_NONE;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -1408,6 +1427,14 @@ buffer_process(buffer *b)
 
         switch (ty = get_input(&ch)) {
         case INPUT_TYPE_NORMAL: {
+                if (b->builtin) {
+                        buffer_action ba;
+
+                        if ((ba = handle_normal_input_while_builtin(b, ch)) != BA_NONE) {
+                                return ba;
+                        }
+                }
+
                 if (ch == '\t')         assert(0);
                 else if (BACKSPACE(ch)) return backspace(b);
                 else if (ch == 0)       return selection(b);

@@ -25,6 +25,33 @@ get_buffer_by_path(ww *ed, const char *path)
 }
 
 static void
+sort_buffers(ww *ed)
+{
+        if (ed->buffers.len <= 1)
+                return;
+
+        const buffer *curbuf = ed->monitors[ed->am];
+        buffer *curbufi = NULL;
+        size_t idx = 0;
+
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                if (!strcmp(ed->buffers.data[i]->name.chars, curbuf->name.chars)) {
+                        curbufi = ed->buffers.data[i];
+                        idx = i;
+                        break;
+                }
+        }
+
+        if (!curbufi) {
+                assert(0);
+                return;
+        }
+
+        ed->buffers.data[idx] = ed->buffers.data[0];
+        ed->buffers.data[0]   = curbufi;
+}
+
+static void
 find_file(ww *ed)
 {
         cstr_ar  files;
@@ -91,6 +118,8 @@ find_file(ww *ed)
         ww_make_buffer_primary(ed, (size_t)idx);
 
         buffer_draw(ed->buffers.data[ed->am]);
+
+        sort_buffers(ed);
 }
 
 static buffer *
@@ -131,6 +160,8 @@ ww_switch_buffer(ww *ed)
                 ed->monitors[ed->am] = get_buffer_by_name(ed, selected);
         else
                 ww_make_buffer_primary_by_name(ed, selected);
+
+        sort_buffers(ed);
 
  done:
         free(selected);
@@ -250,7 +281,9 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_SWITCHBUFFER
             || ba == BA_REQ_FINDFILE
             || ba == BA_REQ_MAXIMIZEMON
-            || ba == BA_REQ_COMPILE)
+            || ba == BA_REQ_COMPILE
+            || ba == BA_REQ_RECOMPILE
+            || ba == BA_REQ_CLOSE_BUILTIN)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -465,6 +498,7 @@ do_compilation(ww *ed)
                                 0, 0,
                                 array_empty(linep_ar), ed);
                 buffer_make_readonly(b);
+                buffer_make_builtin(b);
         } else {
                 exists = 1;
                 for (size_t i = 0; i < b->lines.len; ++i)
@@ -494,7 +528,7 @@ do_compilation(ww *ed)
         ed->monitors[ed->am]->cx = 0;
         ed->monitors[ed->am]->al = 0;
         ed->monitors[ed->am]->cy = 0;
-        /* adjust_scroll(win->ab); */
+        buffer_adjust_scroll(ed->monitors[ed->am]);
 
         str_destroy(&input);
         buffer_draw(ed->monitors[ed->am]);
@@ -540,6 +574,12 @@ metax(ww *ed)
         array_free(cmds);
 }
 
+static void
+close_builtin(ww *ed)
+{
+        ed->monitors[ed->am] = ed->buffers.data[0];
+}
+
 void
 ww_run(ww *ed)
 {
@@ -566,9 +606,11 @@ ww_run(ww *ed)
                         metax(ed);
                         buffer_draw(ed->monitors[ed->am]);
                 }
-                else if (act == BA_REQ_SPLITHOR) split_vertical(ed);
-                else if (act == BA_REQ_JMPBUF)   jump_buffer(ed);
-                else if (act == BA_REQ_COMPILE)  compile(ed);
+                else if (act == BA_REQ_SPLITHOR)      split_vertical(ed);
+                else if (act == BA_REQ_JMPBUF)        jump_buffer(ed);
+                else if (act == BA_REQ_COMPILE)       compile(ed);
+                else if (act == BA_REQ_RECOMPILE)     do_compilation(ed);
+                else if (act == BA_REQ_CLOSE_BUILTIN) close_builtin(ed);
 
                 ww_display_monitors(ed, act);
         }

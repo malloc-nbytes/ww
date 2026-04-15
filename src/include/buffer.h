@@ -12,7 +12,8 @@ extern char_ar g_cpy_buf;
 typedef struct ww ww;
 
 typedef enum {
-        BA_NOP = 0,
+        BA_NONE = 0,
+        BA_NOP,
         BA_REDRAW,
         BA_XY,
         BA_REQ_EXIT,
@@ -23,6 +24,8 @@ typedef enum {
         BA_REQ_METAX,
         BA_REQ_MAXIMIZEMON,
         BA_REQ_COMPILE,
+        BA_REQ_RECOMPILE,
+        BA_REQ_CLOSE_BUILTIN,
 } buffer_action;
 
 typedef enum {
@@ -35,6 +38,7 @@ typedef struct {
         str name; // name of buffer, can be same as path
                   // if buffer by the same name exists
         str path; // path to the file we are editing
+        int builtin; // is this a builtin buffer
         struct {
                 unsigned w;  // width
                 unsigned h;  // height
@@ -75,5 +79,6 @@ buffer_action buffer_process(buffer *b);
 void          buffer_make_readonly(buffer *b);
 buffer_action buffer_save(buffer *b);
 buffer_action buffer_adjust_scroll(buffer *b);
+void          buffer_make_builtin(buffer *b);
 
 #endif // BUFFER_H_INCLUDED
