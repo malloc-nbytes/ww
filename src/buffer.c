@@ -653,7 +653,7 @@ prev_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -679,7 +679,7 @@ next_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -766,7 +766,7 @@ jump_to_top_of_buffer(buffer *b)
         b->wish_col = 0;
         b->al = b->lines.len-1;
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -777,7 +777,7 @@ jump_to_bottom_of_buffer(buffer *b)
         b->wish_col = 0;
         b->al = 0;
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1381,6 +1381,8 @@ ctrlx(buffer *b)
                         return BA_REQ_SPLITHOR;
                 if (ch == 'o')
                         return BA_REQ_JMPBUF;
+                if (ch == 'm')
+                        return BA_REQ_MAXIMIZEMON;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)
@@ -1489,7 +1491,7 @@ draw_status(const buffer *b,
                 b->cx+1,
                 !b->saved ? "*" : "",
                 state_to_cstr(b),
-                b->parent->ab);
+                b->parent->am);
         printf("%s", buf);
         len += strlen(buf);
 

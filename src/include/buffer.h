@@ -19,6 +19,7 @@ typedef enum {
         BA_REQ_SPLITHOR,
         BA_REQ_JMPBUF,
         BA_REQ_METAX,
+        BA_REQ_MAXIMIZEMON,
 } buffer_action;
 
 typedef enum {

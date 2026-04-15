@@ -17,7 +17,7 @@
 typedef struct ww {
         bufferp_ar  buffers;
         buffer     *monitors[4];
-        uint8_t     ab;
+        uint8_t     am;
 } ww;
 
 ww   ww_create(void);

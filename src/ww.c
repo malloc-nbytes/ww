@@ -67,7 +67,7 @@ find_file(ww *ed)
         str_destroy(&cwd);
 
         if (!chosen_file) {
-                buffer_draw(ed->monitors[ed->ab]);
+                buffer_draw(ed->monitors[ed->am]);
                 return;
         }
 
@@ -88,7 +88,7 @@ find_file(ww *ed)
 
         ww_make_buffer_primary(ed, (size_t)idx);
 
-        buffer_draw(ed->buffers.data[ed->ab]);
+        buffer_draw(ed->buffers.data[ed->am]);
 }
 
 static buffer *
@@ -126,7 +126,7 @@ ww_switch_buffer(ww *ed)
         }
 
         if (!open)
-                ed->monitors[ed->ab] = get_buffer_by_name(ed, selected);
+                ed->monitors[ed->am] = get_buffer_by_name(ed, selected);
         else
                 ww_make_buffer_primary_by_name(ed, selected);
 
@@ -179,7 +179,7 @@ ww_create(void)
         return (ww) {
                 .buffers  = array_empty(bufferp_ar),
                 .monitors = {NULL, NULL, NULL, NULL},
-                .ab       = 0,
+                .am       = 0,
         };
 }
 
@@ -234,7 +234,7 @@ ww_make_buffer_primary(ww *ed, size_t idx)
 
         ww_clear_monitors(ed);
         ed->monitors[0] = ed->buffers.data[idx];
-        ed->ab = 0;
+        ed->am = 0;
 }
 
 static void
@@ -246,7 +246,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_SPLITHOR
             || ba == BA_REQ_JMPBUF
             || ba == BA_REQ_SWITCHBUFFER
-            || ba == BA_REQ_FINDFILE)
+            || ba == BA_REQ_FINDFILE
+            || ba == BA_REQ_MAXIMIZEMON)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -274,12 +275,12 @@ ww_display_monitors(ww *ed, buffer_action ba)
                 return;
 
         for (size_t i = 0; i < 4; ++i) {
-                if (i != ed->ab && ed->monitors[i])
+                if (i != ed->am && ed->monitors[i])
                         draw_monitor_based_on_action(ed, ba, i);
         }
 
         // Draw active monitor lastly to not re-draw.
-        draw_monitor_based_on_action(ed, ba, ed->ab);
+        draw_monitor_based_on_action(ed, ba, ed->am);
 
         fflush(stdout);
 }
@@ -315,15 +316,15 @@ split_vertical(ww *ed)
 
         ed->monitors[1] = b;
         //ed->monitors[1] = ed->monitors[ed->ab];
-        ed->ab = 1;
+        ed->am = 1;
 }
 
 static void
 jump_buffer(ww *ed)
 {
         do {
-                ed->ab = (uint8_t)(ed->ab+1) % 4;
-        } while (!ed->monitors[ed->ab]);
+                ed->am = (uint8_t)(ed->am+1) % 4;
+        } while (!ed->monitors[ed->am]);
 }
 
 static void
@@ -341,7 +342,7 @@ metax(ww *ed)
                 return;
 
         if (!strcmp(inp, WW_CMD_SAVE))
-                buffer_save(ed->monitors[ed->ab]);
+                buffer_save(ed->monitors[ed->am]);
         else if (!strcmp(inp, WW_CMD_FIND_FILE))
                 find_file(ed);
 
@@ -359,18 +360,20 @@ ww_run(ww *ed)
         fflush(stdout);
 
         while (1) {
-                assert(ed->ab < 4);
+                assert(ed->am < 4);
 
-                buffer *b = ed->monitors[ed->ab];
+                buffer *b = ed->monitors[ed->am];
 
                 buffer_action act = buffer_process(b);
 
                 if      (act == BA_REQ_EXIT)         break;
                 else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
+                else if (act == BA_REQ_MAXIMIZEMON)
+                        ww_make_buffer_primary_by_name(ed, ed->monitors[ed->am]->name.chars);
                 else if (act == BA_REQ_METAX) {
                         metax(ed);
-                        buffer_draw(ed->monitors[ed->ab]);
+                        buffer_draw(ed->monitors[ed->am]);
                 }
                 else if (act == BA_REQ_SPLITHOR)     split_vertical(ed);
                 else if (act == BA_REQ_JMPBUF)       jump_buffer(ed);
