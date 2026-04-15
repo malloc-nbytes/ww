@@ -7,10 +7,16 @@ struct {
                 size_t h;
                 struct termios termios;
         } term;
+        struct {
+                const char *compile;
+        } runtime;
 } glconf = {
         .term = {
                 .w = 0,
                 .h = 0,
                 .termios = {0},
+        },
+        .runtime = {
+                .compile = "make",
         },
 };

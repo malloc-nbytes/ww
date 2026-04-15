@@ -5,6 +5,8 @@
 #include "line.h"
 #include "str.h"
 
+#define BUFFER_BUILTIN_COMPILE "ww-compile"
+
 extern char_ar g_cpy_buf;
 
 typedef struct ww ww;
@@ -20,6 +22,7 @@ typedef enum {
         BA_REQ_JMPBUF,
         BA_REQ_METAX,
         BA_REQ_MAXIMIZEMON,
+        BA_REQ_COMPILE,
 } buffer_action;
 
 typedef enum {
@@ -71,5 +74,6 @@ void          buffer_drawxy(const buffer *b);
 buffer_action buffer_process(buffer *b);
 void          buffer_make_readonly(buffer *b);
 buffer_action buffer_save(buffer *b);
+buffer_action buffer_adjust_scroll(buffer *b);
 
 #endif // BUFFER_H_INCLUDED

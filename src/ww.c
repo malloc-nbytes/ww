@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 static ssize_t
 get_buffer_by_path(ww *ed, const char *path)
@@ -327,6 +329,184 @@ jump_buffer(ww *ed)
         } while (!ed->monitors[ed->am]);
 }
 
+static char **
+make_command(str *s)
+{
+        cstr_ar ar  = array_empty(cstr_ar);
+        char_ar buf = array_empty(char_ar);
+
+        for (size_t i = 0; i < s->len; ++i) {
+                char ch = str_at(s, i);
+                if (ch == ' ') {
+                        if (buf.len > 0) {
+                                array_append(buf, 0);
+                                array_append(ar, strdup(buf.data));
+                                array_clear(buf);
+                        }
+                } else {
+                        array_append(buf, ch);
+                }
+        }
+
+        if (buf.len > 0) {
+                array_append(buf, 0);
+                array_append(ar, strdup(buf.data));
+        }
+
+        array_append(ar, NULL);
+        array_free(buf);
+
+        return ar.data;
+}
+
+static char *
+capture_command_output(str *input)
+{
+        int     pipefd[2];
+        pid_t   pid;
+        char   *output      = NULL;
+        size_t  output_size = 0;
+        size_t  output_cap  = 0;
+        char    buf[4096];
+
+        if (pipe(pipefd) == -1) {
+                perror("pipe");
+                return NULL;
+        }
+
+        pid = fork();
+        if (pid == -1) {
+                perror("fork");
+                close(pipefd[0]);
+                close(pipefd[1]);
+                return NULL;
+        }
+
+        if (pid == 0) {
+                // Child
+                close(pipefd[0]);
+
+                if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
+                        perror("dup2 stdout");
+                        _exit(1);
+                }
+
+                if (dup2(pipefd[1], STDERR_FILENO) == -1) {
+                        perror("dup2 stderr");
+                        _exit(1);
+                }
+
+                close(pipefd[1]);
+
+                char **args = make_command(input);
+                if (!args || !*args)
+                        _exit(127);
+
+                execvp(args[0], args);
+                perror("execvp");
+                fflush(stdout);
+                _exit(127);
+        }
+
+        // Parent
+        close(pipefd[1]);
+
+        // Read loop
+        ssize_t n;
+        while ((n = read(pipefd[0], buf, sizeof(buf) - 1)) > 0) {
+                buf[n] = '\0';
+
+                size_t needed = output_size + (size_t)n + 1;
+                if (needed > output_cap) {
+                        output_cap = needed * 2 < 8192 ? 8192 : needed * 2;
+                        char *new_out = realloc(output, output_cap);
+                        if (!new_out) {
+                                perror("realloc");
+                                free(output);
+                                close(pipefd[0]);
+                                waitpid(pid, NULL, 0);
+                                return NULL;
+                        }
+                        output = new_out;
+                }
+
+                memcpy(output + output_size, buf, (size_t)n);
+                output_size += (size_t)n;
+                output[output_size] = '\0';
+        }
+
+        close(pipefd[0]);
+
+        int status;
+        waitpid(pid, &status, 0);
+
+        return output;
+}
+
+static void
+do_compilation(ww *ed)
+{
+#define COMPILATION_HEADER "*** Compilation [ %s ] [ (q)uit, a(g)ain, M-<tab>:switch-here ] ***\n\n"
+
+        if (!glconf.runtime.compile)
+                return;
+
+        str     input  = str_from(glconf.runtime.compile);
+        buffer *b      = NULL;
+        int     exists = 0;
+
+        b = get_buffer_by_name(ed, BUFFER_BUILTIN_COMPILE);
+
+        if (!b) {
+                b = buffer_from(str_from(BUFFER_BUILTIN_COMPILE),
+                                str_from(BUFFER_BUILTIN_COMPILE),
+                                (unsigned)glconf.term.w, (unsigned)glconf.term.h,
+                                0, 0,
+                                array_empty(linep_ar), ed);
+                buffer_make_readonly(b);
+        } else {
+                exists = 1;
+                for (size_t i = 0; i < b->lines.len; ++i)
+                        line_free(b->lines.data[i]);
+                array_free(b->lines);
+        }
+
+        if (!exists)
+                ww_add_buffer(ed, b);
+        ww_make_buffer_primary_by_name(ed, BUFFER_BUILTIN_COMPILE);
+        buffer_draw(ed->monitors[ed->am]);
+
+        char *output = capture_command_output(&input);
+        ed->monitors[ed->am]->lines = lines_from(output);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+        char buf[1024] = {0};
+        sprintf(buf, COMPILATION_HEADER, str_cstr(&input));
+        linep_ar header = lines_from(buf);
+        for (int i = (int)header.len-1; i >= 0; --i)
+                array_insert_at(ed->monitors[ed->am]->lines, 0, header.data[i]);
+#pragma GCC diagnostic pop
+
+        array_append(ed->monitors[ed->am]->lines, line_from(str_from("\n")));
+        array_append(ed->monitors[ed->am]->lines, line_from(str_from("[ Done ] ")));
+        ed->monitors[ed->am]->cx = 0;
+        ed->monitors[ed->am]->al = 0;
+        ed->monitors[ed->am]->cy = 0;
+        /* adjust_scroll(win->ab); */
+
+        str_destroy(&input);
+        buffer_draw(ed->monitors[ed->am]);
+
+#undef COMPILATION_HEADER
+}
+
+static void
+compile(ww *ed)
+{
+        assert(0 && ed);
+}
+
 static void
 metax(ww *ed)
 {
@@ -345,6 +525,8 @@ metax(ww *ed)
                 buffer_save(ed->monitors[ed->am]);
         else if (!strcmp(inp, WW_CMD_FIND_FILE))
                 find_file(ed);
+        else if (!strcmp(inp, WW_CMD_COMPILE))
+                compile(ed);
 
         free(inp);
         array_free(cmds);
@@ -354,6 +536,7 @@ void
 ww_run(ww *ed)
 {
         (void)ww_make_buffer_primary_by_path;
+        (void)do_compilation;
 
         ww_display_monitors(ed, BA_REDRAW);
         gotoxy(0, 0);
@@ -375,8 +558,9 @@ ww_run(ww *ed)
                         metax(ed);
                         buffer_draw(ed->monitors[ed->am]);
                 }
-                else if (act == BA_REQ_SPLITHOR)     split_vertical(ed);
-                else if (act == BA_REQ_JMPBUF)       jump_buffer(ed);
+                else if (act == BA_REQ_SPLITHOR) split_vertical(ed);
+                else if (act == BA_REQ_JMPBUF)   jump_buffer(ed);
+                else if (act ==BA_REQ_COMPILE)   compile(ed);
 
                 ww_display_monitors(ed, act);
         }

@@ -37,9 +37,6 @@ draw_status(const buffer *b,
             const char   *msg);
 
 static buffer_action
-adjust_scroll(buffer *b);
-
-static buffer_action
 center_view(buffer *b);
 
 char_ar g_cpy_buf = {0};
@@ -174,7 +171,7 @@ search(buffer *b, int reverse)
                         b->al = (size_t)pairs.data[step].l;
                         b->cy = (unsigned)pairs.data[step].l;
                         b->cx = (unsigned)pairs.data[step].r;
-                        adjust_scroll(b);
+                        buffer_adjust_scroll(b);
                 }
 
                 center_view(b);
@@ -236,7 +233,7 @@ search(buffer *b, int reverse)
         b->state = BS_NORMAL;
 
         center_view(b);
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
 }
 
 static int
@@ -367,8 +364,8 @@ adjust_hscroll(buffer *b)
         return 0;
 }
 
-static buffer_action
-adjust_scroll(buffer *b)
+buffer_action
+buffer_adjust_scroll(buffer *b)
 {
         int res;
 
@@ -433,7 +430,7 @@ del_selection(buffer *b)
         b->saved = 0;
 
         adjust_cursor(b);
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
         //return adjust_scroll(b) == BA_REDRAW
         //        ? BA_REDRAW : BA_XY;
@@ -455,7 +452,7 @@ up(buffer *b)
                 b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -474,7 +471,7 @@ down(buffer *b)
                 b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -492,7 +489,7 @@ right(buffer *b)
         }
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -509,7 +506,7 @@ left(buffer *b)
         }
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -517,7 +514,7 @@ bol(buffer *b)
 {
         b->cx = 0;
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -526,7 +523,7 @@ eol(buffer *b)
         str *s = &b->lines.data[b->al]->txt;
         b->cx = (unsigned)str_len(s)-1;
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -561,7 +558,7 @@ jump_next_word(buffer *b)
                 b->cx = (unsigned)i;
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -596,7 +593,7 @@ jump_prev_word(buffer *b)
                 ++b->cx;
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -626,7 +623,7 @@ del_word(buffer *b)
                 str_rm(s, i);
         }
 
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
 }
 
@@ -653,7 +650,7 @@ prev_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -679,7 +676,7 @@ next_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -711,7 +708,7 @@ kill_line(buffer *b)
 
         b->cx = 0;
 
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
 }
 
@@ -752,7 +749,7 @@ insert_char(buffer *b, char ch, int newline_advance)
         //add_to_popxy(b);
 
         adjust_cursor(b);
-        return (adjust_scroll(b) == BA_REDRAW || ch == '\n') ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || ch == '\n') ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -766,7 +763,7 @@ jump_to_top_of_buffer(buffer *b)
         b->wish_col = 0;
         b->al = b->lines.len-1;
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -777,7 +774,7 @@ jump_to_bottom_of_buffer(buffer *b)
         b->wish_col = 0;
         b->al = 0;
         adjust_cursor(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -813,7 +810,7 @@ del_char(buffer *b)
                 b->cx = (unsigned)str_len(&ln->txt)-1;
 
         //add_to_popxy(b);
-        return (adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -844,7 +841,7 @@ backspace(buffer *b)
                 b->cx = (unsigned)prevln_len-1;
                 --b->cy;
 
-                adjust_scroll(b);
+                buffer_adjust_scroll(b);
                 return 1;
         }
 
@@ -872,7 +869,7 @@ backspace(buffer *b)
         }
 
         //add_to_popxy(b);
-        return (adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
 }
 
 
@@ -897,7 +894,7 @@ delete_until_eol(buffer *b)
 
         //add_to_popxy(b);
 
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
 
         return BA_XY;
 }
@@ -921,7 +918,7 @@ jump_to_first_char(buffer *b)
         b->wish_col = b->cx;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return buffer_adjust_scroll(b);
 }
 
 static buffer_action
@@ -937,7 +934,7 @@ center_view(buffer *b)
                 max_offset = 0;
 
         b->voff = (unsigned)vertical_offset;
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
 
         return BA_REDRAW;
 }
@@ -992,7 +989,7 @@ page_down(buffer *b)
         b->cx       = 0;
         b->wish_col = 0;
 
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
 
         return BA_REDRAW;
 }
@@ -1015,7 +1012,7 @@ page_up(buffer *b)
         b->cx       = 0;
         b->wish_col = 0;
 
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
 
         return BA_REDRAW;
 }
@@ -1063,7 +1060,7 @@ super_backspace(buffer *b)
         //b->last_tab = 0;
 
         //add_to_popxy(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1085,7 +1082,7 @@ buffer_dupline(buffer *b)
         ++b->cy;
 
         //add_to_popxy(b);
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
 }
 
@@ -1107,7 +1104,7 @@ movetxt_up(buffer *b)
         --b->al;
         --b->cy;
         //add_to_popxy(b);
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
 }
 
@@ -1130,7 +1127,7 @@ movetxt_down(buffer *b)
         ++b->cy;
 
         //add_to_popxy(b);
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
 }
 
@@ -1177,8 +1174,8 @@ uppercase_word(buffer *b)
         upperlower_word(b, toupper, 0);
 
         //add_to_popxy(b);
-        adjust_scroll(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        buffer_adjust_scroll(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1190,8 +1187,8 @@ lowercase_word(buffer *b)
         upperlower_word(b, tolower, 1);
 
         //add_to_popxy(b);
-        adjust_scroll(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        buffer_adjust_scroll(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1203,7 +1200,7 @@ caps_word(buffer *b)
         upperlower_word(b, toupper, 1);
 
         //add_to_popxy(b);
-        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1339,7 +1336,7 @@ paste(buffer *b)
 
         //add_to_popxy(b);
 
-        return (adjust_scroll(b) == BA_REDRAW || newline)
+        return (buffer_adjust_scroll(b) == BA_REDRAW || newline)
                 ? BA_REDRAW : BA_XY;
 }
 
@@ -1383,6 +1380,8 @@ ctrlx(buffer *b)
                         return BA_REQ_JMPBUF;
                 if (ch == 'm')
                         return BA_REQ_MAXIMIZEMON;
+                if (ch == 'x')
+                        return BA_REQ_COMPILE;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)

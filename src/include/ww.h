@@ -8,10 +8,12 @@
 
 #define WW_CMD_SAVE      "save-file"
 #define WW_CMD_FIND_FILE "find-file"
+#define WW_CMD_COMPILE   "compile"
 
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
         WW_CMD_FIND_FILE, \
+        WW_CMD_COMPILE, \
 }
 
 typedef struct ww {

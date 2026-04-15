@@ -10,6 +10,9 @@ extern struct {
                 size_t h;
                 struct termios termios;
         } term;
+        struct {
+                const char *compile;
+        } runtime;
 } glconf;
 
 #endif // GLCONF_H_INCLUDED
