@@ -51,7 +51,8 @@ buffer_from(str      name,
             unsigned h,
             unsigned ws,
             unsigned hs,
-            linep_ar lns)
+            linep_ar lns,
+            ww       *parent)
 {
         buffer *b;
 
@@ -75,6 +76,7 @@ buffer_from(str      name,
         b->sy          = 0;
         b->writable    = 1;
         b->last_search = str_create();
+        b->parent      = parent;
 
         return b;
 }
@@ -284,13 +286,17 @@ visual_column(const str *s,
 }
 
 static unsigned
-visual_width_up_to(const str *s, size_t char_idx, unsigned tab_width)
+visual_width_up_to(const str *s,
+                   size_t     char_idx,
+                   unsigned   tab_width)
 {
         return visual_column(s, char_idx, tab_width);
 }
 
 static size_t
-char_index_at_visual_col(const str *s, unsigned target_col, unsigned tab_width)
+char_index_at_visual_col(const str *s,
+                         unsigned   target_col,
+                         unsigned   tab_width)
 {
         // Find the character index for a given visual column
         unsigned col = 0;
@@ -310,7 +316,7 @@ static void
 adjust_cursor(buffer *b)
 {
         const str *s = &b->lines.data[b->al]->txt;
-        unsigned x = visual_column(s, b->cx, TAB_WIDTH);
+        unsigned   x = visual_column(s, b->cx, TAB_WIDTH);
         gotoxy(b->size.ws + (unsigned)(x > b->hoff ? x - b->hoff : 0U),
                b->size.hs + (unsigned)(b->cy - b->voff));
 }
@@ -555,7 +561,7 @@ jump_next_word(buffer *b)
                 b->cx = (unsigned)i;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -590,7 +596,7 @@ jump_prev_word(buffer *b)
                 ++b->cx;
 
         adjust_cursor(b);
-        return adjust_scroll(b);
+        return adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -948,10 +954,10 @@ combine_lines(buffer *b)
         if (b->al >= b->lines.len-1)
                 return BA_NOP;
 
-        l0 = b->lines.data[b->al];
-        s0 = &l0->txt;
-        l1 = b->lines.data[b->al+1];
-        s1 = &l1->txt;
+        l0  = b->lines.data[b->al];
+        s0  = &l0->txt;
+        l1  = b->lines.data[b->al+1];
+        s1  = &l1->txt;
         len = str_len(s0);
 
         s0->chars[s0->len-1] = ' ';
@@ -1371,6 +1377,10 @@ ctrlx(buffer *b)
         case INPUT_TYPE_NORMAL: {
                 if (ch == 'b')
                         return BA_REQ_SWITCHBUFFER;
+                if (ch == '/')
+                        return BA_REQ_SPLITHOR;
+                if (ch == 'o')
+                        return BA_REQ_JMPBUF;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)
@@ -1473,12 +1483,13 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s",
+        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s B:%d",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
                 !b->saved ? "*" : "",
-                state_to_cstr(b));
+                state_to_cstr(b),
+                b->parent->ab);
         printf("%s", buf);
         len += strlen(buf);
 
