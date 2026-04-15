@@ -7,6 +7,8 @@
 
 extern char_ar g_cpy_buf;
 
+typedef struct ww ww;
+
 typedef enum {
         BA_NOP = 0,
         BA_REDRAW,
@@ -14,6 +16,8 @@ typedef enum {
         BA_REQ_EXIT,
         BA_REQ_FINDFILE,
         BA_REQ_SWITCHBUFFER,
+        BA_REQ_SPLITHOR,
+        BA_REQ_JMPBUF,
 } buffer_action;
 
 typedef enum {
@@ -44,18 +48,20 @@ typedef struct {
         unsigned     sx;       // buffer selection x
         unsigned     sy;       // buffer selection y
         int          writable; // is buffer writable
+        ww          *parent;
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);
 
 void    init_buffer_translation_unit(void);
-buffer *buffer_from(str      name,
-                    str      path,
-                    unsigned w,
-                    unsigned h,
-                    unsigned ws,
-                    unsigned hs,
-                    linep_ar lns);
+buffer *buffer_from(str       name,
+                    str       path,
+                    unsigned  w,
+                    unsigned  h,
+                    unsigned  ws,
+                    unsigned  hs,
+                    linep_ar  lns,
+                    ww       *parent);
 
 void          buffer_draw(const buffer *b);
 void          buffer_drawxy(const buffer *b);

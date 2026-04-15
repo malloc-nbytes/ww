@@ -1,5 +1,3 @@
-
-
 #include "argument.h"
 #include "io.h"
 #include "error.h"
@@ -24,7 +22,7 @@ run(const char *path)
                                        str_from(path),
                                        (unsigned)glconf.term.w, (unsigned)glconf.term.h,
                                        0, 0,
-                                       lines_from(load_file(path))));
+                                       lines_from(load_file(path)), &ed));
 
         ww_make_buffer_primary(&ed, 0);
 

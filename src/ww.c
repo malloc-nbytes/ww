@@ -76,7 +76,7 @@ find_file(ww *ed)
                                               str_from(chosen_file),
                                               (unsigned)glconf.term.w, (unsigned)glconf.term.h,
                                               0, 0,
-                                              lines_from(load_file(chosen_file))));
+                                              lines_from(load_file(chosen_file)), ed));
         }
 
         ssize_t idx = get_buffer_by_path(ed, chosen_file);
@@ -197,21 +197,38 @@ ww_add_buffer(ww *ed, buffer *b)
 void
 ww_clear_monitors(ww *ed)
 {
-        memset(ed->monitors, 0, 4*sizeof(*ed->monitors));
+        ed->monitors[0] = NULL;
+        ed->monitors[1] = NULL;
+        ed->monitors[2] = NULL;
+        ed->monitors[3] = NULL;
 }
 
 void
 ww_make_buffer_primary(ww *ed, size_t idx)
 {
-        assert(idx < ed->buffers.len);
+        assert(idx < 4);
 
         ww_clear_monitors(ed);
         ed->monitors[0] = ed->buffers.data[idx];
-        ed->ab = (uint8_t)idx;
+        ed->ab = 0;
+}
+
+static void
+draw_monitor_based_on_action(ww            *ed,
+                             buffer_action  ba,
+                             size_t         idx)
+{
+        if (ba == BA_REDRAW
+            || ba == BA_REQ_SPLITHOR
+            || ba == BA_REQ_JMPBUF
+            || ba == BA_REQ_SWITCHBUFFER)
+                buffer_draw(ed->monitors[idx]);
+        else if (ba == BA_XY)
+                buffer_drawxy(ed->monitors[idx]);
 }
 
 void
-ww_display_monitors(ww *ed)
+ww_display_monitors(ww *ed, buffer_action ba)
 {
         for (size_t i = 0; i < 4; ++i) {
                 if (ed->monitors[i]) {
@@ -222,12 +239,40 @@ ww_display_monitors(ww *ed)
                 }
         }
 
-        for (size_t i = 0; i < 4; ++i) {
-                if (ed->monitors[i])
-                        buffer_draw(ed->monitors[i]);
+        if (ed->monitors[1]) {
+                ed->monitors[0]->size.ws  = 0;
+                ed->monitors[0]->size.w  /= 2;
+                ed->monitors[1]->size.w  /= 2;
+                ed->monitors[1]->size.ws  = (unsigned)glconf.term.w/2;
         }
 
+        if (ba == BA_NOP)
+                return;
+
+        for (size_t i = 0; i < 4; ++i) {
+                if (i != ed->ab && ed->monitors[i])
+                        draw_monitor_based_on_action(ed, ba, i);
+        }
+
+        // Draw active monitor lastly to not re-draw.
+        draw_monitor_based_on_action(ed, ba, ed->ab);
+
         fflush(stdout);
+}
+
+static void
+split_horizontal(ww *ed)
+{
+        ed->monitors[1] = ed->monitors[ed->ab];
+        ed->ab = 1;
+}
+
+static void
+jump_buffer(ww *ed)
+{
+        do {
+                ed->ab = (uint8_t)(ed->ab+1) % 4;
+        } while (!ed->monitors[ed->ab]);
 }
 
 void
@@ -235,21 +280,23 @@ ww_run(ww *ed)
 {
         (void)ww_make_buffer_primary_by_path;
 
-        ww_display_monitors(ed);
+        ww_display_monitors(ed, BA_REDRAW);
         gotoxy(0, 0);
         fflush(stdout);
 
         while (1) {
-                buffer *b = ed->buffers.data[ed->ab];
+                assert(ed->ab < 4);
+
+                buffer *b = ed->monitors[ed->ab];
 
                 buffer_action act = buffer_process(b);
 
-                if (act == BA_REDRAW) buffer_draw(b);
-                else if (act == BA_XY) buffer_drawxy(b);
-                else if (act == BA_REQ_EXIT) break;
-                else if (act == BA_REQ_FINDFILE) find_file(ed);
+                if      (act == BA_REQ_EXIT)         break;
+                else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
+                else if (act == BA_REQ_SPLITHOR)     split_horizontal(ed);
+                else if (act == BA_REQ_JMPBUF)       jump_buffer(ed);
 
-                fflush(stdout);
+                ww_display_monitors(ed, act);
         }
 }

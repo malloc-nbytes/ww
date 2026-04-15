@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct {
+typedef struct ww {
         bufferp_ar  buffers;
         buffer     *monitors[4];
         uint8_t     ab;
@@ -20,7 +20,7 @@ void ww_add_buffer(ww *ed, buffer *b);
 void ww_make_buffer_primary(ww *ed, size_t idx);
 void ww_make_buffer_primary_by_path(ww *ed, const char *path);
 void ww_clear_monitors(ww *ed);
-void ww_display_monitors(ww *ed);
+void ww_display_monitors(ww *ed, buffer_action ba);
 void ww_switch_buffer(ww *ed);
 void ww_make_buffer_primary_by_name(ww *ed, const char *name);
 
