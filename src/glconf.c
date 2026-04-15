@@ -17,6 +17,6 @@ struct {
                 .termios = {0},
         },
         .runtime = {
-                .compile = "make",
+                .compile = NULL,
         },
 };

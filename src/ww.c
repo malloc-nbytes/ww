@@ -249,7 +249,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_JMPBUF
             || ba == BA_REQ_SWITCHBUFFER
             || ba == BA_REQ_FINDFILE
-            || ba == BA_REQ_MAXIMIZEMON)
+            || ba == BA_REQ_MAXIMIZEMON
+            || ba == BA_REQ_COMPILE)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -504,7 +505,14 @@ do_compilation(ww *ed)
 static void
 compile(ww *ed)
 {
-        assert(0 && ed);
+        char *input_raw = minibuffer_input(ed, "compile", array_empty(cstr_ar));
+
+        if (!input_raw)
+                return;
+
+        glconf.runtime.compile = strdup(input_raw);
+
+        do_compilation(ed);
 }
 
 static void
@@ -560,7 +568,7 @@ ww_run(ww *ed)
                 }
                 else if (act == BA_REQ_SPLITHOR) split_vertical(ed);
                 else if (act == BA_REQ_JMPBUF)   jump_buffer(ed);
-                else if (act ==BA_REQ_COMPILE)   compile(ed);
+                else if (act == BA_REQ_COMPILE)  compile(ed);
 
                 ww_display_monitors(ed, act);
         }

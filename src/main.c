@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 static void
 run(const char *path)
@@ -32,6 +33,8 @@ run(const char *path)
 static int
 init(void)
 {
+        glconf.runtime.compile = strdup("make");
+
         if (!get_terminal_xy(&glconf.term.w, &glconf.term.h))
                 return 0;
         if (!enable_raw_terminal(STDIN_FILENO, &glconf.term.termios))

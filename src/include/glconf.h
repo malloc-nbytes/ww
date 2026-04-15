@@ -11,7 +11,7 @@ extern struct {
                 struct termios termios;
         } term;
         struct {
-                const char *compile;
+                char *compile;
         } runtime;
 } glconf;
 
