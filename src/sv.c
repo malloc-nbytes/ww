@@ -14,10 +14,10 @@ sv_from(const char *s, ssize_t len)
         };
 }
 
-#define BUF_CAP 1024
 const char *
 sv_cstr(sv view)
 {
+#define BUF_CAP 1024
         assert(view.len <= BUF_CAP);
 
         static char buf[BUF_CAP+1];
@@ -27,5 +27,5 @@ sv_cstr(sv view)
                 fatal("failed to copy string: %s", strerror(errno));
 
         return buf;
-}
 #undef BUF_CAP
+}

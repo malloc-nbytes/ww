@@ -75,12 +75,13 @@ buffer *buffer_from(str       name,
                     linep_ar  lns,
                     ww       *parent);
 
-void          buffer_draw(const buffer *b);
-void          buffer_drawxy(const buffer *b);
-buffer_action buffer_process(buffer *b);
-void          buffer_make_readonly(buffer *b);
-buffer_action buffer_save(buffer *b);
-buffer_action buffer_adjust_scroll(buffer *b);
-void          buffer_make_builtin(buffer *b);
+void           buffer_draw(const buffer *b);
+void           buffer_drawxy(const buffer *b);
+buffer_action  buffer_process(buffer *b);
+void           buffer_make_readonly(buffer *b);
+buffer_action  buffer_save(buffer *b);
+buffer_action  buffer_adjust_scroll(buffer *b);
+void           buffer_make_builtin(buffer *b);
+buffer        *ww_helpbuf_alloc(unsigned w, unsigned h, unsigned ws, unsigned hs, ww *parent);
 
 #endif // BUFFER_H_INCLUDED

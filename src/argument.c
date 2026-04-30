@@ -101,8 +101,8 @@ parse_args(int argc, char *argv[])
                 it = it->n;
         }
 
-        if (!filename)
-                filename = strdup(get_realpath("."));
+        /* if (!filename) */
+        /*         filename = strdup(get_realpath(".")); */
 
         return filename;
 }

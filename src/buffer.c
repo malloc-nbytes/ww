@@ -7,6 +7,7 @@
 #include "minibuffer.h"
 #include "io.h"
 #include "pair.h"
+#include "helpbuf.h"
 #include "flags.h"
 
 #include <assert.h>
@@ -46,6 +47,26 @@ void
 buffer_make_builtin(buffer *b)
 {
         b->builtin = 1;
+}
+
+buffer *
+ww_helpbuf_alloc(unsigned  w,
+                 unsigned  h,
+                 unsigned  ws,
+                 unsigned  hs,
+                 ww       *parent)
+{
+        buffer *b;
+
+        b = buffer_from(str_from("ww-help"),
+                        str_from("ww-help"),
+                        w, h, ws, hs, lines_from(HELP_DEF CONTROLS_DEF),
+                        parent);
+
+        buffer_make_readonly(b);
+        buffer_make_builtin(b);
+
+        return b;
 }
 
 buffer *

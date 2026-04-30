@@ -19,11 +19,16 @@ run(const char *path)
 
         ed = ww_create();
 
-        ww_add_buffer(&ed, buffer_from(str_from(get_basename(path)),
-                                       str_from(path),
-                                       (unsigned)glconf.term.w, (unsigned)glconf.term.h,
-                                       0, 0,
-                                       lines_from(load_file(path)), &ed));
+        if (path) {
+                ww_add_buffer(&ed, buffer_from(str_from(get_basename(path)),
+                                               str_from(path),
+                                               (unsigned)glconf.term.w, (unsigned)glconf.term.h,
+                                               0, 0,
+                                               lines_from(load_file(path)), &ed));
+        } else {
+                ww_add_buffer(&ed, ww_helpbuf_alloc((unsigned)glconf.term.w,
+                                                    (unsigned)glconf.term.h, 0, 0, &ed));
+        }
 
         ww_make_buffer_primary(&ed, 0);
 
@@ -60,7 +65,7 @@ main(int argc, char *argv[])
 
         path = parse_args(argc, argv);
 
-        assert(!is_dir(path));
+        /* assert(!is_dir(path)); */
 
         if (!init())
                 fatal("init");
