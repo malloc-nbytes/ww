@@ -4,6 +4,7 @@
 #include "buffer.h"
 #include "io.h"
 #include "minibuffer.h"
+#include "flags.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -593,7 +594,7 @@ compile(ww *ed)
 static void
 toggle_spacemode(void)
 {
-        glconf.runtime.spacemode = !glconf.runtime.spacemode;
+        glconf.flags ^= FK_TABMODE;
 }
 
 static void

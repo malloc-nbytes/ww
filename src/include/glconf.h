@@ -12,9 +12,9 @@ extern struct {
         } term;
         struct {
                 char *compile;
-                int   spacemode;
                 int   space_amt;
         } runtime;
+        uint32_t flags;
 } glconf;
 
 #endif // GLCONF_H_INCLUDED

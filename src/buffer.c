@@ -7,6 +7,7 @@
 #include "minibuffer.h"
 #include "io.h"
 #include "pair.h"
+#include "flags.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -81,6 +82,7 @@ buffer_from(str      name,
         b->writable    = 1;
         b->last_search = str_create();
         b->parent      = parent;
+        b->last_tab    = 0;
 
         return b;
 }
@@ -852,23 +854,15 @@ backspace(buffer *b)
                 return 1;
         }
 
-        /*if (b->last_tab > 0 && (glconf.flags & FT_TABMODE) == 0) {
+        if (((glconf.flags & FK_TABMODE) == 0) && b->last_tab > 0) {
                 --b->last_tab;
-                for (size_t i = 0; i < (size_t)glconf.defaults.space_amt; ++i) {
-                        buffer_left(b);
-                        str_rm(&ln->s, b->cx);
-                        if (b->cx > str_len(&ln->s)-1)
-                                b->cx = str_len(&ln->s)-1;
+                for (size_t i = 0; i < /*(size_t)glconf.defaults.space_amt*/8; ++i) {
+                        left(b);
+                        str_rm(&ln->txt, b->cx);
+                        if (b->cx > str_len(&ln->txt)-1)
+                                b->cx = (unsigned)str_len(&ln->txt)-1;
                 }
         } else {
-                buffer_left(b);
-                str_rm(&ln->s, b->cx);
-                if (b->cx > str_len(&ln->s)-1)
-                        b->cx = str_len(&ln->s)-1;
-        }*/
-
-        // TODO: remove this
-        {
                 left(b);
                 str_rm(&ln->txt, b->cx);
                 if (b->cx > str_len(&ln->txt)-1)
@@ -878,7 +872,6 @@ backspace(buffer *b)
         //add_to_popxy(b);
         return (buffer_adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
 }
-
 
 static buffer_action
 delete_until_eol(buffer *b)
@@ -1064,7 +1057,7 @@ super_backspace(buffer *b)
         str_remove_range(&ln->txt, start, b->cx - start);
 
         b->cx       = (unsigned)start;
-        //b->last_tab = 0;
+        b->last_tab = 0;
 
         //add_to_popxy(b);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
@@ -1421,9 +1414,13 @@ handle_normal_input_while_builtin(buffer *b, char ch)
 static buffer_action
 tab(buffer *b)
 {
-        buffer_action ba = BA_NOP;
+        buffer_action ba;
 
-        if (!glconf.runtime.spacemode)
+        ba = BA_NOP;
+
+        ++b->last_tab;
+
+        if (glconf.flags & FK_TABMODE)
                 return insert_char(b, '\t', 1);
 
         for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
@@ -1447,6 +1444,9 @@ buffer_process(buffer *b)
 
         switch (ty = get_input(&ch)) {
         case INPUT_TYPE_NORMAL: {
+                if (!BACKSPACE(ch))
+                        b->last_tab = 0;
+
                 if (b->builtin) {
                         buffer_action ba;
 
@@ -1461,6 +1461,9 @@ buffer_process(buffer *b)
                 else                    return insert_char(b, ch, 1);
         } break;
         case INPUT_TYPE_CTRL: {
+                if (ch != 9)
+                        b->last_tab = 0;
+
                 if (ch == CTRL_N)      return down(b);
                 else if (ch == 9)      return tab(b);
                 else if (ch == CTRL_P) return up(b);
@@ -1491,6 +1494,7 @@ buffer_process(buffer *b)
                 }
         } break;
         case INPUT_TYPE_ALT: {
+                b->last_tab = 0;
                 if (ch == 'f')          return jump_next_word(b);
                 else if (ch == 'b')     return jump_prev_word(b);
                 else if (ch == 'd')     return del_word(b);

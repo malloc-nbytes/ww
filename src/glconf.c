@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 #include <termios.h>
 
 struct {
@@ -9,9 +10,9 @@ struct {
         } term;
         struct {
                 const char *compile;
-                int         spacemode;
                 int         space_amt;
         } runtime;
+        uint32_t flags;
 } glconf = {
         .term = {
                 .w       = 0,
@@ -20,7 +21,7 @@ struct {
         },
         .runtime = {
                 .compile   = NULL,
-                .spacemode = 1,
                 .space_amt = 8,
         },
+        .flags = 0x0000,
 };

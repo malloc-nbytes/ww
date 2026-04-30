@@ -60,6 +60,7 @@ typedef struct {
         int          writable; // is buffer writable
         str          last_search; // last search query
         ww          *parent;
+        int          last_tab; // was the last character a tab
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);
