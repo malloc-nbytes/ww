@@ -328,7 +328,7 @@ adjust_cursor(buffer *b)
 static unsigned
 get_win_hight(const buffer *b)
 {
-        return b->size.h > 0 ? b->size.h - 1 : 0;
+        return b->size.h > 0 ? b->size.h - 1 - b->size.hs : 0;
 }
 
 static unsigned
@@ -1382,13 +1382,15 @@ ctrlx(buffer *b)
                 if (ch == 'b')
                         return BA_REQ_SWITCHBUFFER;
                 if (ch == '/')
-                        return BA_REQ_SPLITHOR;
+                        return BA_REQ_SPLITVER;
                 if (ch == 'o')
                         return BA_REQ_JMPBUF;
                 if (ch == 'm')
                         return BA_REQ_MAXIMIZEMON;
                 if (ch == 'x')
                         return BA_REQ_COMPILE;
+                if (ch == '-')
+                        return BA_REQ_SPLITHOR;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)
@@ -1414,6 +1416,24 @@ handle_normal_input_while_builtin(buffer *b, char ch)
                 return BA_REQ_CLOSE_BUILTIN;
 
         return BA_NONE;
+}
+
+static buffer_action
+tab(buffer *b)
+{
+        buffer_action ba = BA_NOP;
+
+        if (!glconf.runtime.spacemode)
+                return insert_char(b, '\t', 1);
+
+        for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
+                if (ba == BA_REDRAW)
+                        insert_char(b, ' ', 1);
+                else
+                        ba = insert_char(b, ' ', 1);
+        }
+
+        return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 // entrypoint
@@ -1442,6 +1462,7 @@ buffer_process(buffer *b)
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_N)      return down(b);
+                else if (ch == 9)      return tab(b);
                 else if (ch == CTRL_P) return up(b);
                 else if (ch == CTRL_F) return right(b);
                 else if (ch == CTRL_B) return left(b);
@@ -1507,7 +1528,7 @@ draw_status(const buffer *b,
 
         len = 0;
 
-        gotoxy(0, b->size.h);
+        gotoxy(0, (unsigned)glconf.term.h);
 
         printf(INVERT);
 

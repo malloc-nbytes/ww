@@ -276,14 +276,15 @@ draw_monitor_based_on_action(ww            *ed,
                              size_t         idx)
 {
         if (ba == BA_REDRAW
-            || ba == BA_REQ_SPLITHOR
+            || ba == BA_REQ_SPLITVER
             || ba == BA_REQ_JMPBUF
             || ba == BA_REQ_SWITCHBUFFER
             || ba == BA_REQ_FINDFILE
             || ba == BA_REQ_MAXIMIZEMON
             || ba == BA_REQ_COMPILE
             || ba == BA_REQ_RECOMPILE
-            || ba == BA_REQ_CLOSE_BUILTIN)
+            || ba == BA_REQ_CLOSE_BUILTIN
+            || ba == BA_REQ_SPLITHOR)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -305,6 +306,13 @@ ww_display_monitors(ww *ed, buffer_action ba)
                 ed->monitors[0]->size.w  /= 2;
                 ed->monitors[1]->size.w  /= 2;
                 ed->monitors[1]->size.ws  = (unsigned)glconf.term.w/2;
+        }
+
+        if (ed->monitors[2]) {
+                ed->monitors[2]->size.hs = (unsigned)glconf.term.h/2;
+                ed->monitors[0]->size.h /= 2;
+                if (ed->monitors[1])
+                        ed->monitors[1]->size.h /= 2;
         }
 
         if (ba == BA_NOP)
@@ -356,10 +364,43 @@ split_vertical(ww *ed)
 }
 
 static void
+split_horizontal(ww *ed)
+{
+        if (ed->buffers.len <= 1)
+                return;
+
+        buffer *b = NULL;
+
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                b = ed->buffers.data[i];
+
+                for (size_t j = 0; j < 4; ++j) {
+                        if (!ed->monitors[j])
+                                continue;
+                        if (!strcmp(ed->monitors[j]->name.chars,
+                                    ed->buffers.data[i]->name.chars)) {
+                                b = NULL;
+                                break;
+                        }
+                }
+
+                if (b)
+                        break;
+        }
+
+        if (!b)
+                return;
+
+        ed->monitors[2] = b;
+        ed->am          = 2;
+}
+
+static void
 jump_buffer(ww *ed)
 {
         do {
-                ed->am = (uint8_t)(ed->am+1) % 4;
+                ed->am = (uint8_t)(ed->am + 1)
+                        % (sizeof(ed->monitors)/sizeof(*ed->monitors));
         } while (!ed->monitors[ed->am]);
 }
 
@@ -550,6 +591,12 @@ compile(ww *ed)
 }
 
 static void
+toggle_spacemode(void)
+{
+        glconf.runtime.spacemode = !glconf.runtime.spacemode;
+}
+
+static void
 metax(ww *ed)
 {
         char *inp;
@@ -569,6 +616,8 @@ metax(ww *ed)
                 find_file(ed);
         else if (!strcmp(inp, WW_CMD_COMPILE))
                 compile(ed);
+        else if (!strcmp(inp, WW_CMD_TOGGLE_SPACEMODE))
+                toggle_spacemode();
 
         free(inp);
         array_free(cmds);
@@ -606,11 +655,12 @@ ww_run(ww *ed)
                         metax(ed);
                         buffer_draw(ed->monitors[ed->am]);
                 }
-                else if (act == BA_REQ_SPLITHOR)      split_vertical(ed);
+                else if (act == BA_REQ_SPLITVER)      split_vertical(ed);
                 else if (act == BA_REQ_JMPBUF)        jump_buffer(ed);
                 else if (act == BA_REQ_COMPILE)       compile(ed);
                 else if (act == BA_REQ_RECOMPILE)     do_compilation(ed);
                 else if (act == BA_REQ_CLOSE_BUILTIN) close_builtin(ed);
+                else if (act == BA_REQ_SPLITHOR)      split_horizontal(ed);
 
                 ww_display_monitors(ed, act);
         }

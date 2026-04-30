@@ -19,13 +19,14 @@ typedef enum {
         BA_REQ_EXIT,
         BA_REQ_FINDFILE,
         BA_REQ_SWITCHBUFFER,
-        BA_REQ_SPLITHOR,
+        BA_REQ_SPLITVER,
         BA_REQ_JMPBUF,
         BA_REQ_METAX,
         BA_REQ_MAXIMIZEMON,
         BA_REQ_COMPILE,
         BA_REQ_RECOMPILE,
         BA_REQ_CLOSE_BUILTIN,
+        BA_REQ_SPLITHOR,
 } buffer_action;
 
 typedef enum {

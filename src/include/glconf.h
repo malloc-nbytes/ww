@@ -6,12 +6,14 @@
 
 extern struct {
         struct {
-                size_t w;
-                size_t h;
+                size_t         w;
+                size_t         h;
                 struct termios termios;
         } term;
         struct {
                 char *compile;
+                int   spacemode;
+                int   space_amt;
         } runtime;
 } glconf;
 

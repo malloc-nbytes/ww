@@ -6,14 +6,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define WW_CMD_SAVE      "save-file"
-#define WW_CMD_FIND_FILE "find-file"
-#define WW_CMD_COMPILE   "compile"
+#define WW_CMD_SAVE             "save-file"
+#define WW_CMD_FIND_FILE        "find-file"
+#define WW_CMD_COMPILE          "compile"
+#define WW_CMD_TOGGLE_SPACEMODE "toggle-spacemode"
 
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
         WW_CMD_FIND_FILE, \
         WW_CMD_COMPILE, \
+        WW_CMD_TOGGLE_SPACEMODE, \
 }
 
 typedef struct ww {
