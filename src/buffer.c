@@ -510,6 +510,8 @@ up(buffer *b)
                 --b->al;
                 const str *news = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
+                if (desired < b->wish_col)
+                        b->cx = b->wish_col;
         }
 
         if (b->cx > b->lines.data[b->al]->txt.len-1)
@@ -529,6 +531,9 @@ down(buffer *b)
                 ++b->al;
                 const str *news = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
+                if (desired < b->wish_col)
+                        b->cx = b->wish_col;
+
         }
 
         if (b->cx > b->lines.data[b->al]->txt.len-1)
@@ -545,12 +550,12 @@ right(buffer *b)
 
         if (b->cx < str_len(s)-1) {
                 ++b->cx;
-                b->wish_col = b->cx;
         } else if (b->cy < b->lines.len-1) {
                 ++b->cy;
                 ++b->al;
                 b->cx = 0;
         }
+        b->wish_col = b->cx;
 
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
@@ -561,13 +566,13 @@ left(buffer *b)
 {
         if (b->cx > 0) {
                 --b->cx;
-                b->wish_col = b->cx;
         } else if (b->cy > 0) {
                 --b->cy;
                 --b->al;
                 str *prev = &b->lines.data[b->al]->txt;
                 b->cx = (unsigned)str_len(prev)-1;
         }
+        b->wish_col = b->cx;
 
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
@@ -577,6 +582,7 @@ static buffer_action
 bol(buffer *b)
 {
         b->cx = 0;
+        b->wish_col = 0;
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
@@ -586,6 +592,7 @@ eol(buffer *b)
 {
         str *s = &b->lines.data[b->al]->txt;
         b->cx = (unsigned)str_len(s)-1;
+        b->wish_col = (unsigned)str_len(s)-1;
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
 }
