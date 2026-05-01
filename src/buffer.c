@@ -1416,6 +1416,8 @@ buffer_save(buffer *b)
 
         b->saved = 1;
         draw_status(b, "saved");
+        fflush(stdout);
+        //return BA_XY;
         return BA_NOP;
 }
 
@@ -1593,7 +1595,7 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s B:%d",
+        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s Monitor:%d",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,

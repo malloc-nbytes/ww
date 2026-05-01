@@ -264,7 +264,7 @@ ww_clear_monitors(ww *ed)
 void
 ww_make_buffer_primary(ww *ed, size_t idx)
 {
-        assert(idx < 4);
+        //assert(idx < 4);
 
         ww_clear_monitors(ed);
         ed->monitors[0] = ed->buffers.data[idx];
@@ -276,6 +276,9 @@ draw_monitor_based_on_action(ww            *ed,
                              buffer_action  ba,
                              size_t         idx)
 {
+        if (!ed->monitors[idx])
+                return;
+
         if (ba == BA_REDRAW
             || ba == BA_REQ_SPLITVER
             || ba == BA_REQ_JMPBUF
@@ -631,12 +634,53 @@ close_builtin(ww *ed)
         ed->monitors[ed->am] = ed->buffers.data[0];
 }
 
+static buffer *
+get_random_nonopen_buffer(ww *ed)
+{
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                const char *name  = ed->buffers.data[i]->name.chars;
+                int         found = 0;
+                for (int j = 0; j < 4; ++j) {
+                        if (ed->monitors[j] && !strcmp(name, ed->monitors[j]->name.chars)) {
+                                found = 1;
+                                break;
+                        }
+                }
+
+                if (!found) {
+                        return ed->buffers.data[i];
+                }
+        }
+
+        return NULL;
+}
+
 static void
 kill_current_buffer(ww *ed)
 {
+        size_t idx;
+        buffer *b;
+
+        idx = (size_t)get_buffer_by_path(ed, ed->monitors[ed->am]->path.chars);
+
+        array_rm_at(ed->buffers, idx);
+
+        if (ed->buffers.len == 0) {
+                buffer_free(ed->monitors[ed->am]);
+                ed->monitors[ed->am] = NULL;
+                return;
+        }
+
+        if (!(b = get_random_nonopen_buffer(ed))) {
+                idx = (size_t)get_buffer_by_path(ed, ed->monitors[0]->path.chars);
+                buffer_free(ed->monitors[ed->am]);
+                ed->monitors[ed->am] = NULL;
+                ww_make_buffer_primary(ed, idx);
+                return;
+        }
+
         buffer_free(ed->monitors[ed->am]);
-        ed->monitors[ed->am] = NULL;
-        jump_buffer(ed);
+        ed->monitors[ed->am] = b;
 }
 
 void
