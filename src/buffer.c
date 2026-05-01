@@ -918,7 +918,7 @@ backspace(buffer *b)
 
         if (((glconf.flags & FK_TABMODE) == 0) && b->last_tab > 0) {
                 --b->last_tab;
-                for (size_t i = 0; i < /*(size_t)glconf.defaults.space_amt*/8; ++i) {
+                for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
                         left(b);
                         str_rm(&ln->txt, b->cx);
                         if (b->cx > str_len(&ln->txt)-1)
@@ -1496,6 +1496,15 @@ tab(buffer *b)
         return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
+static buffer_action
+jmp_and_highlight_forward(buffer *b)
+{
+        if (b->state != BS_SELECTION)
+                selection(b);
+        jump_next_word(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -1578,6 +1587,7 @@ buffer_process(buffer *b)
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
                 else if (ch == 'x')     return BA_REQ_METAX;
+                else if (ch == '.')     return jmp_and_highlight_forward(b);
         } break;
         default: break;
         }

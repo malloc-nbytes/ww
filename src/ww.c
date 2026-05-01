@@ -5,6 +5,7 @@
 #include "io.h"
 #include "minibuffer.h"
 #include "flags.h"
+#include "utils.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -587,7 +588,7 @@ compile(ww *ed)
 {
         char *input_raw = minibuffer_input(ed, "compile", array_empty(cstr_ar));
 
-        if (!input_raw)
+        if (!input_raw || strlen(input_raw) == 0)
                 return;
 
         glconf.runtime.compile = strdup(input_raw);
@@ -599,6 +600,31 @@ static void
 toggle_spacemode(void)
 {
         glconf.flags ^= FK_TABMODE;
+}
+
+static void
+set_spaceamt(ww *ed)
+{
+        cstr_ar items;
+
+        items = array_empty(cstr_ar);
+
+        array_append(items, "1");
+        array_append(items, "2");
+        array_append(items, "4");
+        array_append(items, "8");
+
+        char *input = minibuffer_input(ed, "space-amt", items);
+
+        if (!input || strlen(input) == 0)
+                goto cleanup;
+        if (!cstr_isdigit(input))
+                goto cleanup;
+
+        glconf.runtime.space_amt = atoi(input);
+
+cleanup:
+        array_free(items);
 }
 
 static void
@@ -623,6 +649,8 @@ metax(ww *ed)
                 compile(ed);
         else if (!strcmp(inp, WW_CMD_TOGGLE_SPACEMODE))
                 toggle_spacemode();
+        else if (!strcmp(inp, WW_CMD_SPACEAMT))
+                set_spaceamt(ed);
 
         free(inp);
         array_free(cmds);
