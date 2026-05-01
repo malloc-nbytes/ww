@@ -27,6 +27,7 @@ typedef enum {
         BA_REQ_RECOMPILE,
         BA_REQ_CLOSE_BUILTIN,
         BA_REQ_SPLITHOR,
+        BA_REQ_KILLBUF,
 } buffer_action;
 
 typedef enum {
@@ -83,5 +84,6 @@ buffer_action  buffer_save(buffer *b);
 buffer_action  buffer_adjust_scroll(buffer *b);
 void           buffer_make_builtin(buffer *b);
 buffer        *ww_helpbuf_alloc(unsigned w, unsigned h, unsigned ws, unsigned hs, ww *parent);
+void           buffer_free(buffer *b);
 
 #endif // BUFFER_H_INCLUDED

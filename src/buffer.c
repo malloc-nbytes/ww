@@ -44,6 +44,16 @@ center_view(buffer *b);
 char_ar g_cpy_buf = {0};
 
 void
+buffer_free(buffer *b)
+{
+        str_destroy(&b->name);
+        str_destroy(&b->path);
+        str_destroy(&b->last_search);
+
+        free(b);
+}
+
+void
 buffer_make_builtin(buffer *b)
 {
         b->builtin = 1;
@@ -411,59 +421,83 @@ del_selection(buffer *b)
         if (b->state != BS_SELECTION)
                 return BA_NOP;
 
-        size_t start_line, start_col, end_line, end_col;
+        size_t anchor_y = (size_t)b->sy;
+        size_t anchor_x = (size_t)b->sx;
+        size_t cursor_y = b->al;
+        size_t cursor_x = b->cx;
 
-        // determine absolute selection bounds
-        if (b->sy < b->al || (b->sy == b->al && b->sx <= b->cx)) {
-                start_line = b->sy;
-                start_col  = b->sx;
-                end_line   = b->al;
-                end_col    = b->cx;
-        } else {
-                start_line = b->al;
-                start_col  = b->cx;
-                end_line   = b->sy;
-                end_col    = b->sx;
-        }
+        // normalize
+        int forward = (anchor_y < cursor_y) ||
+                (anchor_y == cursor_y && anchor_x <= cursor_x);
 
-        // single-line selection
-        if (start_line == end_line) {
-                str_remove_range(&b->lines.data[start_line]->txt, start_col, end_col - start_col);
-        } else {
-                // remove part from the first line
-                str_remove_range(&b->lines.data[start_line]->txt, start_col,
-                                 b->lines.data[start_line]->txt.len - start_col);
+        size_t start_y = forward ? anchor_y : cursor_y;
+        size_t end_y   = forward ? cursor_y : anchor_y;
+        size_t start_x = forward ? anchor_x : cursor_x;
+        size_t end_x   = forward ? cursor_x : anchor_x;
 
-                // remove part from the last line
-                str_remove_range(&b->lines.data[end_line]->txt, 0, end_col);
-
-                // merge lines: append remaining last line to first line
-                str_concat(&b->lines.data[start_line]->txt,
-                           b->lines.data[end_line]->txt.chars);
-
-                // Remove all lines between start_line + 1 and end_line
-                for (size_t i = start_line + 1; i <= end_line; ++i) {
-                        str_destroy(&b->lines.data[i]->txt);
-                        array_rm_at(b->lines, start_line + 1);
-                }
-        }
-
-        // move cursor to start of selection
-        b->al = start_line;
-        b->cy = (unsigned)start_line;
-        b->cx = (unsigned)start_col;
-
-        b->sx    = 0;
-        b->sy    = 0;
-        b->state = BS_NORMAL;
+        if (start_y >= b->lines.len || end_y >= b->lines.len)
+                goto cleanup;
 
         b->saved = 0;
 
-        adjust_cursor(b);
+        if (start_y == end_y) {
+                // single-line deletion
+                line *ln = b->lines.data[start_y];
+
+                size_t remove_count = end_x - start_x;
+                for (size_t i = 0; i < remove_count; ++i)
+                        str_rm(&ln->txt, start_x);
+
+                b->cx = (unsigned)start_x;
+                b->al = (unsigned)start_y;
+                b->cy = (unsigned)start_y;
+        } else {
+                // multi-line deletion
+
+                // first line
+                {
+                        line *first = b->lines.data[start_y];
+                        size_t len_first = str_len(&first->txt);
+                        if (start_x < len_first) {
+                                while (str_len(&first->txt) > start_x)
+                                        str_rm(&first->txt, start_x);
+                        }
+                }
+
+                // last line
+                {
+                        line *last = b->lines.data[end_y];
+                        for (size_t i = 0; i < end_x; ++i)
+                                str_rm(&last->txt, 0);
+                }
+
+                // delete all middle lines
+                size_t lines_to_remove = end_y - start_y - 1;
+                for (size_t i = 0; i < lines_to_remove; ++i) {
+                        line_free(b->lines.data[start_y + 1]);
+                        array_rm_at(b->lines, start_y + 1);
+                }
+
+                // join the first and last lines
+                line *first = b->lines.data[start_y];
+                line *last  = b->lines.data[start_y + 1];
+
+                str_concat(&first->txt, str_cstr(&last->txt));
+                line_free(last);
+                array_rm_at(b->lines, start_y + 1);
+
+                // place cursor at the join point
+                b->cx = (unsigned)start_x;
+                b->al = (unsigned)start_y;
+                b->cy = (unsigned)start_y;
+        }
+
+ cleanup:
+        b->wish_col = b->cx;
+        b->state    = BS_NORMAL;
+
         buffer_adjust_scroll(b);
         return BA_REDRAW;
-        //return adjust_scroll(b) == BA_REDRAW
-        //        ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -939,7 +973,7 @@ jump_to_first_char(buffer *b)
         b->wish_col = b->cx;
 
         adjust_cursor(b);
-        return buffer_adjust_scroll(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1405,6 +1439,8 @@ ctrlx(buffer *b)
                         return BA_REQ_COMPILE;
                 if (ch == '-')
                         return BA_REQ_SPLITHOR;
+                if (ch == 'k')
+                        return BA_REQ_KILLBUF;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)

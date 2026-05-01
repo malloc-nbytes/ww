@@ -285,7 +285,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_COMPILE
             || ba == BA_REQ_RECOMPILE
             || ba == BA_REQ_CLOSE_BUILTIN
-            || ba == BA_REQ_SPLITHOR)
+            || ba == BA_REQ_SPLITHOR
+            || ba == BA_REQ_KILLBUF)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -630,6 +631,14 @@ close_builtin(ww *ed)
         ed->monitors[ed->am] = ed->buffers.data[0];
 }
 
+static void
+kill_current_buffer(ww *ed)
+{
+        buffer_free(ed->monitors[ed->am]);
+        ed->monitors[ed->am] = NULL;
+        jump_buffer(ed);
+}
+
 void
 ww_run(ww *ed)
 {
@@ -640,7 +649,7 @@ ww_run(ww *ed)
         gotoxy(0, 0);
         fflush(stdout);
 
-        while (1) {
+        while (ed->monitors[0]) {
                 assert(ed->am < 4);
 
                 buffer *b = ed->monitors[ed->am];
@@ -662,6 +671,7 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_RECOMPILE)     do_compilation(ed);
                 else if (act == BA_REQ_CLOSE_BUILTIN) close_builtin(ed);
                 else if (act == BA_REQ_SPLITHOR)      split_horizontal(ed);
+                else if (act == BA_REQ_KILLBUF)       kill_current_buffer(ed);
 
                 ww_display_monitors(ed, act);
         }
