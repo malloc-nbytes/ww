@@ -906,7 +906,7 @@ backspace(buffer *b)
                 --b->cy;
 
                 buffer_adjust_scroll(b);
-                return 1;
+                return BA_REDRAW;
         }
 
         if (((glconf.flags & FK_TABMODE) == 0) && b->last_tab > 0) {
@@ -1664,17 +1664,30 @@ line_selection_range(const buffer *b,
         return 1;
 }
 
+static ssize_t
+find_trailing_whitespace_start(const str *s)
+{
+        if (s->len == 0)
+                return -1;
+        if (s->len <= 1 || !isspace(s->chars[s->len-2]))
+                return -1;
+        for (int i = (int)s->len-1; i >= 0; --i) {
+                if (!isspace(s->chars[i]))
+                        return (ssize_t)i;
+        }
+        return 0;
+}
+
 static void
 drawln(const buffer *b, size_t idx)
 {
         if (idx < b->voff || idx >= b->voff + get_win_hight(b))
                 return;
-
-        const line *ln    = b->lines.data[idx];
-        const str  *s     = &ln->txt;
-        unsigned    y     = b->size.hs + (unsigned)(idx - b->voff);
-        unsigned    win_w = get_win_width(b);
-        unsigned    tabw  = TAB_WIDTH;
+        const line *ln = b->lines.data[idx];
+        const str *s = &ln->txt;
+        unsigned y = b->size.hs + (unsigned)(idx - b->voff);
+        unsigned win_w = get_win_width(b);
+        unsigned tabw = TAB_WIDTH;
 
         // clear line
         gotoxy(b->size.ws, y);
@@ -1685,7 +1698,6 @@ drawln(const buffer *b, size_t idx)
                 return;
 
         gotoxy(b->size.ws, y);
-
         unsigned screen_col = 0;
         size_t char_i = 0;
 
@@ -1695,48 +1707,42 @@ drawln(const buffer *b, size_t idx)
         }
 
         // determine selection range on this line
-        size_t sel_start          = 0, sel_end = 0;
-        int    cursor_on_line     = ((size_t)b->cy == idx);
-        int    line_has_selection = line_selection_range(b, idx, s->len, &sel_start, &sel_end);
-
+        size_t sel_start = 0, sel_end = 0;
+        int cursor_on_line = ((size_t)b->cy == idx);
+        int line_has_selection = line_selection_range(b, idx, s->len, &sel_start, &sel_end);
         int_ar search_matches = {0};
-        size_t qlen           = str_len(&b->last_search);
-        size_t match_idx      = 0;
+        size_t qlen = str_len(&b->last_search);
+        size_t match_idx = 0;
 
         if (b->state == BS_SEARCH)
                 search_matches = find_line_matches(b, s);
 
+        ssize_t whitespace_start = find_trailing_whitespace_start(s);
+
         // draw visible part
         while (char_i < s->len && screen_col < win_w) {
-                //unsigned col_start = screen_col;
                 char c = s->chars[char_i];
-
                 int in_search = 0;
                 int in_cursor_match = 0;
 
                 if (b->state == BS_SEARCH && search_matches.len > 0) {
                         if (match_idx < search_matches.len) {
                                 int mstart = search_matches.data[match_idx];
-                                int mend   = mstart + (int)qlen;
-
+                                int mend = mstart + (int)qlen;
                                 if ((int)char_i >= mstart && (int)char_i < mend) {
                                         in_search = 1;
-
-                                        if (cursor_on_line &&
-                                            (int)b->cx >= mstart &&
-                                            (int)b->cx < mend) {
+                                        if (cursor_on_line && (int)b->cx >= mstart && (int)b->cx < mend) {
                                                 in_cursor_match = 1;
                                         }
-
                                 } else if ((int)char_i >= mend) {
                                         ++match_idx;
                                 }
                         }
                 }
 
-                int in_selection = line_has_selection &&
-                        char_i >= sel_start && char_i < sel_end;
+                int in_selection = line_has_selection && char_i >= sel_start && char_i < sel_end;
 
+                // Handle tab character
                 if (c == '\t') {
                         unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
                         for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
@@ -1747,25 +1753,40 @@ drawln(const buffer *b, size_t idx)
                                 } else if (in_search) {
                                         printf(INVERT YELLOW BOLD " " RESET);
                                 } else {
-                                        putchar(' ');
+                                        if (/*b->show_trailing_whitespace && */t == 0)
+                                                printf(GRAY ">" RESET);
+                                        else
+                                                putchar(' ');
                                 }
                                 ++screen_col;
                         }
                 } else {
-                        if (in_selection) {
-                                printf(INVERT YELLOW BOLD "%c" RESET, c);
-                        } else if (in_cursor_match) {
-                                printf(INVERT ORANGE BOLD "%c" RESET, c);
-                        } else if (in_search) {
-                                printf(INVERT YELLOW BOLD "%c" RESET, c);
+                        int is_trailing_whitespace =
+                                (whitespace_start != -1)
+                                && (c != '\n')
+                                && (((size_t)whitespace_start < char_i)
+                                    || ((size_t)whitespace_start == 0
+                                    && (size_t)whitespace_start <= char_i));
+
+                        if (/*b->show_trailing_whitespace && */is_trailing_whitespace && !in_selection) {
+                                printf(GRAY "-" RESET);
                         } else {
-                                putchar(c);
+                                if (in_selection) {
+                                        printf(INVERT YELLOW BOLD "%c" RESET, c);
+                                } else if (in_cursor_match) {
+                                        printf(INVERT ORANGE BOLD "%c" RESET, c);
+                                } else if (in_search) {
+                                        printf(INVERT YELLOW BOLD "%c" RESET, c);
+                                } else {
+                                        putchar(c);
+                                }
                         }
                         ++screen_col;
                 }
                 ++char_i;
         }
 
+        // Clean up search matches
         if (search_matches.data)
                 array_free(search_matches);
 }
