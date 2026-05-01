@@ -19,13 +19,19 @@ run(const char *path)
 
         ed = ww_create();
 
-        if (path) {
+        if (path && !is_dir(path)) {
                 ww_add_buffer(&ed, buffer_from(str_from(get_basename(path)),
                                                str_from(path),
                                                (unsigned)glconf.term.w, (unsigned)glconf.term.h,
                                                0, 0,
                                                lines_from(load_file(path)), &ed));
         } else {
+                if (path) {
+                        if (chdir(path) != 0) {
+                                perror("chdir");
+                                fatal("aborting");
+                        }
+                }
                 ww_add_buffer(&ed, ww_helpbuf_alloc((unsigned)glconf.term.w,
                                                     (unsigned)glconf.term.h, 0, 0, &ed));
         }

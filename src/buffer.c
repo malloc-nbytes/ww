@@ -979,7 +979,7 @@ jump_to_first_char(buffer *b)
 static buffer_action
 center_view(buffer *b)
 {
-        int rows = (int)b->size.h;
+        int rows = (int)get_win_hight(b);
         int vertical_offset = (int)b->cy - (rows/2);
         if (vertical_offset < 0)
                 vertical_offset = 0;
@@ -1415,10 +1415,7 @@ buffer_save(buffer *b)
         }
 
         b->saved = 1;
-        draw_status(b, "saved");
-        fflush(stdout);
-        //return BA_XY;
-        return BA_NOP;
+        return BA_XY;
 }
 
 static buffer_action
@@ -1611,7 +1608,7 @@ draw_status(const buffer *b,
                 len += strlen(buf);
         }
 
-        for (size_t i = len; i < b->size.w; ++i)
+        for (size_t i = len; i < glconf.term.w; ++i)
                 putchar(' ');
 
         printf(RESET);
