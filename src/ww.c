@@ -295,7 +295,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_RECOMPILE
             || ba == BA_REQ_CLOSE_BUILTIN
             || ba == BA_REQ_SPLITHOR
-            || ba == BA_REQ_KILLBUF)
+            || ba == BA_REQ_KILLBUF
+            || ba == BA_REQ_SWITCHCOMPL)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -599,6 +600,7 @@ compile(ww *ed)
         glconf.runtime.compile = strdup(input_raw);
 
         do_compilation(ed);
+        sort_buffers(ed);
 }
 
 static void
@@ -674,6 +676,7 @@ get_random_nonopen_buffer(ww *ed)
         for (size_t i = 0; i < ed->buffers.len; ++i) {
                 const char *name  = ed->buffers.data[i]->name.chars;
                 int         found = 0;
+
                 for (int j = 0; j < 4; ++j) {
                         if (ed->monitors[j] && !strcmp(name, ed->monitors[j]->name.chars)) {
                                 found = 1;
@@ -681,9 +684,8 @@ get_random_nonopen_buffer(ww *ed)
                         }
                 }
 
-                if (!found) {
+                if (!found)
                         return ed->buffers.data[i];
-                }
         }
 
         return NULL;
@@ -692,7 +694,7 @@ get_random_nonopen_buffer(ww *ed)
 static void
 kill_current_buffer(ww *ed)
 {
-        size_t idx;
+        size_t  idx;
         buffer *b;
 
         idx = (size_t)get_buffer_by_path(ed, ed->monitors[ed->am]->path.chars);
@@ -715,6 +717,19 @@ kill_current_buffer(ww *ed)
 
         buffer_free(ed->monitors[ed->am]);
         ed->monitors[ed->am] = b;
+}
+
+static void
+switch_to_compilation_buffer(ww *ed)
+{
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                if (!strcmp(str_cstr(&ed->buffers.data[i]->name),
+                            BUFFER_BUILTIN_COMPILE)) {
+                        ed->monitors[ed->am] = ed->buffers.data[i];
+                        sort_buffers(ed);
+                        return;
+                }
+        }
 }
 
 void
@@ -750,6 +765,7 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_CLOSE_BUILTIN) close_builtin(ed);
                 else if (act == BA_REQ_SPLITHOR)      split_horizontal(ed);
                 else if (act == BA_REQ_KILLBUF)       kill_current_buffer(ed);
+                else if (act == BA_REQ_SWITCHCOMPL)   switch_to_compilation_buffer(ed);
 
                 ww_display_monitors(ed, act);
         }

@@ -1469,6 +1469,8 @@ handle_normal_input_while_builtin(buffer *b, char ch)
 {
         if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == 'g')
                 return BA_REQ_RECOMPILE;
+        if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == '\n')
+                assert(0);
 
         if (ch == 'q')
                 return BA_REQ_CLOSE_BUILTIN;
@@ -1590,6 +1592,7 @@ buffer_process(buffer *b)
                 else if (ch == 'w')     return copy_selection(b);
                 else if (ch == 'x')     return BA_REQ_METAX;
                 else if (ch == '.')     return jmp_and_highlight_forward(b);
+                else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
         } break;
         default: break;
         }

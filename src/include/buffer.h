@@ -29,6 +29,7 @@ typedef enum {
         BA_REQ_CLOSE_BUILTIN,
         BA_REQ_SPLITHOR,
         BA_REQ_KILLBUF,
+        BA_REQ_SWITCHCOMPL,
 } buffer_action;
 
 typedef enum {
