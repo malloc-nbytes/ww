@@ -13,6 +13,38 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <regex.h>
+
+static volatile sig_atomic_t g_resize_flag = 0;
+
+static void
+resize_signal_handler(int sig)
+{
+        (void)sig;
+        g_resize_flag = 1;
+}
+
+static void
+handle_resize(ww *ed)
+{
+        if (!g_resize_flag)
+                return;
+
+        g_resize_flag = 0;
+
+        size_t win_width;
+        size_t win_height;
+
+        if (!get_terminal_xy(&win_width, &win_height)) {
+                perror("get_terminal_xy");
+                exit(1);
+        }
+
+        glconf.term.w = win_width;
+        glconf.term.h = win_height;
+
+        ww_display_monitors(ed, BA_REDRAW);
+}
 
 static ssize_t
 get_buffer_by_path(ww *ed, const char *path)
@@ -296,7 +328,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_CLOSE_BUILTIN
             || ba == BA_REQ_SPLITHOR
             || ba == BA_REQ_KILLBUF
-            || ba == BA_REQ_SWITCHCOMPL)
+            || ba == BA_REQ_SWITCHCOMPL
+            || ba == BA_REQ_ERRJMP)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -737,11 +770,87 @@ switch_to_compilation_buffer(ww *ed)
         }
 }
 
+static void
+try_jump_to_error(ww *ed)
+{
+        const line *ln       = NULL;
+        char       *filename = NULL;
+        int         row      = -1;
+        int         col      = -1;
+        buffer     *ab       = NULL;
+
+        ab = ed->monitors[ed->am];
+        ln = ab->lines.data[ab->al];
+
+        regex_t regex;
+        regmatch_t matches[4]; // full match + 3 capture groups
+
+        const char *pattern = "([^[:space:]:]+):([0-9]+):([0-9]+):";
+
+        if (regcomp(&regex, pattern, REG_EXTENDED)) {
+                fprintf(stderr, "Could not compile regex\n");
+                return;
+        }
+
+        if (regexec(&regex, ln->txt.chars, 4, matches, 0) == 0) {
+                int fname_len = matches[1].rm_eo - matches[1].rm_so;
+
+                if (!(filename = malloc((size_t)fname_len + 1))) {
+                        regfree(&regex);
+                        return;
+                }
+
+                memcpy(filename,
+                       ln->txt.chars + matches[1].rm_so,
+                       (size_t)fname_len);
+                filename[fname_len] = '\0';
+
+                row = atoi(ln->txt.chars + matches[2].rm_so);
+                col = atoi(ln->txt.chars + matches[3].rm_so);
+        }
+
+        regfree(&regex);
+
+        if (!filename) {
+                buffer_draw(ab);
+                return;
+        }
+
+        if (row == -1 || col == -1) {
+                free(filename);
+                buffer_draw(ab);
+                return;
+        }
+
+        buffer *b = NULL;
+
+        if (!(b = get_buffer_by_name(ed, filename))) {
+                char *real = get_realpath(filename);
+                assert(real);
+                b = buffer_from(str_from(filename),
+                                str_from(real),
+                                (unsigned)glconf.term.w, (unsigned)glconf.term.h,
+                                0, 0,
+                                lines_from(load_file(real)), ed);
+                ww_add_buffer(ed, b);
+        }
+
+        ed->monitors[ed->am] = b;
+        buffer_jump_to_verts(ed->monitors[ed->am], (size_t)col-1, (size_t)row-1);
+
+        free(filename);
+        buffer_draw(ed->monitors[ed->am]);
+
+        sort_buffers(ed);
+}
+
 void
 ww_run(ww *ed)
 {
         (void)ww_make_buffer_primary_by_path;
         (void)do_compilation;
+
+        signal(SIGWINCH, resize_signal_handler);
 
         ww_display_monitors(ed, BA_REDRAW);
         gotoxy(0, 0);
@@ -749,6 +858,8 @@ ww_run(ww *ed)
 
         while (ed->monitors[0]) {
                 assert(ed->am < 4);
+
+                handle_resize(ed);
 
                 buffer *b = ed->monitors[ed->am];
 
@@ -771,6 +882,7 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_SPLITHOR)      split_horizontal(ed);
                 else if (act == BA_REQ_KILLBUF)       kill_current_buffer(ed);
                 else if (act == BA_REQ_SWITCHCOMPL)   switch_to_compilation_buffer(ed);
+                else if (act == BA_REQ_ERRJMP)        try_jump_to_error(ed);
 
                 ww_display_monitors(ed, act);
         }

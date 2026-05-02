@@ -156,15 +156,16 @@ minibuffer_input(ww         *ed,
 {
         completion_state st;
         size_t           cx;
+
         st.selected_idx = 0;
         st.offset       = 0;
 
         if (autofill) {
                 st.input = str_from(autofill);
-                cx = st.input.len;
+                cx       = st.input.len;
         } else {
                 st.input = str_create();
-                cx = 0;
+                cx       = 0;
         }
 
 
@@ -185,15 +186,14 @@ minibuffer_input(ww         *ed,
                                 matches.data,
                                 total_matches);
 
-                /* gotoxy((unsigned)(cx), (unsigned)glconf.term.h); */
-                //printf("%s [ %s", prompt ? prompt : "", buf.chars);
-                gotoxy((unsigned)(cx + (label?strlen(label):0) + strlen(" [ ")), (unsigned)glconf.term.h);
+                gotoxy((unsigned)(cx + (label?strlen(label):0) + strlen(" [ ")),
+                       (unsigned)glconf.term.h);
                 fflush(stdout);
 
                 ty = get_input(&ch);
 
                 switch (ty) {
-                case INPUT_TYPE_NORMAL:
+                case INPUT_TYPE_NORMAL: {
                         if (ENTER(ch)) {
                                 char *res;
                                 if (total_matches > 0 &&
@@ -221,9 +221,9 @@ minibuffer_input(ww         *ed,
                                 st.selected_idx = 0;
                                 st.offset       = 0;
                         }
-                        break;
+                } break;
 
-                case INPUT_TYPE_CTRL:
+                case INPUT_TYPE_CTRL: {
                         if (ch == CTRL_N) {
                                 if (total_matches > 0 &&
                                     st.selected_idx < total_matches - 1)
@@ -260,8 +260,7 @@ minibuffer_input(ww         *ed,
                                         st.offset       = 0;
                                 }
                         }
-                        break;
-
+                } break;
                 default:
                         break;
                 }

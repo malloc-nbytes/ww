@@ -30,6 +30,7 @@ typedef enum {
         BA_REQ_SPLITHOR,
         BA_REQ_KILLBUF,
         BA_REQ_SWITCHCOMPL,
+        BA_REQ_ERRJMP,
 } buffer_action;
 
 typedef enum {
@@ -87,5 +88,6 @@ buffer_action  buffer_adjust_scroll(buffer *b);
 void           buffer_make_builtin(buffer *b);
 buffer        *ww_helpbuf_alloc(unsigned w, unsigned h, unsigned ws, unsigned hs, ww *parent);
 void           buffer_free(buffer *b);
+void           buffer_jump_to_verts(buffer *b, size_t x, size_t y);
 
 #endif // BUFFER_H_INCLUDED

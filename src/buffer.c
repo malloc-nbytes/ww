@@ -44,6 +44,22 @@ center_view(buffer *b);
 char_ar g_cpy_buf = {0};
 
 void
+buffer_jump_to_verts(buffer *b,
+                     size_t  x,
+                     size_t  y)
+{
+        if (y > b->lines.len-1)
+                return;
+        if (x > b->lines.data[y]->txt.len-1)
+                return;
+        b->cx       = (unsigned)x;
+        b->cy       = (unsigned)y;
+        b->al       = (unsigned)y;
+        b->wish_col = (unsigned)x;
+        buffer_adjust_scroll(b);
+}
+
+void
 buffer_free(buffer *b)
 {
         str_destroy(&b->name);
@@ -1470,7 +1486,7 @@ handle_normal_input_while_builtin(buffer *b, char ch)
         if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == 'g')
                 return BA_REQ_RECOMPILE;
         if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == '\n')
-                assert(0);
+                return BA_REQ_ERRJMP;
 
         if (ch == 'q')
                 return BA_REQ_CLOSE_BUILTIN;
