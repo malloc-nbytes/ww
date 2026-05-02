@@ -9,6 +9,7 @@
 #include "pair.h"
 #include "helpbuf.h"
 #include "flags.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -1525,6 +1526,30 @@ jmp_and_highlight_forward(buffer *b)
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
+static buffer_action
+jump_to_line(buffer *b)
+{
+        char *input;
+        int   no;
+
+        if (!(input = minibuffer_input(b->parent, "lineno", NULL, array_empty(cstr_ar))))
+                 return BA_NOP;
+
+        if (!cstr_isdigit(input))
+                return BA_NOP;
+
+        no = atoi(input);
+
+        if (no-1 >= (int)b->lines.len || no-1 <= 0)
+                return BA_NOP;
+
+        b->cx = 0;
+        b->cy = (unsigned)no-1;
+        b->al = (unsigned)no-1;
+
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -1609,7 +1634,9 @@ buffer_process(buffer *b)
                 else if (ch == 'x')     return BA_REQ_METAX;
                 else if (ch == '.')     return jmp_and_highlight_forward(b);
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
+                else if (ch == 'g')     return jump_to_line(b);
         } break;
+
         default: break;
         }
 
