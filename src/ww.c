@@ -151,10 +151,7 @@ find_file(ww *ed)
         if (idx == -1)
                 return;
 
-        ww_make_buffer_primary(ed, (size_t)idx);
-
-        buffer_draw(ed->buffers.data[ed->am]);
-
+        ed->monitors[ed->am] = ed->buffers.data[idx];
         sort_buffers(ed);
 }
 
@@ -177,8 +174,18 @@ ww_switch_buffer(ww *ed)
 
         names = array_empty(cstr_ar);
 
-        for (size_t i = 0; i < ed->buffers.len; ++i)
-                array_append(names, strdup(str_cstr(&ed->buffers.data[i]->name)));
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                int found = 0;
+                for (size_t j = 0; j < 4; ++j) {
+                        if (ed->monitors[j] && !strcmp(ed->buffers.data[i]->name.chars,
+                                                       ed->monitors[j]->name.chars)) {
+                                found = 1;
+                                break;
+                        }
+                }
+                if (!found)
+                        array_append(names, strdup(str_cstr(&ed->buffers.data[i]->name)));
+        }
 
         selected = minibuffer_input(ed, "switch-buffer", NULL, names);
 
@@ -195,10 +202,11 @@ ww_switch_buffer(ww *ed)
                 }
         }
 
-        if (!open)
+        /*if (!open)
                 ed->monitors[ed->am] = get_buffer_by_name(ed, selected);
         else
-                ww_make_buffer_primary_by_name(ed, selected);
+                ww_make_buffer_primary_by_name(ed, selected);*/
+        ed->monitors[ed->am] = get_buffer_by_name(ed, selected);
 
         sort_buffers(ed);
 
