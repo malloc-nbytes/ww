@@ -33,8 +33,8 @@ sort_buffers(ww *ed)
                 return;
 
         const buffer *curbuf = ed->monitors[ed->am];
-        buffer *curbufi = NULL;
-        size_t idx = 0;
+        buffer *curbufi      = NULL;
+        size_t idx           = 0;
 
         for (size_t i = 0; i < ed->buffers.len; ++i) {
                 if (!strcmp(ed->buffers.data[i]->name.chars, curbuf->name.chars)) {
@@ -49,7 +49,9 @@ sort_buffers(ww *ed)
                 return;
         }
 
-        ed->buffers.data[idx] = ed->buffers.data[0];
+        for (size_t i = idx; i > 0; --i)
+                ed->buffers.data[i] = ed->buffers.data[i-1];
+
         ed->buffers.data[0]   = curbufi;
 }
 

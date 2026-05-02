@@ -777,7 +777,8 @@ kill_line(buffer *b)
                 --b->cy;
         }
 
-        b->cx = 0;
+        b->cx       = 0;
+        b->wish_col = 0;
 
         buffer_adjust_scroll(b);
         return BA_REDRAW;
