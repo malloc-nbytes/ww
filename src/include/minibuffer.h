@@ -8,6 +8,7 @@
 char *
 minibuffer_input(ww         *ed,
                  const char *label,
+                 const char *autofill,
                  cstr_ar     items);
 
 #endif // MINIBUFFER_H_INCLUDED

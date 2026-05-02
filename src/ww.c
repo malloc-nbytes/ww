@@ -65,7 +65,7 @@ find_file(ww *ed)
  reload_dir:
 
         files          = lsdir(str_cstr(&cwd));
-        char *selected = minibuffer_input(ed, "find-file", files);
+        char *selected = minibuffer_input(ed, "find-file", NULL, files);
 
         if (!selected)
                 goto done;
@@ -148,7 +148,7 @@ ww_switch_buffer(ww *ed)
         for (size_t i = 0; i < ed->buffers.len; ++i)
                 array_append(names, strdup(str_cstr(&ed->buffers.data[i]->name)));
 
-        selected = minibuffer_input(ed, "switch-buffer", names);
+        selected = minibuffer_input(ed, "switch-buffer", NULL, names);
 
         if (!selected || strlen(selected) == 0)
                 goto done;
@@ -561,7 +561,8 @@ do_compilation(ww *ed)
 
         if (!exists)
                 ww_add_buffer(ed, b);
-        ww_make_buffer_primary_by_name(ed, BUFFER_BUILTIN_COMPILE);
+        //ww_make_buffer_primary_by_name(ed, BUFFER_BUILTIN_COMPILE);
+        ed->monitors[ed->am] = ed->buffers.data[get_buffer_by_path(ed, BUFFER_BUILTIN_COMPILE)];
         buffer_draw(ed->monitors[ed->am]);
 
         char *output = capture_command_output(&input);
@@ -592,12 +593,16 @@ do_compilation(ww *ed)
 static void
 compile(ww *ed)
 {
-        char *input_raw = minibuffer_input(ed, "compile", array_empty(cstr_ar));
+        char *input_raw = minibuffer_input(ed, "compile", glconf.runtime.compile,
+                                           array_empty(cstr_ar));
 
         if (!input_raw || strlen(input_raw) == 0)
                 return;
 
-        glconf.runtime.compile = strdup(input_raw);
+        if (strcmp(glconf.runtime.compile, input_raw)) {
+                free(glconf.runtime.compile);
+                glconf.runtime.compile = strdup(input_raw);
+        }
 
         do_compilation(ed);
         sort_buffers(ed);
@@ -621,7 +626,7 @@ set_spaceamt(ww *ed)
         array_append(items, "4");
         array_append(items, "8");
 
-        char *input = minibuffer_input(ed, "space-amt", items);
+        char *input = minibuffer_input(ed, "space-amt", NULL, items);
 
         if (!input || strlen(input) == 0)
                 goto cleanup;
@@ -645,7 +650,7 @@ metax(ww *ed)
         for (size_t i = 0; i < sizeof(cmds_raw)/sizeof(*cmds_raw); ++i)
                 array_append(cmds, cmds_raw[i]);
 
-        if (!(inp = minibuffer_input(ed, "M-x", cmds)))
+        if (!(inp = minibuffer_input(ed, "M-x", NULL, cmds)))
                 return;
 
         if (!strcmp(inp, WW_CMD_SAVE))

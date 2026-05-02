@@ -151,14 +151,22 @@ completion_draw(ww                *ed,
 char *
 minibuffer_input(ww         *ed,
                  const char *label,
+                 const char *autofill,
                  cstr_ar     items)
 {
         completion_state st;
-        st.input        = str_create();
+        size_t           cx;
         st.selected_idx = 0;
         st.offset       = 0;
 
-        size_t cx = 0;
+        if (autofill) {
+                st.input = str_from(autofill);
+                cx = st.input.len;
+        } else {
+                st.input = str_create();
+                cx = 0;
+        }
+
 
         while (1) {
                 char ch;
@@ -238,6 +246,8 @@ minibuffer_input(ww         *ed,
                                 cx = st.input.len;
                         } else if (ch == CTRL_D) {
                                 str_rm(&st.input, cx);
+                        } else if (ch == CTRL_K) {
+                                str_cut(&st.input, cx);
                         } else if (ch == CTRL_Y) {
                                 if (g_cpy_buf.len > 0) {
                                         char cpy[1024] = {0};
