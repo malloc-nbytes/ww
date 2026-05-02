@@ -812,6 +812,7 @@ insert_char(buffer *b, char ch, int newline_advance)
 
                 if (newline_advance) {
                         b->cx = 0;
+                        b->wish_col = 0;
                         ++b->cy;
                         ++b->al;
                 }

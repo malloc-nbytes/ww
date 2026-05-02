@@ -138,14 +138,17 @@ get_buffer_by_name(ww         *ed,
 void
 ww_switch_buffer(ww *ed)
 {
-        cstr_ar names = array_empty(cstr_ar);
+        cstr_ar names;
+        char *selected;
+
+        names = array_empty(cstr_ar);
 
         for (size_t i = 0; i < ed->buffers.len; ++i)
                 array_append(names, strdup(str_cstr(&ed->buffers.data[i]->name)));
 
-        char *selected = minibuffer_input(ed, "switch-buffer", names);
+        selected = minibuffer_input(ed, "switch-buffer", names);
 
-        if (!selected)
+        if (!selected || strlen(selected) == 0)
                 goto done;
 
         int open = 0;
