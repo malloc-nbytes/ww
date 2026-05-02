@@ -1,0 +1,12 @@
+#include <stdio.h>
+
+jfkdslfjdkfffffffffffffffffffffffffffffffffffffffffffffffffff aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+int
+main(void)
+{
+	if (1 == 1) {
+		printf("hello world\n");
+	}
+        return 0;
+}

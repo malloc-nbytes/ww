@@ -664,7 +664,8 @@ metax(ww *ed)
 static void
 close_builtin(ww *ed)
 {
-        ed->monitors[ed->am] = ed->buffers.data[0];
+        ed->monitors[ed->am] = ed->buffers.data[1];
+        sort_buffers(ed);
 }
 
 static buffer *

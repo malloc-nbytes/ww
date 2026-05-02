@@ -6,6 +6,7 @@
 #include "str.h"
 
 #define BUFFER_BUILTIN_COMPILE "ww-compile"
+#define BUFFER_BUILTIN_HELP    "ww-help"
 
 extern char_ar g_cpy_buf;
 

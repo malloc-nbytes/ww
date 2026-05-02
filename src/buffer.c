@@ -68,8 +68,8 @@ ww_helpbuf_alloc(unsigned  w,
 {
         buffer *b;
 
-        b = buffer_from(str_from("ww-help"),
-                        str_from("ww-help"),
+        b = buffer_from(str_from(BUFFER_BUILTIN_HELP),
+                        str_from(BUFFER_BUILTIN_HELP),
                         w, h, ws, hs, lines_from(HELP_DEF CONTROLS_DEF),
                         parent);
 
