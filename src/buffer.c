@@ -1761,7 +1761,7 @@ buffer_process(buffer *b)
                 if (ch == '\t')                             assert(0);
                 else if (BACKSPACE(ch))                     return backspace(b);
                 else if (ch == 0)                           return selection(b);
-                else if (ch == '\n' /*&& b->state == BS_AUTO*/) return accept_autocomplete(b);
+                else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
                 else                                        return insert_char(b, ch, 1);
         } break;
         case INPUT_TYPE_CTRL: {
