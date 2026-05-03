@@ -30,6 +30,9 @@ DOCTARGETS := $(patsubst ../%.org, $(DOCDIR)/%.html, $(DOCSRC))
 # Check if emacs is available
 EMACS := $(shell command -v emacs 2>/dev/null)
 
+PREFIX ?= /usr/local
+DESTDIR ?=
+
 # Default target
 .PHONY: all
 all: $(BINDIR)/$(TARGET)
@@ -51,6 +54,15 @@ $(BINDIR)/$(TARGET): $(OBJECTS) | $(BINDIR)
 .PHONY: debug
 debug: CFLAGS := $(filter-out -O2,$(CFLAGS)) $(DEBUG_FLAGS)
 debug: all
+
+.PHONY: install
+install: all
+	install -d "$(DESTDIR)$(PREFIX)/bin"
+	install -m 755 "$(BINDIR)/$(TARGET)" "$(DESTDIR)$(PREFIX)/bin/$(TARGET)"
+
+.PHONY: uninstall
+uninstall:
+	-rm -f "$(DESTDIR)$(PREFIX)/bin/$(TARGET)"
 
 # Clean build artifacts (now also cleans docs)
 .PHONY: clean
