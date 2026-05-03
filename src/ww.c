@@ -192,20 +192,6 @@ ww_switch_buffer(ww *ed)
         if (!selected || strlen(selected) == 0)
                 goto done;
 
-        int open = 0;
-        for (size_t i = 0; i < 4; ++i) {
-                if (!ed->monitors[i])
-                        continue;
-                if (!strcmp(ed->monitors[i]->name.chars, selected)) {
-                        open = 1;
-                        break;
-                }
-        }
-
-        /*if (!open)
-                ed->monitors[ed->am] = get_buffer_by_name(ed, selected);
-        else
-                ww_make_buffer_primary_by_name(ed, selected);*/
         ed->monitors[ed->am] = get_buffer_by_name(ed, selected);
 
         sort_buffers(ed);
@@ -526,12 +512,14 @@ capture_command_output(str *input)
 
                 close(pipefd[1]);
 
-                char **args = make_command(input);
-                if (!args || !*args)
-                        _exit(127);
+                //char **args = make_command(input);
+                //if (!args || !*args)
+                //        _exit(127);
+                //execvp(args[0], args);
 
-                execvp(args[0], args);
-                perror("execvp");
+                int _ = system(input->chars);
+                (void)_;
+                //perror("system");
                 fflush(stdout);
                 _exit(127);
         }
@@ -602,9 +590,8 @@ do_compilation(ww *ed)
 
         if (!exists)
                 ww_add_buffer(ed, b);
-        //ww_make_buffer_primary_by_name(ed, BUFFER_BUILTIN_COMPILE);
+
         ed->monitors[ed->am] = ed->buffers.data[get_buffer_by_path(ed, BUFFER_BUILTIN_COMPILE)];
-        buffer_draw(ed->monitors[ed->am]);
 
         char *output = capture_command_output(&input);
         ed->monitors[ed->am]->lines = lines_from(output);
@@ -856,7 +843,7 @@ void
 ww_run(ww *ed)
 {
         (void)ww_make_buffer_primary_by_path;
-        (void)do_compilation;
+        (void)make_command;
 
         signal(SIGWINCH, resize_signal_handler);
 
