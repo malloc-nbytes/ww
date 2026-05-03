@@ -219,14 +219,12 @@ ww_make_buffer_primary_by_name(ww *ed, const char *name)
         idx = -1;
 
         for (size_t i = 0; i < ed->buffers.len; ++i) {
-                if (!strcmp(ed->buffers.data[i]->name.chars, name)) {
+                if (!strcmp(ed->buffers.data[i]->name.chars, name))
                         idx = (ssize_t)i;
-                }
         }
 
-        if (idx != -1) {
+        if (idx != -1)
                 ww_make_buffer_primary(ed, (size_t)idx);
-        }
 }
 
 void
@@ -309,6 +307,7 @@ ww_make_buffer_primary(ww *ed, size_t idx)
         ww_clear_monitors(ed);
         ed->monitors[0] = ed->buffers.data[idx];
         ed->am = 0;
+        sort_buffers(ed);
 }
 
 static void
