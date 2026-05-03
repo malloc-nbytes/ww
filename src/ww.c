@@ -6,6 +6,7 @@
 #include "minibuffer.h"
 #include "flags.h"
 #include "utils.h"
+#include "tut.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -669,6 +670,39 @@ cleanup:
 }
 
 static void
+tutorial(ww *ed)
+{
+        char *input;
+        cstr_ar chapters;
+        buffer *b;
+
+        chapters = array_empty(cstr_ar);
+        array_append(chapters, "ch1");
+
+        input = minibuffer_input(ed, "tutorial", NULL, chapters);
+
+        if (!input || strlen(input) == 0)
+                goto done;
+
+        if (strcmp(input, "ch1"))
+                goto done;
+
+        ssize_t idx = get_buffer_by_path(ed, "ww-tut-ch1");
+
+        if (idx == -1) {
+                b = tut_alloc(ed, input);
+                ww_add_buffer(ed, b);
+        }
+        else
+                b = ed->buffers.data[(size_t)idx];
+
+        ed->monitors[ed->am] = b;
+
+done:
+        array_free(chapters);
+}
+
+static void
 metax(ww *ed)
 {
         char *inp;
@@ -692,6 +726,8 @@ metax(ww *ed)
                 toggle_spacemode();
         else if (!strcmp(inp, WW_CMD_SPACEAMT))
                 set_spaceamt(ed);
+        else if (!strcmp(inp, WW_CMD_TUT))
+                tutorial(ed);
 
         free(inp);
         array_free(cmds);
