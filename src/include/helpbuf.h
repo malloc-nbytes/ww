@@ -51,7 +51,7 @@
 "C-v         = page down\n" \
 "M-v         = page up\n" \
 "M-m         = go to first non-space char on line\n" \
-"C-u         = pop to last (x, y) location\n" \
+"C-u         = pop to last (x, y) location (UNIMPLEMENTED)\n" \
 "\n" \
 "Text Manipulation:\n" \
 "\n" \
@@ -81,7 +81,7 @@
 "\n" \
 "C-x s = save buffer (must have write permissions) *\n" \
 "C-x x = invoke compilation buffer *\n" \
-"M-'   = invoke a shell *\n" \
+"M-'   = invoke a shell (UNIMPLEMENTED)*\n" \
 "C-x b = switch to different buffer *\n" \
 "C-x k = kill current buffer\n" \
 "\n" \

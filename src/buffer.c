@@ -20,6 +20,7 @@
 #else
 #define PATH_MAX 4096
 #endif
+#include <unistd.h>
 
 #define TAB_WIDTH 8
 
@@ -1553,6 +1554,22 @@ jump_to_line(buffer *b)
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
+static buffer_action
+buffer_shell(buffer *b)
+{
+        clear_terminal();
+        disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
+        int _ = system("bash --rcfile <("
+               "echo 'source ~/.bashrc 2>/dev/null || true'; "
+               "echo 'PS1=\"(ww-shell) $PS1\"'"
+               ") -i"
+        );
+        (void)_;
+        enable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
+        buffer_draw(b);
+        return BA_REDRAW;
+}
+
 // entrypoint
 buffer_action
 buffer_process(buffer *b)
@@ -1638,6 +1655,7 @@ buffer_process(buffer *b)
                 else if (ch == '.')     return jmp_and_highlight_forward(b);
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
                 else if (ch == 'g')     return jump_to_line(b);
+                else if (ch == '\'')    return buffer_shell(b);
         } break;
 
         default: break;
