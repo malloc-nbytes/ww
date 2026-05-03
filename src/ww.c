@@ -677,17 +677,17 @@ tutorial(ww *ed)
         buffer *b;
 
         chapters = array_empty(cstr_ar);
-        array_append(chapters, "ch1");
+        array_append(chapters, TUT_CH1_NAME);
 
         input = minibuffer_input(ed, "tutorial", NULL, chapters);
 
         if (!input || strlen(input) == 0)
                 goto done;
 
-        if (strcmp(input, "ch1"))
+        if (strcmp(input, TUT_CH1_NAME))
                 goto done;
 
-        ssize_t idx = get_buffer_by_path(ed, "ww-tut-ch1");
+        ssize_t idx = get_buffer_by_path(ed, TUT_CH1_NAME);
 
         if (idx == -1) {
                 b = tut_alloc(ed, input);

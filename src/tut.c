@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-char *g_tut01 = "*** ww Tutorial Chapter 1 ***\n"
+char *g_tut01 = "*** ww Tutorial Chapter 1 - Basic Navigation ***\n"
 "\n"
 "Welcome to the first tutorial on how to use this editor.\n"
 "\n"
@@ -34,8 +34,6 @@ char *g_tut01 = "*** ww Tutorial Chapter 1 ***\n"
 "Try moving the cursor to the box:\n"
 "                    [ ]\n"
 "Once you are in the box, you can center your view with `C-l'\n"
-"\n" "\n" "\n" "\n" "\n" "\n" "\n" "\n"
-"This line should now be visible.\n"
 "\n"
 "Here are some more movement options:\n"
 "\n"
@@ -59,8 +57,12 @@ char *g_tut01 = "*** ww Tutorial Chapter 1 ***\n"
 "  M-} -> jump a paragraph forwards\n"
 "  M-v -> page up\n"
 "  C-v -> page down\n"
+"  M-< -> jump to top of buffer\n"
+"  M-> -> jump to bottom of buffer\n"
 "\n"
-"Feel free to try these out in this buffer as well.";
+"Feel free to try these out in this buffer as well.\n"
+"\n"
+"END OF TUTORIAL\n";
 
 buffer *
 tut_alloc(ww *ed, const char *chapter)
@@ -69,7 +71,7 @@ tut_alloc(ww *ed, const char *chapter)
         linep_ar lns;
         int writable = 0;
 
-        if (!strcmp(chapter, "ch1")) {
+        if (!strcmp(chapter, TUT_CH1_NAME)) {
                 name = "ch1";
                 lns = lines_from(g_tut01);
                 writable = 0;

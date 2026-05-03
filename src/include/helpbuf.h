@@ -10,6 +10,8 @@
 "a *very* heavy Emacs influence. It's controls are mostly\n" \
 "default Emacs keybindings (see controls).\n" \
 "\n" \
+"There is a tutorial built-in that can be called with M-x tutorial.\n" \
+"\n" \
 "To begin, try finding a file with `C-x C-f' and choosing a file.\n" \
 "\nTIP: Whenever there is a suggestion box, use `C-n' and `C-p' to\n" \
 "     navigate through it.\n" \
@@ -81,7 +83,7 @@
 "\n" \
 "C-x s = save buffer (must have write permissions) *\n" \
 "C-x x = invoke compilation buffer *\n" \
-"M-'   = invoke a shell (UNIMPLEMENTED)*\n" \
+"M-'   = invoke a shell *\n" \
 "C-x b = switch to different buffer *\n" \
 "C-x k = kill current buffer\n" \
 "\n" \

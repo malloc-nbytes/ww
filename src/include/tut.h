@@ -4,6 +4,8 @@
 #include "buffer.h"
 #include "ww.h"
 
+#define TUT_CH1_NAME "ww-tut-ch1 - Basic Navigation"
+
 extern char *g_tut01;
 
 buffer *tut_alloc(ww *ed, const char *chapter);
