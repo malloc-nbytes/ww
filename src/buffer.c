@@ -1427,6 +1427,9 @@ buffer_save(buffer *b)
         if (!writable(b))
                 return BA_NOP;
 
+        if (b->lines.len == 0)
+                return BA_NOP;
+
         char_ar content = array_empty(char_ar);
         for (size_t i = 0; i < b->lines.len; ++i) {
                 const line *ln = b->lines.data[i];

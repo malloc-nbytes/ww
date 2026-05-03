@@ -122,7 +122,11 @@ find_file(ww *ed)
                 goto reload_dir;
         }
 
-        chosen_file = strdup(get_realpath(fullpath.chars));
+        char *realpath = get_realpath(fullpath.chars);
+        if (realpath)
+                chosen_file = strdup(get_realpath(fullpath.chars));
+        else
+                chosen_file = strdup(fullpath.chars);
 
         str_destroy(&fullpath);
         free(selected);
@@ -145,6 +149,8 @@ find_file(ww *ed)
         }
 
         if (!ww_buffer_exists_by_path(ed, chosen_file)) {
+                if (!file_exists(chosen_file))
+                        create_file(chosen_file, 1);
                 ww_add_buffer(ed, buffer_from(str_from(get_basename(chosen_file)),
                                               str_from(chosen_file),
                                               (unsigned)glconf.term.w, (unsigned)glconf.term.h,
