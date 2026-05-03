@@ -1,986 +1,238 @@
 #include "buffer.h"
-#include "io.h"
+#include "mem.h"
 #include "term.h"
-#include "utils.h"
-#include "window.h"
 #include "colors.h"
-#include "pair.h"
 #include "glconf.h"
-#include "flags.h"
-#include "lexer.h"
 #include "config.h"
+#include "minibuffer.h"
+#include "io.h"
+#include "pair.h"
+#include "helpbuf.h"
+#include "flags.h"
+#include "utils.h"
+#include "trie.h"
+#include "set.h"
 
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <stdint.h>
-#include <unistd.h>
-
+#include <string.h>
 #ifdef __linux__
 #include <limits.h>
 #else
 #define PATH_MAX 4096
 #endif
+#include <unistd.h>
+
+#define TAB_WIDTH        8
+#define MAX_AUTOCOMPLETE 32
+
+PAIR_DEFINE (int, int, int_pair);
+PAIR_IMPL   (int, int, int_pair);
+ARRAY_DEFINE(int_pair, int_pair_ar);
+
+SET_DEFINE(char *, cstr_set);
+SET_IMPL  (char *, cstr_set);
+
+static int
+line_selection_range(const buffer *b,
+                     size_t        idx,
+                     size_t        line_len,
+                     size_t       *sel_start,
+                     size_t       *sel_end);
 
 static void
 draw_status(const buffer *b,
             const char   *msg);
 
-static int_array
-find_line_matches(const buffer *b,
-                  const str    *s);
+static buffer_action
+center_view(buffer *b);
 
-PAIR_IMPL(int, int, int_pair)
-DYN_ARRAY_TYPE(int_array, int_array_array);
+char_ar g_cpy_buf = {0};
 
-static char_array g_cpy_buf = {0};
-
-static const char *
-state_to_cstr(const buffer *b)
-{
-        switch (b->state) {
-        case BS_NORMAL:    return "normal";
-        case BS_SELECTION: return "selection";
-        case BS_SEARCH:    return "search";
-        default:           return "unknown";
-        }
-        return "unknown";
-}
+static cstr_set g_found_words = {0};
 
 static void
-clear_cpy(void)
+collect_ac_from_buffer(buffer *b)
 {
-        dyn_array_clear(g_cpy_buf);
-}
+#define BUFCAP 1024
+        assert(g_found_words.hash);
+        assert(g_found_words.cmp);
 
-static void
-add_to_popxy(buffer *b)
-{
-        if (b->popxy.len > 0 && b->popxy.data[b->popxy.len-1].r == b->al) {
-                b->popxy.data[b->popxy.len-1].l = b->cx;
-                return;
-        }
-        dyn_array_append(b->popxy, int_pair_create(b->cx, b->al));
-}
+        for (size_t i = 0; i < b->lines.len; ++i) {
+                const line *ln = b->lines.data[i];
+                const str *s = &ln->txt;
+                const char *sraw = str_cstr(s);
+                int foundalpha = 0;
+                char buf[BUFCAP] = {0};
+                size_t bufn = 0;
 
-void
-buffer_find_and_replace_in_selection(buffer     *b,
-                                     const char *from,
-                                     const char *to)
-{
-        if (!b || b->state != BS_SELECTION)
-                return;
+                for (size_t j = 0; j < s->len; ++j) {
+                        char ch = sraw[j];
 
-        if (!from || !*from)
-                return;
-
-        size_t from_len = strlen(from);
-        size_t to_len   = strlen(to);
-
-        size_t anchor_y = (size_t)b->sy;
-        size_t anchor_x = (size_t)b->sx;
-        size_t cursor_y = b->al;
-        size_t cursor_x = b->cx;
-
-        // normalize direction
-        int forward = (anchor_y < cursor_y) ||
-                (anchor_y == cursor_y && anchor_x <= cursor_x);
-
-        size_t start_y = forward ? anchor_y : cursor_y;
-        size_t end_y   = forward ? cursor_y : anchor_y;
-        size_t start_x = forward ? anchor_x : cursor_x;
-        size_t end_x   = forward ? cursor_x : anchor_x;
-
-        if (start_y >= b->lns.len || end_y >= b->lns.len)
-                return;
-
-        for (size_t y = start_y; y <= end_y; ++y) {
-                line *ln = b->lns.data[y];
-                if (!ln)
-                        continue;
-
-                size_t line_len = str_len(&ln->s);
-
-                size_t range_start = 0;
-                size_t range_end   = line_len;
-
-                if (start_y == end_y) {
-                        range_start = start_x;
-                        range_end   = end_x;
-                } else if (y == start_y) {
-                        range_start = start_x;
-                } else if (y == end_y) {
-                        range_end = end_x;
-                }
-
-                if (range_start >= line_len || range_start >= range_end)
-                        continue;
-
-                char *data = ln->s.chars;
-
-                for (size_t i = range_start; i+from_len <= range_end; ) {
-
-                        if (memcmp(&data[i], from, from_len) == 0) {
-                                if (to_len != from_len) {
-                                        size_t new_len = line_len - from_len + to_len;
-
-                                        if (new_len + 1 > ln->s.cap) {
-                                                size_t new_cap = new_len + 16;
-                                                char *new_buf = realloc(ln->s.chars, new_cap);
-                                                if (!new_buf)
-                                                        return;
-                                                ln->s.chars = new_buf;
-                                                ln->s.cap   = new_cap;
-                                                data = ln->s.chars;
+                        if (!isalpha(ch) && ch != '_') {
+                                if (foundalpha) {
+                                        if (!cstr_set_contains(&g_found_words, buf)) {
+                                                char *word = strdup(buf);
+                                                cstr_set_insert(&g_found_words, word);
+                                                trie_insert(b->ac, word);
                                         }
-
-                                        memmove(&data[i + to_len],
-                                                &data[i + from_len],
-                                                line_len - (i + from_len));
-
-                                        ln->s.len = new_len;
-                                        line_len  = new_len;
-
-                                        range_end = range_end - from_len + to_len;
+                                        bufn = 0;
+                                        memset(buf, 0, sizeof(buf));
                                 }
-
-                                memcpy(&data[i], to, to_len);
-                                i += to_len;
+                        } else if (bufn < BUFCAP) {
+                                buf[bufn++] = ch;
+                                foundalpha = 1;
                         }
-                        else
-                                i++;
+                }
+
+                if (strlen(buf) && !cstr_set_contains(&g_found_words, buf)) {
+                        char *word = strdup(buf);
+                        cstr_set_insert(&g_found_words, word);
+                        trie_insert(b->ac, word);
                 }
         }
 
-        b->saved = 0;
+#undef BUFCAP
 }
 
 void
-buffer_copybuf_to_clipboard(const buffer *b)
+buffer_jump_to_verts(buffer *b,
+                     size_t  x,
+                     size_t  y)
 {
-        if (!glconf.defaults.to_clipboard)
+        if (y > b->lines.len-1)
                 return;
-
-        char *buf = (char *)malloc(g_cpy_buf.len+strlen(glconf.defaults.to_clipboard)+1);
-
-        dyn_array_append(g_cpy_buf, 0);
-
-        sprintf(buf, glconf.defaults.to_clipboard, g_cpy_buf.data);
-
-        int status = system(buf);
-
-        buffer_dump(b);
-
-        if (status == -1)
-                draw_status(b, "copy to clipboard failed");
-        else {
-                char msg[256] = {0};
-                sprintf(msg, "copied " YELLOW BOLD "%zu" RESET INVERT " bytes to system clipboard", g_cpy_buf.len);
-                draw_status(b, msg);
-        }
-
-        free(buf);
+        if (x > b->lines.data[y]->txt.len-1)
+                return;
+        b->cx       = (unsigned)x;
+        b->cy       = (unsigned)y;
+        b->al       = (unsigned)y;
+        b->wish_col = (unsigned)x;
+        buffer_adjust_scroll(b);
 }
 
-static void
-append_line_range_to_clipboard(line *ln, size_t from, size_t to) {
-        if (!ln || from >= str_len(&ln->s))
-                return;
-        if (to > str_len(&ln->s))
-                to = str_len(&ln->s);
-        if (from >= to)
-                return;
-
-        for (size_t i = from; i < to; ++i)
-                dyn_array_append(g_cpy_buf, str_at(&ln->s, i));
-}
-
-static void
-copy_selection(buffer *b) {
-        clear_cpy();
-
-        if (b->state != BS_SELECTION)
-                return;
-
-        size_t anchor_y;
-        size_t anchor_x;
-        size_t cursor_y;
-        size_t cursor_x;
-
-        anchor_y = (size_t)b->sy;
-        anchor_x = (size_t)b->sx;
-        cursor_y = b->al;
-        cursor_x = b->cx;
-
-        // normalize
-        int forward = (anchor_y < cursor_y) ||
-                (anchor_y == cursor_y && anchor_x <= cursor_x);
-
-        size_t start_y = forward ? anchor_y : cursor_y;
-        size_t end_y   = forward ? cursor_y : anchor_y;
-        size_t start_x = forward ? anchor_x : cursor_x;
-        size_t end_x   = forward ? cursor_x : anchor_x;
-
-        // invalid line numbers
-        if (start_y >= b->lns.len || end_y >= b->lns.len) {
-                return;
-        }
-
-        if (start_y == end_y) {
-                // single line selection
-                line *ln = b->lns.data[start_y];
-                append_line_range_to_clipboard(ln, start_x, end_x);
-        } else {
-                // multi-line selection
-
-                // first (partial) line: start_x
-                {
-                        line *ln = b->lns.data[start_y];
-                        append_line_range_to_clipboard(ln, start_x, SIZE_MAX);
-                }
-
-                // middle full lines
-                for (size_t y = start_y + 1; y < end_y; ++y) {
-                        line *ln = b->lns.data[y];
-                        append_line_range_to_clipboard(ln, 0, SIZE_MAX);
-                }
-
-                // last (partial) line
-                {
-                        line *ln = b->lns.data[end_y];
-                        append_line_range_to_clipboard(ln, 0, end_x);
-                }
-        }
-
-        add_to_popxy(b);
-}
-
-static int
-writable(buffer *b)
+void
+buffer_free(buffer *b)
 {
-        if (!b->writable) {
-                draw_status(b, "buffer is read-only");
-                buffer_dump(b);
-                return 0;
-        }
-        return 1;
+        str_destroy(&b->name);
+        str_destroy(&b->path);
+        str_destroy(&b->last_search);
+
+        free(b);
+}
+
+void
+buffer_make_builtin(buffer *b)
+{
+        b->builtin = 1;
 }
 
 buffer *
-buffer_alloc(window     *parent)
-{
-        buffer *b = (buffer *)malloc(sizeof(buffer));
-
-        b->name        = str_create();
-        b->filename    = str_create();
-        b->lns         = dyn_array_empty(line_array);
-        b->cx          = 0;
-        b->cy          = 0;
-        b->al          = 0;
-        b->wish_col    = 0;
-        b->hscrloff    = 0;
-        b->vscrloff    = 0;
-        b->parent      = parent;
-        b->saved       = 1;
-        b->state       = BS_NORMAL;
-        b->last_search = str_create();
-        b->cpy         = str_create();
-        b->sy          = 0;
-        b->sx          = 0;
-        b->writable    = 1;
-        b->last_tab    = 0;
-        b->popxy       = dyn_array_empty(int_pair_array);
-
-        return b;
-}
-
-int
-buffer_save(buffer *b)
-{
-        if (!writable(b))
-                return 0;
-
-        char_array content = dyn_array_empty(char_array);
-        for (size_t i = 0; i < b->lns.len; ++i) {
-                const line *ln = b->lns.data[i];
-                for (size_t j = 0; j < ln->s.len; ++j) {
-                        dyn_array_append(content, ln->s.chars[j]);
-                }
-        }
-        dyn_array_append(content, 0);
-        if (!write_file(str_cstr(&b->filename), content.data)) {
-                perror("write_file");
-                return 0;
-        }
-
-        b->saved = 1;
-        draw_status(b, "saved");
-        return 1;
-}
-
-buffer *
-buffer_from_file(str filename, window *parent)
+ww_helpbuf_alloc(unsigned  w,
+                 unsigned  h,
+                 unsigned  ws,
+                 unsigned  hs,
+                 ww       *parent)
 {
         buffer *b;
 
-        b = buffer_alloc(parent);
-        str_destroy(&b->filename);
+        b = buffer_from(str_from(BUFFER_BUILTIN_HELP),
+                        str_from(BUFFER_BUILTIN_HELP),
+                        w, h, ws, hs, lines_from(HELP_DEF CONTROLS_DEF),
+                        parent);
 
-        b->filename = filename;
-        b->name = str_from(get_basename(str_cstr(&b->filename)));
-
-        if (file_exists(str_cstr(&filename))) {
-                char       *file_data;
-
-                file_data = load_file(str_cstr(&filename));
-                b->lns    = lines_of_cstr(file_data);
-        } else {
-                if (!create_file(str_cstr(&filename), 1)) {
-                        perror("create_file");
-                        return NULL;
-                }
-        }
-
-        b->al = 0;
+        buffer_make_readonly(b);
+        buffer_make_builtin(b);
 
         return b;
 }
 
-static inline size_t
-get_win_hight(buffer *b)
+buffer *
+buffer_from(str      name,
+            str      path,
+            unsigned w,
+            unsigned h,
+            unsigned ws,
+            unsigned hs,
+            linep_ar lns,
+            ww       *parent)
 {
-        return b->parent->h-1; // -1 for status line
+        buffer *b;
+
+        b              = (buffer *)alloc(sizeof(buffer));
+        b->name        = name;
+        b->path        = path;
+        b->builtin     = 0;
+        b->size.w      = w;
+        b->size.h      = h;
+        b->size.ws     = ws;
+        b->size.hs     = hs;
+        b->lines       = lns;
+        b->cx          = 0;
+        b->cy          = 0;
+        b->wish_col    = 0;
+        b->al          = 0;
+        b->hoff        = 0;
+        b->voff        = 0;
+        b->state       = BS_NORMAL;
+        b->saved       = 1;
+        b->sx          = 0;
+        b->sy          = 0;
+        b->writable    = 1;
+        b->last_search = str_create();
+        b->parent      = parent;
+        b->last_tab    = 0;
+        b->ac          = trie_alloc();
+        b->ac_cycle    = 0;
+
+        collect_ac_from_buffer(b);
+
+        return b;
 }
 
-static int
-adjust_vscroll(buffer *b)
+void
+buffer_make_readonly(buffer *b)
 {
-        size_t win_h = get_win_hight(b);
-
-        if (b->cy < b->vscrloff) {
-                b->vscrloff = b->cy;
-                return 1;
-        } else if (b->cy >= b->vscrloff + win_h) {
-                b->vscrloff = b->cy - win_h + 1;
-                return 1;
-        }
-        return 0;
+        b->writable = 0;
 }
 
-static int
-adjust_hscroll(buffer *b)
+
+static int_ar
+find_line_matches(const buffer *b,
+                  const str    *s)
 {
-        size_t win_w = b->parent->w;
+        assert(b->state == BS_SEARCH);
 
-        if (b->cx < b->hscrloff) {
-                b->hscrloff = b->cx;
-                return 1;
-        } else if (b->cx >= b->hscrloff + win_w) {
-                b->hscrloff = b->cx - win_w + 1;
-                return 1;
-        }
-        return 0;
-}
+        static int_ar     ar;
+        const char       *sraw;
+        const char       *query;
 
-int
-adjust_scroll(buffer *b)
-{
-        int res;
+        ar    = array_empty(int_ar);
+        sraw  = str_cstr(s);
+        query = str_cstr(&b->last_search);
 
-        res = adjust_vscroll(b);
-        res = adjust_hscroll(b) || res;
-
-        return res;
-}
-
-static int
-buffer_up(buffer *b)
-{
-        if (b->cy > 0) {
-                --b->cy;
-                --b->al;
-        }
-
-        const str *s = &b->lns.data[b->al]->s;
-        if (b->wish_col > str_len(s)-1)
-                b->cx = str_len(s)-1;
-        else
-                b->cx = b->wish_col;
-
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b) || b->state == BS_SELECTION;
-}
-
-static int
-buffer_down(buffer *b)
-{
-        if (b->cy < b->lns.len-1) {
-                ++b->cy;
-                ++b->al;
-        }
-
-        const str *s = &b->lns.data[b->al]->s;
-        if (b->wish_col > str_len(s)-1)
-                b->cx = str_len(s)-1;
-        else
-                b->cx = b->wish_col;
-
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b) || b->state == BS_SELECTION;
-}
-
-static int
-buffer_right(buffer *b)
-{
-        str *s = &b->lns.data[b->al]->s;
-
-        if (b->cx == str_len(s)-1 && b->cy < b->lns.len-1) {
-                b->cx = 0;
-                ++b->cy;
-                ++b->al;
-        } else if (b->cx < str_len(s)-1) {
-                ++b->cx;
-        }
-        b->wish_col = b->cx;
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b) || b->state == BS_SELECTION;
-}
-
-static int
-buffer_left(buffer *b)
-{
-        if (b->cx == 0 && b->cy > 0) {
-                b->cx = str_len(&b->lns.data[b->al-1]->s)-1;
-                --b->cy;
-                --b->al;
-        }
-        else if (b->cx > 0)
-                --b->cx;
-        b->wish_col = b->cx;
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b);
-}
-
-static int
-buffer_eol(buffer *b)
-{
-        b->cx = str_len(&b->lns.data[b->al]->s)-1;
-        b->wish_col = b->cx;
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b);
-}
-
-static int
-buffer_bol(buffer *b)
-{
-        b->cx = 0;
-        b->wish_col = b->cx;
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        return adjust_scroll(b);
-}
-
-static void
-insert_char(buffer *b,
-            char    ch,
-            int     newline_advance)
-{
-        if (!writable(b))
-                return;
-
-        b->saved = 0;
-
-        if (!b->lns.data) {
-                char tmp[2] = {10, 0};
-                dyn_array_append(b->lns, line_from(str_from(tmp)));
-        }
-
-        str_insert(&b->lns.data[b->al]->s, b->cx, ch);
-        ++b->cx;
-
-        if (ch == 10) {
-                const char *rest;
-                line       *newln;
-
-                rest = str_cstr(&b->lns.data[b->al]->s)+b->cx;
-                newln = line_from(str_from(rest));
-
-                dyn_array_insert_at(b->lns, b->al+1, newln);
-                str_cut(&b->lns.data[b->al]->s, b->cx);
-
-                if (newline_advance) {
-                        b->cx = 0;
-                        ++b->cy;
-                        ++b->al;
-                }
-        }
-
-        b->wish_col = b->cx;
-
-        add_to_popxy(b);
-
-        adjust_scroll(b);
-}
-
-static void
-del_selection(buffer *b)
-{
-        if (b->state != BS_SELECTION)
-                return;
-
-        size_t anchor_y = (size_t)b->sy;
-        size_t anchor_x = (size_t)b->sx;
-        size_t cursor_y = b->al;
-        size_t cursor_x = b->cx;
-
-        // normalize
-        int forward = (anchor_y < cursor_y) ||
-                (anchor_y == cursor_y && anchor_x <= cursor_x);
-
-        size_t start_y = forward ? anchor_y : cursor_y;
-        size_t end_y   = forward ? cursor_y   : anchor_y;
-        size_t start_x = forward ? anchor_x : cursor_x;
-        size_t end_x   = forward ? cursor_x : anchor_x;
-
-        if (start_y >= b->lns.len || end_y >= b->lns.len)
-                goto cleanup;
-
-        b->saved = 0;
-
-        if (start_y == end_y) {
-                // single-line deletion
-                line *ln = b->lns.data[start_y];
-
-                size_t remove_count = end_x - start_x;
-                for (size_t i = 0; i < remove_count; ++i)
-                        str_rm(&ln->s, start_x);
-
-                b->cx = start_x;
-                b->al = start_y;
-                b->cy = start_y;
-        } else {
-                // multi-line deletion
-
-                // first line
-                {
-                        line *first = b->lns.data[start_y];
-                        size_t len_first = str_len(&first->s);
-                        if (start_x < len_first) {
-                                while (str_len(&first->s) > start_x)
-                                        str_rm(&first->s, start_x);
-                        }
-                }
-
-                // last line
-                {
-                        line *last = b->lns.data[end_y];
-                        for (size_t i = 0; i < end_x; ++i)
-                                str_rm(&last->s, 0);
-                }
-
-                // delete all middle lines
-                size_t lines_to_remove = end_y - start_y - 1;
-                for (size_t i = 0; i < lines_to_remove; ++i) {
-                        line_free(b->lns.data[start_y + 1]);
-                        dyn_array_rm_at(b->lns, start_y + 1);
-                }
-
-                // join the first and last lines
-                line *first = b->lns.data[start_y];
-                line *last  = b->lns.data[start_y + 1];
-
-                str_concat(&first->s, str_cstr(&last->s));
-                line_free(last);
-                dyn_array_rm_at(b->lns, start_y + 1);
-
-                // place cursor at the join point
-                b->cx = start_x;
-                b->al = start_y;
-                b->cy = start_y;
-        }
-
- cleanup:
-        b->wish_col = b->cx;
-        b->state = BS_NORMAL;
-        adjust_scroll(b);
-}
-
-static int
-del_char(buffer *b)
-{
-        if (!writable(b))
-                return 0;
-
-        if (b->state == BS_SELECTION) {
-                del_selection(b);
-                return 1;
-        }
-
-        line *ln;
-        int   newline;
-
-        ln       = b->lns.data[b->al];
-        newline  = 0;
-        b->saved = 0;
-
-        if (ln->s.chars[b->cx] == 10) {
-                newline = 1;
-                if (b->al < b->lns.len-1) {
-                        str *s = &ln->s;
-                        str_concat(s, str_cstr(&b->lns.data[b->al+1]->s));
-                        line_free(b->lns.data[b->al+1]);
-                        dyn_array_rm_at(b->lns, b->al+1);
-                } else {
-                        return 0;
-                }
-        }
-
-        str_rm(&ln->s, b->cx);
-        if (b->cx > str_len(&ln->s)-1)
-                b->cx = str_len(&ln->s)-1;
-
-        add_to_popxy(b);
-        return adjust_scroll(b) || newline;
-}
-
-static int
-backspace(buffer *b)
-{
-        if (!writable(b))
-                return 0;
-
-        line *ln;
-        int   newline;
-
-        ln       = b->lns.data[b->al];
-        newline  = 0;
-        b->saved = 0;
-
-        if (b->cx == 0) {
-                if (b->al == 0)
-                        return 0;
-                line   *prevln     = b->lns.data[b->al-1];
-                size_t  prevln_len = str_len(&prevln->s);
-
-                str_rm(&prevln->s, prevln_len-1);
-                str_concat(&prevln->s, str_cstr(&ln->s));
-                line_free(b->lns.data[b->al]);
-                dyn_array_rm_at(b->lns, b->al);
-
-                --b->al;
-                b->cx = prevln_len-1;
-                --b->cy;
-
-                adjust_scroll(b);
-                return 1;
-        }
-
-        if (b->last_tab > 0 && (glconf.flags & FT_TABMODE) == 0) {
-                --b->last_tab;
-                for (size_t i = 0; i < (size_t)glconf.defaults.space_amt; ++i) {
-                        buffer_left(b);
-                        str_rm(&ln->s, b->cx);
-                        if (b->cx > str_len(&ln->s)-1)
-                                b->cx = str_len(&ln->s)-1;
-                }
-        } else {
-                buffer_left(b);
-                str_rm(&ln->s, b->cx);
-                if (b->cx > str_len(&ln->s)-1)
-                        b->cx = str_len(&ln->s)-1;
-        }
-
-        adjust_scroll(b);
-        add_to_popxy(b);
-        return newline;
-}
-
-static void
-tab(buffer *b)
-{
-        ++b->last_tab;
-
-        if ((glconf.flags & FT_TABMODE) == 0) {
-                for (size_t i = 0; i < (size_t)glconf.defaults.space_amt; ++i)
-                        insert_char(b, ' ', 1);
-        }
-        else
-                insert_char(b, '\t', 1);
-}
-
-static void
-delete_until_eol(buffer *b)
-{
-        if (!writable(b))
-                return;
-
-        line *ln;
-        const str *s;
-
-        ln = b->lns.data[b->al];
-        s  = &ln->s;
-
-        clear_cpy();
-        for (size_t i = b->cx; i < str_len(s)-1; ++i)
-                dyn_array_append(g_cpy_buf, str_at(s, i));
-
-        str_cut(&ln->s, b->cx);
-        str_insert(&ln->s, b->cx, 10);
-
-        add_to_popxy(b);
-}
-
-static void
-jump_to_first_char(buffer *b)
-{
-        const str  *s;
-        const char *sraw;
-
-        s    = &b->lns.data[b->al]->s;
-        sraw = str_cstr(s);
+        if (!sraw || !query || !str_len(&b->last_search))
+                return ar;
 
         for (size_t i = 0; i < str_len(s); ++i) {
-                if (sraw[i] != ' ' && sraw[i] != '\n' && sraw[i] != '\t' && sraw[i] != '\r') {
-                        b->cx = i;
-                        break;
+                if (!memcmp(query, sraw+i, str_len(&b->last_search))) {
+                        array_append(ar, (int)i);
+                        i += str_len(&b->last_search)-1;
                 }
         }
 
-        b->wish_col = b->cx;
-
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+        return ar;
 }
 
-static void
-jump_to_top_of_buffer(buffer *b)
-{
-        if (b->lns.len == 0) // not sure if this is required, but doesn't hurt
-                return;
-
-        b->cy = b->lns.len-1;
-        b->cx = 0;
-        b->wish_col = 0;
-        b->al = b->lns.len-1;
-        adjust_scroll(b);
-}
-
-static void
-jump_to_bottom_of_buffer(buffer *b)
-{
-        b->cy = 0;
-        b->cx = 0;
-        b->wish_col = 0;
-        b->al = 0;
-        adjust_scroll(b);
-}
-
-static int
-prev_paragraph(buffer *b)
-{
-        size_t nextln;
-
-        nextln = b->cy;
-
-        for (int i = b->cy-1; i >= 0; --i) {
-                const line *l  = b->lns.data[i];
-                const line *l2 = b->lns.data[i+1];
-                nextln         = i;
-                if (str_len(&l->s) == 1 && l->s.chars[0] == 10) {
-                        if (i > 0 && l2 && l2->s.chars[0] == 10)
-                                continue;
-                        break;
-                }
-        }
-
-        b->cy = nextln;
-        b->cx = 0;
-        b->al = nextln;
-
-        return adjust_scroll(b) || b->state == BS_SELECTION;
-}
-
-static int
-next_paragraph(buffer *b)
-{
-        size_t nextln;
-
-        nextln = b->cy;
-
-        for (size_t i = b->cy+1; i < b->lns.len; ++i) {
-                const line *l  = b->lns.data[i];
-                const line *l2 = b->lns.data[i+1];
-                nextln         = i;
-                if (str_len(&l->s) == 1 && l->s.chars[0] == 10) {
-                        if (i < b->lns.len && l2 && l2->s.chars[0] == 10)
-                                continue;
-                        break;
-                }
-        }
-
-        b->cy = nextln;
-        b->cx = 0;
-        b->al = nextln;
-
-        return adjust_scroll(b) || b->state == BS_SELECTION;
-}
-
-static void
-kill_line(buffer *b)
-{
-        if (!writable(b))
-                return;
-
-        line *ln;
-        const str *s;
-
-        if (b->lns.len <= 0)
-                return;
-
-        ln = b->lns.data[b->al];
-        s  = &ln->s;
-
-        clear_cpy();
-        for (size_t i = 0; i < str_len(s); ++i)
-                dyn_array_append(g_cpy_buf, str_at(s, i));
-
-        line_free(ln);
-        dyn_array_rm_at(b->lns, b->al);
-
-        if (b->al > b->lns.len-1) {
-                --b->al;
-                --b->cy;
-        }
-
-        b->cx       = 0;
-        b->wish_col = 0;
-
-        adjust_scroll(b);
-}
-
-static void
-jump_next_word(buffer *b)
-{
-        const line *ln;
-        const str  *s;
-        const char *sraw;
-        int         hitchars;
-        size_t      i;
-
-        ln       = b->lns.data[b->al];
-        s        = &ln->s;
-        sraw     = str_cstr(s);
-        hitchars = 0;
-        i        = b->cx;
-
-        if (str_len(s) <= 0)
-                return;
-
-        while (i < str_len(s)) {
-                if (isalnum(sraw[i]))
-                        hitchars = 1;
-                else if (hitchars)
-                        break;
-                ++i;
-        }
-
-        if (i == str_len(s))
-                b->cx = str_len(s)-1;
-        else
-                b->cx = i;
-
-        b->wish_col = b->cx;
-}
-
-static void
-jump_prev_word(buffer *b)
-{
-        const line *ln;
-        const str  *s;
-        const char *sraw;
-        int         hitchars;
-        size_t      i;
-
-        ln       = b->lns.data[b->al];
-        s        = &ln->s;
-        sraw     = str_cstr(s);
-        hitchars = 0;
-        i        = b->cx-1;
-
-        if (str_len(s) == 0 || b->cx == 0)
-                return;
-
-        while (i > 0) {
-                if (isalnum(sraw[i]))
-                        hitchars = 1;
-                else if (hitchars)
-                        break;
-                --i;
-        }
-
-        b->cx = i;
-
-        if (!isalnum(sraw[b->cx]))
-                ++b->cx;
-
-        b->wish_col = b->cx;
-}
-
-static void
-del_word(buffer *b)
-{
-        line        *ln;
-        str         *s;
-        const char  *sraw;
-        int          hitchars;
-        size_t       i;
-
-        ln       = b->lns.data[b->al];
-        s        = &ln->s;
-        sraw     = str_cstr(s);
-        hitchars = 0;
-        i        = b->cx;
-
-        clear_cpy();
-        while (i < str_len(s)) {
-                if (sraw[i] == 10)
-                        break;
-                if (isalnum(sraw[i]))
-                        hitchars = 1;
-                else if (!isalnum(sraw[i]) && hitchars)
-                        break;
-                dyn_array_append(g_cpy_buf, str_at(s, i));
-                str_rm(s, i);
-        }
-}
-
-static void
-center_view(buffer *b)
-{
-        int rows = b->parent->h;
-        int vertical_offset = b->cy - (rows/2);
-        if (vertical_offset < 0)
-                vertical_offset = 0;
-
-        int max_offset = b->lns.len - rows;
-        if (max_offset < 0)
-                max_offset = 0;
-
-        //if (vertical_offset > max_offset)
-        //        vertical_offset = max_offset;
-
-        b->vscrloff = vertical_offset;
-        adjust_scroll(b);
-}
-
-int_pair_array
+static int_pair_ar
 find_all_matches_in_buffer(buffer *b)
 {
-        int_pair_array pairs = dyn_array_empty(int_pair_array);
-        for (size_t i = 0; i < b->lns.len; ++i) {
-                int_array verts = find_line_matches(b, &b->lns.data[i]->s);
+        int_pair_ar pairs = array_empty(int_pair_ar);
+        for (size_t i = 0; i < b->lines.len; ++i) {
+                int_ar verts = find_line_matches(b, &b->lines.data[i]->txt);
                 for (size_t j = 0; j < verts.len; ++j)
-                        dyn_array_append(pairs, int_pair_create(i, verts.data[j]));
+                        array_append(pairs, int_pair_create((int)i, verts.data[j]));
         }
         return pairs;
 }
@@ -992,9 +244,9 @@ search(buffer *b, int reverse)
         char        ch;
         str        *input;
         int         first;
-        int         old_cx;
-        int         old_cy;
-        int         old_al;
+        unsigned    old_cx;
+        unsigned    old_cy;
+        size_t      old_al;
         int         step;
         int         adjust;
 
@@ -1008,7 +260,7 @@ search(buffer *b, int reverse)
         adjust      = 1;
 
         while (1) {
-                int_pair_array pairs = find_all_matches_in_buffer(b);
+                int_pair_ar pairs = find_all_matches_in_buffer(b);
 
                 if (adjust) {
                         step = 0;
@@ -1029,24 +281,24 @@ search(buffer *b, int reverse)
                 adjust = 0;
 
                 if (pairs.len > 0 && step < (int)pairs.len) {
-                        b->al = pairs.data[step].l;
-                        b->cy = pairs.data[step].l;
-                        b->cx = pairs.data[step].r;
-                        adjust_scroll(b);
+                        b->al = (size_t)pairs.data[step].l;
+                        b->cy = (unsigned)pairs.data[step].l;
+                        b->cx = (unsigned)pairs.data[step].r;
+                        buffer_adjust_scroll(b);
                 }
 
                 center_view(b);
-                buffer_dump(b);
+                buffer_draw(b);
 
-                gotoxy(0, b->parent->h);
-                clear_line(0, b->parent->h);
+                gotoxy(0, b->size.h);
+                clear_line(0, b->size.h);
                 printf("Search [ %s", str_cstr(input));
                 fflush(stdout);
 
                 ty = get_input(&ch);
                 if (ty == INPUT_TYPE_NORMAL) {
                         if (first && (BACKSPACE(ch)
-                                || (ty == INPUT_TYPE_NORMAL && ch != '\n'))) {
+                                      || (ty == INPUT_TYPE_NORMAL && ch != '\n'))) {
                                 b->cx = old_cx; b->cy = old_cy; b->al = old_al;
                                 str_clear(&b->last_search);
                                 first  = 0;
@@ -1059,9 +311,9 @@ search(buffer *b, int reverse)
                                 adjust = 1;
                         } else if (ENTER(ch)) {
                                 if (pairs.len > 0 && step < (int)pairs.len) {
-                                        b->al       = pairs.data[step].l;
-                                        b->cy       = pairs.data[step].l;
-                                        b->cx       = pairs.data[step].r;
+                                        b->al       = (size_t)pairs.data[step].l;
+                                        b->cy       = (unsigned)pairs.data[step].l;
+                                        b->cx       = (unsigned)pairs.data[step].r;
                                         b->wish_col = b->cx;
                                 }
                                 break;
@@ -1094,14 +346,1124 @@ search(buffer *b, int reverse)
         b->state = BS_NORMAL;
 
         center_view(b);
-        adjust_scroll(b);
+        buffer_adjust_scroll(b);
 }
 
 static int
+writable(const buffer *b)
+{
+        if (!b->writable) {
+                draw_status(b, "buffer is read-only");
+                fflush(stdout);
+                return 0;
+        }
+
+        return 1;
+}
+
+static void
+clear_cpy(void)
+{
+        array_clear(g_cpy_buf);
+}
+
+static const char *
+state_to_cstr(const buffer *b)
+{
+        switch (b->state) {
+        case BS_NORMAL:    return "normal";
+        case BS_SELECTION: return "selection";
+        case BS_SEARCH:    return "search";
+        default:           return "unknown";
+        }
+        return "unknown";
+}
+
+static unsigned
+visual_column(const str *s,
+              size_t     char_idx,
+              unsigned   tab_width)
+{
+        unsigned col = 0;
+        for (size_t i = 0; i < char_idx && i < s->len; ++i) {
+                if (s->chars[i] == '\t') {
+                        col += tab_width - (col % tab_width);
+                } else {
+                        ++col;
+                }
+        }
+        return col;
+}
+
+static unsigned
+visual_width_up_to(const str *s,
+                   size_t     char_idx,
+                   unsigned   tab_width)
+{
+        return visual_column(s, char_idx, tab_width);
+}
+
+static size_t
+char_index_at_visual_col(const str *s,
+                         unsigned   target_col,
+                         unsigned   tab_width)
+{
+        // Find the character index for a given visual column
+        unsigned col = 0;
+        for (size_t i = 0; i < s->len; ++i) {
+                if (col >= target_col)
+                        return i;
+                if (s->chars[i] == '\t') {
+                        col += tab_width - (col % tab_width);
+                } else {
+                        ++col;
+                }
+        }
+        return s->len;
+}
+
+static void
+adjust_cursor(buffer *b)
+{
+        const str *s = &b->lines.data[b->al]->txt;
+        unsigned   x = visual_column(s, b->cx, TAB_WIDTH);
+        gotoxy(b->size.ws + (unsigned)(x > b->hoff ? x - b->hoff : 0U),
+               b->size.hs + (unsigned)(b->cy - b->voff));
+}
+
+static unsigned
+get_win_hight(const buffer *b)
+{
+        return b->size.h > 0 ? b->size.h - 1 - b->size.hs : 0;
+}
+
+static unsigned
+get_win_width(const buffer *b)
+{
+        return b->size.w > 0 ? b->size.w : 80;
+}
+
+static int
+adjust_vscroll(buffer *b)
+{
+        size_t win_h = get_win_hight(b);
+
+        if (b->cy < b->voff) {
+                b->voff = b->cy;
+                return 1;
+        } else if (b->cy >= b->voff + win_h) {
+                b->voff = b->cy - win_h + 1;
+                return 1;
+        }
+        return 0;
+}
+
+static int
+adjust_hscroll(buffer *b)
+{
+        const unsigned  tabw  = TAB_WIDTH;
+        const str      *s     = &b->lines.data[b->al]->txt;
+        unsigned        win_w = get_win_width(b);
+
+        unsigned cursor_visual = visual_column(s, b->cx, tabw);
+
+        if (cursor_visual < b->hoff) {
+                b->hoff = cursor_visual;
+                return 1;
+        } else if (cursor_visual >= b->hoff + win_w) {
+                b->hoff = cursor_visual - win_w + 1;
+                return 1;
+        }
+        return 0;
+}
+
+buffer_action
+buffer_adjust_scroll(buffer *b)
+{
+        int res;
+
+        res = adjust_vscroll(b);
+        res = adjust_hscroll(b) || res;
+
+        return res ? BA_REDRAW : BA_NOP;
+}
+
+static buffer_action
+del_selection(buffer *b)
+{
+        if (b->state != BS_SELECTION)
+                return BA_NOP;
+
+        size_t anchor_y = (size_t)b->sy;
+        size_t anchor_x = (size_t)b->sx;
+        size_t cursor_y = b->al;
+        size_t cursor_x = b->cx;
+
+        // normalize
+        int forward = (anchor_y < cursor_y) ||
+                (anchor_y == cursor_y && anchor_x <= cursor_x);
+
+        size_t start_y = forward ? anchor_y : cursor_y;
+        size_t end_y   = forward ? cursor_y : anchor_y;
+        size_t start_x = forward ? anchor_x : cursor_x;
+        size_t end_x   = forward ? cursor_x : anchor_x;
+
+        if (start_y >= b->lines.len || end_y >= b->lines.len)
+                goto cleanup;
+
+        b->saved = 0;
+
+        if (start_y == end_y) {
+                // single-line deletion
+                line *ln = b->lines.data[start_y];
+
+                size_t remove_count = end_x - start_x;
+                for (size_t i = 0; i < remove_count; ++i)
+                        str_rm(&ln->txt, start_x);
+
+                b->cx = (unsigned)start_x;
+                b->al = (unsigned)start_y;
+                b->cy = (unsigned)start_y;
+        } else {
+                // multi-line deletion
+
+                // first line
+                {
+                        line *first = b->lines.data[start_y];
+                        size_t len_first = str_len(&first->txt);
+                        if (start_x < len_first) {
+                                while (str_len(&first->txt) > start_x)
+                                        str_rm(&first->txt, start_x);
+                        }
+                }
+
+                // last line
+                {
+                        line *last = b->lines.data[end_y];
+                        for (size_t i = 0; i < end_x; ++i)
+                                str_rm(&last->txt, 0);
+                }
+
+                // delete all middle lines
+                size_t lines_to_remove = end_y - start_y - 1;
+                for (size_t i = 0; i < lines_to_remove; ++i) {
+                        line_free(b->lines.data[start_y + 1]);
+                        array_rm_at(b->lines, start_y + 1);
+                }
+
+                // join the first and last lines
+                line *first = b->lines.data[start_y];
+                line *last  = b->lines.data[start_y + 1];
+
+                str_concat(&first->txt, str_cstr(&last->txt));
+                line_free(last);
+                array_rm_at(b->lines, start_y + 1);
+
+                // place cursor at the join point
+                b->cx = (unsigned)start_x;
+                b->al = (unsigned)start_y;
+                b->cy = (unsigned)start_y;
+        }
+
+ cleanup:
+        b->wish_col = b->cx;
+        b->state    = BS_NORMAL;
+
+        buffer_adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+up(buffer *b)
+{
+        if (b->cy > 0) {
+                const str *olds = &b->lines.data[b->al]->txt;
+                unsigned desired = visual_column(olds, /*b->wish_col*/b->cx, TAB_WIDTH);
+                --b->cy;
+                --b->al;
+                const str *news = &b->lines.data[b->al]->txt;
+                b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
+                if (desired < b->wish_col)
+                        b->cx = b->wish_col;
+        }
+
+        if (b->cx > b->lines.data[b->al]->txt.len-1)
+                b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+down(buffer *b)
+{
+        if (b->cy < b->lines.len-1) {
+                const str *olds = &b->lines.data[b->al]->txt;
+                unsigned desired = visual_column(olds, /*b->wish_col*/b->cx, TAB_WIDTH);
+                ++b->cy;
+                ++b->al;
+                const str *news = &b->lines.data[b->al]->txt;
+                b->cx = (unsigned)char_index_at_visual_col(news, desired, TAB_WIDTH);
+                if (desired < b->wish_col)
+                        b->cx = b->wish_col;
+
+        }
+
+        if (b->cx > b->lines.data[b->al]->txt.len-1)
+                b->cx = (unsigned)b->lines.data[b->al]->txt.len-1;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+right(buffer *b)
+{
+        str *s = &b->lines.data[b->al]->txt;
+
+        if (b->cx < str_len(s)-1) {
+                ++b->cx;
+        } else if (b->cy < b->lines.len-1) {
+                ++b->cy;
+                ++b->al;
+                b->cx = 0;
+        }
+        b->wish_col = b->cx;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+left(buffer *b)
+{
+        if (b->cx > 0) {
+                --b->cx;
+        } else if (b->cy > 0) {
+                --b->cy;
+                --b->al;
+                str *prev = &b->lines.data[b->al]->txt;
+                b->cx = (unsigned)str_len(prev)-1;
+        }
+        b->wish_col = b->cx;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+bol(buffer *b)
+{
+        b->cx = 0;
+        b->wish_col = 0;
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+eol(buffer *b)
+{
+        str *s = &b->lines.data[b->al]->txt;
+        b->cx = (unsigned)str_len(s)-1;
+        b->wish_col = (unsigned)str_len(s)-1;
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+jump_next_word(buffer *b)
+{
+        const line *ln;
+        const str  *s;
+        const char *sraw;
+        int         hitchars;
+        size_t      i;
+
+        ln       = b->lines.data[b->al];
+        s        = &ln->txt;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx;
+
+        if (str_len(s) <= 0)
+                return BA_NOP;
+
+        while (i < str_len(s)) {
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (hitchars)
+                        break;
+                ++i;
+        }
+
+        if (i == str_len(s))
+                b->cx = (unsigned)str_len(s)-1;
+        else
+                b->cx = (unsigned)i;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+jump_prev_word(buffer *b)
+{
+        const line *ln;
+        const str  *s;
+        const char *sraw;
+        int         hitchars;
+        size_t      i;
+
+        ln       = b->lines.data[b->al];
+        s        = &ln->txt;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx-1;
+
+        if (str_len(s) == 0 || b->cx == 0)
+                return BA_NOP;
+
+        while (i > 0) {
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (hitchars)
+                        break;
+                --i;
+        }
+
+        b->cx = (unsigned)i;
+
+        if (!isalnum(sraw[b->cx]))
+                ++b->cx;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+del_word(buffer *b)
+{
+        line        *ln;
+        str         *s;
+        const char  *sraw;
+        int          hitchars;
+        size_t       i;
+
+        ln       = b->lines.data[b->al];
+        s        = &ln->txt;
+        sraw     = str_cstr(s);
+        hitchars = 0;
+        i        = b->cx;
+
+        //clear_cpy();
+        while (i < str_len(s)) {
+                if (sraw[i] == 10)
+                        break;
+                if (isalnum(sraw[i]))
+                        hitchars = 1;
+                else if (!isalnum(sraw[i]) && hitchars)
+                        break;
+                //array_append(g_cpy_buf, str_at(s, i));
+                str_rm(s, i);
+        }
+
+        buffer_adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+prev_paragraph(buffer *b)
+{
+        size_t nextln;
+
+        nextln = b->cy;
+
+        for (int i = (int)b->cy-1; i >= 0; --i) {
+                const line *l  = b->lines.data[i];
+                const line *l2 = b->lines.data[i+1];
+                nextln         = (size_t)i;
+                if (str_len(&l->txt) == 1 && l->txt.chars[0] == '\n') {
+                        if (i > 0 && l2 && l2->txt.chars[0] == '\n')
+                                continue;
+                        break;
+                }
+        }
+
+        b->cy = (unsigned)nextln;
+        b->cx = 0;
+        b->al = nextln;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+next_paragraph(buffer *b)
+{
+        size_t nextln;
+
+        nextln = b->cy;
+
+        for (size_t i = b->cy+1; i < b->lines.len; ++i) {
+                const line *l  = b->lines.data[i];
+                const line *l2 = b->lines.data[i+1];
+                nextln         = i;
+                if (str_len(&l->txt) == 1 && l->txt.chars[0] == 10) {
+                        if (i < b->lines.len && l2 && l2->txt.chars[0] == '\n')
+                                continue;
+                        break;
+                }
+        }
+
+        b->cy = (unsigned)nextln;
+        b->cx = 0;
+        b->al = nextln;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+kill_line(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        line *ln;
+        const str *s;
+
+        if (b->lines.len <= 0)
+                return BA_NOP;
+
+        ln = b->lines.data[b->al];
+        s  = &ln->txt;
+
+        clear_cpy();
+        for (size_t i = 0; i < str_len(s); ++i)
+                array_append(g_cpy_buf, str_at(s, i));
+
+        line_free(ln);
+        array_rm_at(b->lines, b->al);
+
+        if (b->al > b->lines.len-1) {
+                --b->al;
+                --b->cy;
+        }
+
+        b->cx       = 0;
+        b->wish_col = 0;
+
+        buffer_adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+insert_char(buffer *b, char ch, int newline_advance)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        if (b->state == BS_AUTO)
+                b->state = BS_NORMAL;
+
+        b->saved = 0;
+
+        if (!b->lines.data) {
+                char tmp[] = {'\n', 0};
+                array_append(b->lines, line_from(str_from(tmp)));
+                /* array_append(b->lines, line_from(str_from("\n"))); */
+        }
+
+        str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
+        ++b->cx;
+        ++b->wish_col;
+
+        if (ch == '\n') {
+                const char *rest;
+                line       *newln;
+
+                rest  = str_cstr(&b->lines.data[b->al]->txt)+b->cx;
+                newln = line_from(str_from(rest));
+
+                array_insert_at(b->lines, b->al+1, newln);
+                str_cut(&b->lines.data[b->al]->txt, b->cx);
+
+                if (newline_advance) {
+                        b->cx = 0;
+                        b->wish_col = 0;
+                        ++b->cy;
+                        ++b->al;
+                }
+        }
+
+        //add_to_popxy(b);
+
+        adjust_cursor(b);
+        return (buffer_adjust_scroll(b) == BA_REDRAW || ch == '\n') ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+jump_to_top_of_buffer(buffer *b)
+{
+        if (b->lines.len == 0) // not sure if this is required, but doesn't hurt
+                return BA_NOP;
+
+        b->cy = (unsigned)b->lines.len-1;
+        b->cx = 0;
+        b->wish_col = 0;
+        b->al = b->lines.len-1;
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+jump_to_bottom_of_buffer(buffer *b)
+{
+        b->cy = 0;
+        b->cx = 0;
+        b->wish_col = 0;
+        b->al = 0;
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+del_char(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        if (b->state == BS_SELECTION)
+                return del_selection(b);
+
+        line *ln;
+        int   newline;
+
+        ln       = b->lines.data[b->al];
+        newline  = 0;
+        b->saved = 0;
+
+        if (ln->txt.chars[b->cx] == '\n') {
+                newline = 1;
+                if (b->al < b->lines.len-1) {
+                        str *s = &ln->txt;
+                        str_concat(s, str_cstr(&b->lines.data[b->al+1]->txt));
+                        line_free(b->lines.data[b->al+1]);
+                        array_rm_at(b->lines, b->al+1);
+                } else {
+                        return 0;
+                }
+        }
+
+        str_rm(&ln->txt, b->cx);
+        if (b->cx > str_len(&ln->txt)-1)
+                b->cx = (unsigned)str_len(&ln->txt)-1;
+
+        //add_to_popxy(b);
+        return (buffer_adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+backspace(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        if (b->state == BS_AUTO)
+                b->state = BS_NORMAL;
+
+        line *ln;
+        int   newline;
+
+        ln       = b->lines.data[b->al];
+        newline  = 0;
+        b->saved = 0;
+
+        if (b->cx == 0) {
+                if (b->al == 0)
+                        return 0;
+                line   *prevln     = b->lines.data[b->al-1];
+                size_t  prevln_len = str_len(&prevln->txt);
+
+                str_rm(&prevln->txt, prevln_len-1);
+                str_concat(&prevln->txt, str_cstr(&ln->txt));
+                line_free(b->lines.data[b->al]);
+                array_rm_at(b->lines, b->al);
+
+                --b->al;
+                b->cx = (unsigned)prevln_len-1;
+                --b->cy;
+
+                buffer_adjust_scroll(b);
+                return BA_REDRAW;
+        }
+
+        if (((glconf.flags & FK_TABMODE) == 0) && b->last_tab > 0) {
+                --b->last_tab;
+                for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
+                        left(b);
+                        str_rm(&ln->txt, b->cx);
+                        if (b->cx > str_len(&ln->txt)-1)
+                                b->cx = (unsigned)str_len(&ln->txt)-1;
+                }
+        } else {
+                left(b);
+                str_rm(&ln->txt, b->cx);
+                if (b->cx > str_len(&ln->txt)-1)
+                        b->cx = (unsigned)str_len(&ln->txt)-1;
+        }
+
+        b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+        return (buffer_adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+delete_until_eol(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        line *ln;
+        const str *s;
+
+        ln = b->lines.data[b->al];
+        s  = &ln->txt;
+
+        clear_cpy();
+        for (size_t i = b->cx; i < str_len(s)-1; ++i)
+                array_append(g_cpy_buf, str_at(s, i));
+
+        str_cut(&ln->txt, b->cx);
+        str_insert(&ln->txt, b->cx, '\n');
+
+        //add_to_popxy(b);
+
+        buffer_adjust_scroll(b);
+
+        return BA_XY;
+}
+
+static buffer_action
+jump_to_first_char(buffer *b)
+{
+        const str  *s;
+        const char *sraw;
+
+        s    = &b->lines.data[b->al]->txt;
+        sraw = str_cstr(s);
+
+        for (size_t i = 0; i < str_len(s); ++i) {
+                if (sraw[i] != ' ' && sraw[i] != '\n' && sraw[i] != '\t' && sraw[i] != '\r') {
+                        b->cx = (unsigned)i;
+                        break;
+                }
+        }
+
+        b->wish_col = b->cx;
+
+        adjust_cursor(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+center_view(buffer *b)
+{
+        int rows = (int)get_win_hight(b);
+        int vertical_offset = (int)b->cy - (rows/2);
+        if (vertical_offset < 0)
+                vertical_offset = 0;
+
+        int max_offset = (int)b->lines.len - rows;
+        if (max_offset < 0)
+                max_offset = 0;
+
+        b->voff = (unsigned)vertical_offset;
+        buffer_adjust_scroll(b);
+
+        return BA_REDRAW;
+}
+
+static buffer_action
+combine_lines(buffer *b)
+{
+        line   *l0;
+        line   *l1;
+        str    *s0;
+        str    *s1;
+        size_t len;
+
+        if (b->al >= b->lines.len-1)
+                return BA_NOP;
+
+        l0  = b->lines.data[b->al];
+        s0  = &l0->txt;
+        l1  = b->lines.data[b->al+1];
+        s1  = &l1->txt;
+        len = str_len(s0);
+
+        s0->chars[s0->len-1] = ' ';
+        str_trim_before(s1);
+        str_concat(s0, str_cstr(s1));
+        array_rm_at(b->lines, b->al+1);
+
+        b->cx = (unsigned)len-1;
+        b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+
+        return BA_REDRAW;
+}
+
+
+static buffer_action
+page_down(buffer *b)
+{
+        size_t h;
+
+        h = b->size.h;
+
+        if (b->al + h > b->lines.len) {
+                b->al = b->lines.len-1;
+                b->cy = (unsigned)b->lines.len-1;
+        } else {
+                b->al += h;
+                b->cy += (unsigned)h;
+        }
+
+        b->cx       = 0;
+        b->wish_col = 0;
+
+        buffer_adjust_scroll(b);
+
+        return BA_REDRAW;
+}
+
+static buffer_action
+page_up(buffer *b)
+{
+        size_t h;
+
+        h = b->size.h;
+
+        if ((int)b->al - (int)h < 0) {
+                b->al = 0;
+                b->cy = 0;
+        } else {
+                b->al -= h;
+                b->cy -= (unsigned)h;
+        }
+
+        b->cx       = 0;
+        b->wish_col = 0;
+
+        buffer_adjust_scroll(b);
+
+        return BA_REDRAW;
+}
+
+
+static int
+backspace_stop(unsigned char ch)
+{
+        return isspace(ch) || !isalnum(ch);
+}
+
+static int
+super_backspace(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        line   *ln;
+        size_t  start;
+
+        ln    = b->lines.data[b->al];
+        start = b->cx;
+
+        // cursor at beginning of line fall back to regular backspace
+        if (b->cx == 0)
+                return backspace(b);
+
+        b->saved = 0;
+
+        while (start > 0 && backspace_stop((unsigned char)str_at(&ln->txt, start - 1)))
+                --start;
+
+        if (start > 0) {
+                while (start > 0 && !backspace_stop((unsigned char)str_at(&ln->txt, start - 1)))
+                        --start;
+        }
+
+        // nothing to remove
+        if (start == b->cx)
+                return 0;
+
+        str_remove_range(&ln->txt, start, b->cx - start);
+
+        b->cx       = (unsigned)start;
+        b->last_tab = 0;
+
+        //add_to_popxy(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+buffer_dupline(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        line *ln;
+        str  *s;
+        line *newln;
+
+        ln = b->lines.data[b->al];
+        s  = &ln->txt;
+        newln = line_from_cstr(str_cstr(s));
+
+        array_insert_at(b->lines, b->al, newln);
+        ++b->al;
+        ++b->cy;
+
+        //add_to_popxy(b);
+        buffer_adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+movetxt_up(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        if (b->al <= 0)
+                return BA_NOP;
+
+        line *tmp;
+
+        tmp                    = b->lines.data[b->al];
+        b->lines.data[b->al]   = b->lines.data[b->al-1];
+        b->lines.data[b->al-1] = tmp;
+
+        --b->al;
+        --b->cy;
+        //add_to_popxy(b);
+        buffer_adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+movetxt_down(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        if (b->al >= b->lines.len-1)
+                return BA_NOP;
+
+        line *tmp;
+
+        tmp                    = b->lines.data[b->al];
+        b->lines.data[b->al]   = b->lines.data[b->al+1];
+        b->lines.data[b->al+1] = tmp;
+
+        ++b->al;
+        ++b->cy;
+
+        //add_to_popxy(b);
+        buffer_adjust_scroll(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+upperlower_word(buffer *b,
+                int   (*fun)(int),
+                int     all)
+{
+        size_t      start;
+        line       *ln;
+        str        *s;
+        const char *sraw;
+
+        start = b->cx;
+        ln    = b->lines.data[b->al];
+        s     = &ln->txt;
+        sraw  = str_cstr(s);
+
+        while (start < str_len(s) && !isalpha(sraw[start]))
+                ++start;
+
+        if (start >= str_len(s))
+                return BA_NOP;
+
+        for (size_t i = 0; start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'); ++i, ++start) {
+                if ((!all && !i) || all)
+                        s->chars[start] = (char)fun(s->chars[start]);
+        }
+
+        b->cx = (unsigned)start;
+        b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+
+        return BA_XY;
+}
+
+static buffer_action
+uppercase_word(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        upperlower_word(b, toupper, 0);
+
+        //add_to_popxy(b);
+        buffer_adjust_scroll(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+lowercase_word(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        upperlower_word(b, tolower, 1);
+
+        //add_to_popxy(b);
+        buffer_adjust_scroll(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+caps_word(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        upperlower_word(b, toupper, 1);
+
+        //add_to_popxy(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+swap_chars(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        line *ln;
+        str  *s;
+        char  ch;
+
+        ln = b->lines.data[b->al];
+        s  = &ln->txt;
+        ch = str_at(s, b->cx);
+
+        if (b->cx >= str_len(s)-1 || b->cx == 0)
+                return BA_NOP;
+
+        s->chars[b->cx]   = s->chars[b->cx-1];
+        s->chars[b->cx-1] = ch;
+
+        ++b->cx;
+        b->wish_col = b->cx;
+
+        //add_to_popxy(b);
+        return BA_XY;
+}
+
+static buffer_action
+cancel(buffer *b)
+{
+        b->state = BS_NORMAL;
+        return BA_REDRAW;
+}
+
+static buffer_action
+selection(buffer *b)
+{
+        if (b->state == BS_NORMAL)
+                b->state = BS_SELECTION;
+        else if (b->state == BS_SELECTION)
+                b->state = BS_NORMAL;
+        else
+                return BA_NOP;
+
+        b->sy = (unsigned)b->al;
+        b->sx = b->cx;
+
+        return BA_XY;
+}
+
+static buffer_action
+copy_selection(buffer *b)
+{
+        if (b->state != BS_SELECTION)
+                return BA_NOP;
+
+        clear_cpy();
+
+        size_t start_line, start_col, end_line, end_col;
+
+        (void)end_col;
+        (void)start_col;
+
+        // determine absolute selection bounds
+        if (b->sy < b->al || (b->sy == b->al && b->sx <= b->cx)) {
+                start_line = b->sy;
+                start_col  = b->sx;
+                end_line   = b->al;
+                end_col    = b->cx;
+        } else {
+                start_line = b->al;
+                start_col  = b->cx;
+                end_line   = b->sy;
+                end_col    = b->sx;
+        }
+
+        // copy lines
+        for (size_t i = start_line; i <= end_line; ++i) {
+                str *ln = &b->lines.data[i]->txt;
+                size_t sel_start, sel_end;
+
+                if (!line_selection_range(b, i, ln->len, &sel_start, &sel_end))
+                        continue;
+
+                for (size_t j = sel_start; j < sel_end; ++j)
+                        array_append(g_cpy_buf, ln->chars[j]);
+        }
+
+        b->state = BS_NORMAL;
+
+        return BA_REDRAW;
+}
+
+static buffer_action
+cut_selection(buffer *b)
+{
+        if (!writable(b))
+                return BA_NOP;
+
+        if (b->state != BS_SELECTION)
+                return BA_NOP;
+
+        copy_selection(b);
+        b->state = BS_SELECTION;
+        buffer_action a = del_selection(b);
+        //add_to_popxy(b);
+        return a == BA_REDRAW
+                ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
 paste(buffer *b)
 {
         if (!writable(b))
-                return 0;
+                return BA_NOP;
 
         int newline;
 
@@ -1118,755 +1480,358 @@ paste(buffer *b)
                         newline = 1;
         }
 
-        add_to_popxy(b);
-        adjust_scroll(b);
+        //add_to_popxy(b);
 
-        return newline;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || newline)
+                ? BA_REDRAW : BA_XY;
 }
 
-static void
-combine_lines(buffer *b)
-{
-        line   *l0;
-        line   *l1;
-        str    *s0;
-        str    *s1;
-        size_t len;
-
-        if (b->al >= b->lns.len-1)
-                return;
-
-        l0 = b->lns.data[b->al];
-        s0 = &l0->s;
-        l1 = b->lns.data[b->al+1];
-        s1 = &l1->s;
-        len = str_len(s0);
-
-        s0->chars[s0->len-1] = ' ';
-        str_trim_before(s1);
-        str_concat(s0, str_cstr(s1));
-        dyn_array_rm_at(b->lns, b->al+1);
-
-        b->cx = len-1;
-        b->wish_col = b->cx;
-
-        add_to_popxy(b);
-}
-
-static void
-page_down(buffer *b)
-{
-        size_t h;
-
-        h = b->parent->h;
-
-        if (b->al + h > b->lns.len) {
-                b->al = b->lns.len-1;
-                b->cy = b->lns.len-1;
-        } else {
-                b->al += h;
-                b->cy += h;
-        }
-
-        b->cx       = 0;
-        b->wish_col = 0;
-
-        adjust_scroll(b);
-}
-
-static void
-page_up(buffer *b)
-{
-        size_t h;
-
-        h = b->parent->h;
-
-        if ((int)b->al - (int)h < 0) {
-                b->al = 0;
-                b->cy = 0;
-        } else {
-                b->al -= h;
-                b->cy -= h;
-        }
-
-        b->cx       = 0;
-        b->wish_col = 0;
-
-        adjust_scroll(b);
-}
-
-static void
-selection(buffer *b)
-{
-        if (b->state == BS_NORMAL)
-                b->state = BS_SELECTION;
-        else if (b->state == BS_SELECTION)
-                b->state = BS_NORMAL;
-        else
-                return;
-
-        b->sy = b->al;
-        b->sx = b->cx;
-}
-
-static void
-cancel(buffer *b)
-{
-        b->state = BS_NORMAL;
-}
-
-static void
-cut_selection(buffer *b)
+buffer_action
+buffer_save(buffer *b)
 {
         if (!writable(b))
-                return;
-        if (b->state != BS_SELECTION)
-                return;
-        copy_selection(b);
-        del_selection(b);
-        add_to_popxy(b);
-}
+                return BA_NOP;
 
-static char *
-input_from_minibuffer(buffer     *b,
-                      const char *prompt)
-{
-        str input;
+        if (b->lines.len == 0)
+                return BA_NOP;
 
-        input = str_create();
-
-        if (!prompt)
-                prompt = "";
-
-        while (1) {
-                gotoxy(0, b->parent->h);
-                clear_line(0, b->parent->h);
-                printf("%s [ %s", prompt, str_cstr(&input));
-                fflush(stdout);
-
-                char ch;
-                input_type ty;
-
-                switch (ty = get_input(&ch)) {
-                case INPUT_TYPE_NORMAL:
-                        if (ENTER(ch))
-                                goto done;
-                        if (BACKSPACE(ch))
-                                str_pop(&input);
-                        else
-                                str_append(&input, ch);
-                        break;
-                case INPUT_TYPE_CTRL:
-                        if (ch == CTRL_G) {
-                                str_destroy(&input);
-                                return NULL;
-                        }
-                        break;
-                default: break;
+        char_ar content = array_empty(char_ar);
+        for (size_t i = 0; i < b->lines.len; ++i) {
+                const line *ln = b->lines.data[i];
+                for (size_t j = 0; j < ln->txt.len; ++j) {
+                        array_append(content, ln->txt.chars[j]);
                 }
         }
+        array_append(content, 0);
+        if (!write_file(b->path.chars, content.data)) {
+                perror("write_file");
+                return BA_NOP;
+        }
+
+        b->saved = 1;
+
+        collect_ac_from_buffer(b);
+
+        return BA_XY;
+}
+
+static buffer_action
+ctrlx(buffer *b)
+{
+        char       ch;
+        input_type ty;
+
+        switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_NORMAL: {
+                if (ch == 'b')
+                        return BA_REQ_SWITCHBUFFER;
+                if (ch == '/')
+                        return BA_REQ_SPLITVER;
+                if (ch == 'o')
+                        return BA_REQ_JMPBUF;
+                if (ch == 'm')
+                        return BA_REQ_MAXIMIZEMON;
+                if (ch == 'x')
+                        return BA_REQ_COMPILE;
+                if (ch == '-')
+                        return BA_REQ_SPLITHOR;
+                if (ch == 'k')
+                        return BA_REQ_KILLBUF;
+        } break;
+        case INPUT_TYPE_CTRL: {
+                if (ch == CTRL_S)
+                        return buffer_save(b);
+                if (ch == CTRL_Q)
+                        return BA_REQ_EXIT;
+                if (ch == CTRL_F)
+                        return BA_REQ_FINDFILE;
+        } break;
+        default: break;
+        }
+
+        return BA_NOP;
+}
+
+static buffer_action
+handle_normal_input_while_builtin(buffer *b, char ch)
+{
+        if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == 'g')
+                return BA_REQ_RECOMPILE;
+        if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == '\n')
+                return BA_REQ_ERRJMP;
+
+        if (ch == 'q')
+                return BA_REQ_CLOSE_BUILTIN;
+
+        return BA_NONE;
+}
+
+static str
+get_word_behind_cursor(const buffer *b)
+{
+        str res;
+
+        res = str_create();
+
+        for (int i = (int)b->cx-1; i >= 0; --i) {
+                char ch = b->lines.data[b->al]->txt.chars[(size_t)i];
+                if (!isalpha(ch) && ch != '_')
+                        break;
+                else
+                        str_insert(&res, 0/*res.len*/, ch);
+        }
+
+        return res;
+}
+
+static void
+display_autocomplete(buffer *b)
+{
+        str      prev;
+        size_t   words_n;
+        char   **words;
+
+        prev = get_word_behind_cursor(b);
+
+        if (prev.len == 0)
+                goto done;
+
+        words_n = 0;
+        words   = trie_get_completions(b->ac, str_cstr(&prev), MAX_AUTOCOMPLETE, &words_n);
+
+        if (words_n > 0) {
+                for (size_t i = 0; i < strlen(words[(b->ac_cycle-1)%words_n]); ++i)
+                        putchar(' ');
+
+                gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+                printf(GRAY "%s " RESET, words[(b->ac_cycle++)%words_n] + str_len(&prev));
+                gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+                fflush(stdout);
+
+                b->state = BS_AUTO;
+        }
+
+        free(words);
+done:
+        str_destroy(&prev);
+}
+
+static buffer_action
+accept_autocomplete(buffer *b)
+{
+        /*if (!glconf.runtime.enable_auto)
+                return;*/
+
+        /*if (b->state != BS_AUTO)
+                return BA_NOP;*/
+
+        str      prev;
+        size_t   words_n;
+        char   **words;
+
+        prev    = get_word_behind_cursor(b);
+        words_n = 0;
+        words   = trie_get_completions(b->ac, str_cstr(&prev), MAX_AUTOCOMPLETE, &words_n);
+
+       if (words_n == 0)
+                goto done;
+
+        char *s = words[(b->ac_cycle-1)%words_n];
+        size_t n = strlen(s);
+        if (isspace(s[n-1]))
+                s[n-1] = 0;
+
+        for (size_t i = str_len(&prev); s[i]; ++i)
+                str_insert(&b->lines.data[b->al]->txt, b->cx++, s[i]);
 
 done:
-        return input.chars;
+        str_destroy(&prev);
+        free(words);
+        b->state    = BS_NORMAL;
+        b->ac_cycle = 0;
+        b->wish_col = b->cx;
+
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
-void
-buffer_jump_to_verts(buffer *b, int x, int y)
+static buffer_action
+tab(buffer *b)
 {
-        if (y > (int)b->lns.len-1 || y < 0)
-                return;
-        if (x > (int)b->lns.data[y]->s.len-1 || x < 0)
-                return;
-        b->cx = x;
-        b->cy = y;
-        b->al = y;
-        adjust_scroll(b);
+        buffer_action ba;
+        char          prevchar;
+
+        ba = BA_NOP;
+
+        if (b->cx > 0)
+                prevchar = b->lines.data[b->al]->txt.chars[b->cx-1];
+        else
+                prevchar = 0;
+
+        if ((prevchar && isalpha(prevchar)) || prevchar == '_') {
+                display_autocomplete(b);
+                return BA_NOP;
+        }
+
+        ++b->last_tab;
+
+        if (glconf.flags & FK_TABMODE)
+                return insert_char(b, '\t', 1);
+
+        for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
+                if (ba == BA_REDRAW)
+                        insert_char(b, ' ', 1);
+                else
+                        ba = insert_char(b, ' ', 1);
+        }
+
+        return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
-void
+static buffer_action
+jmp_and_highlight_forward(buffer *b)
+{
+        if (b->state != BS_SELECTION)
+                selection(b);
+        jump_next_word(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
 jump_to_line(buffer *b)
 {
         char *input;
         int   no;
 
-        if (!(input = input_from_minibuffer(b, "Lineno")))
-                return;
+        if (!(input = minibuffer_input(b->parent, "lineno", NULL, array_empty(cstr_ar))))
+                 return BA_REDRAW;
 
         if (!cstr_isdigit(input))
-                return;
+                return BA_NOP;
 
         no = atoi(input);
 
-        if (no-1 >= (int)b->lns.len || no-1 <= 0)
-                return;
+        if (no > (int)b->lines.len || no <= 0)
+                return BA_REDRAW;
 
         b->cx = 0;
-        b->cy = no-1;
-        b->al = no-1;
+        b->cy = (unsigned)no-1;
+        b->al = (unsigned)no-1;
 
-        adjust_scroll(b);
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
-static int
-backspace_stop(unsigned char ch)
+static buffer_action
+buffer_shell(buffer *b)
 {
-        return isspace(ch) || !isalnum(ch);
-}
-
-static int
-super_backspace(buffer *b)
-{
-        if (!writable(b))
-                return 0;
-
-        line   *ln;
-        size_t  start;
-
-        ln    = b->lns.data[b->al];
-        start = b->cx;
-
-        // cursor at beginning of line fall back to regular backspace
-        if (b->cx == 0)
-                return backspace(b);
-
-        b->saved = 0;
-
-        while (start > 0 && backspace_stop((unsigned char)str_at(&ln->s, start - 1)))
-                --start;
-
-        if (start > 0) {
-                while (start > 0 && !backspace_stop((unsigned char)str_at(&ln->s, start - 1)))
-                        --start;
-        }
-
-        // nothing to remove
-        if (start == b->cx)
-                return 0;
-
-        str_remove_range(&ln->s, start, b->cx - start);
-
-        b->cx       = start;
-        b->last_tab = 0;
-
-        add_to_popxy(b);
-        adjust_scroll(b);
-
-        return 1;
-}
-
-static void
-expand_region(buffer *b)
-{
-        const line *ln   = b->lns.data[b->al];
-        const str  *s    = &ln->s;
-
-        if (b->cx >= str_len(s)-1)
-                return;
-
-        if (b->state != BS_SELECTION)
-                selection(b);
-
-        jump_next_word(b);
-
-        b->wish_col = b->cx;
-        adjust_scroll(b);
-}
-
-void
-buffer_dupline(buffer *b)
-{
-        if (!writable(b))
-                return;
-
-        line *ln;
-        str  *s;
-        line *newln;
-
-        ln = b->lns.data[b->al];
-        s  = &ln->s;
-        newln = line_from_cstr(str_cstr(s));
-
-        dyn_array_insert_at(b->lns, b->al, newln);
-        ++b->al;
-        ++b->cy;
-
-        add_to_popxy(b);
-        adjust_scroll(b);
-}
-
-static void
-movetxt_up(buffer *b)
-{
-        if (!writable(b))
-                return;
-
-        if (b->al <= 0)
-                return;
-
-        line *tmp;
-
-        tmp                  = b->lns.data[b->al];
-        b->lns.data[b->al]   = b->lns.data[b->al-1];
-        b->lns.data[b->al-1] = tmp;
-
-        --b->al;
-        --b->cy;
-        add_to_popxy(b);
-        adjust_scroll(b);
-}
-
-static void
-movetxt_down(buffer *b)
-{
-        if (!writable(b))
-                return;
-
-        if (b->al >= b->lns.len-1)
-                return;
-
-        line *tmp;
-
-        tmp                  = b->lns.data[b->al];
-        b->lns.data[b->al]   = b->lns.data[b->al+1];
-        b->lns.data[b->al+1] = tmp;
-
-        ++b->al;
-        ++b->cy;
-
-        add_to_popxy(b);
-        adjust_scroll(b);
-}
-
-static void
-upperlower_word(buffer *b,
-                int   (*fun)(int),
-                int     all)
-{
-        size_t      start;
-        line       *ln;
-        str        *s;
-        const char *sraw;
-
-        start = b->cx;
-        ln    = b->lns.data[b->al];
-        s     = &ln->s;
-        sraw  = str_cstr(s);
-
-        while (start < str_len(s) && !isalpha(sraw[start]))
-                ++start;
-
-        if (start >= str_len(s))
-                return;
-
-        for (size_t i = 0; start < str_len(s) && (isalnum(sraw[start]) || sraw[start] == '_'); ++i, ++start) {
-                if ((!all && !i) || all)
-                        s->chars[start] = fun(s->chars[start]);
-        }
-
-        b->cx = start;
-        b->wish_col = b->cx;
-
-        add_to_popxy(b);
-}
-
-static void
-uppercase_word(buffer *b)
-{
-        if (!writable(b))
-                return;
-        upperlower_word(b, toupper, 0);
-
-        add_to_popxy(b);
-        adjust_scroll(b);
-}
-
-static void
-lowercase_word(buffer *b)
-{
-        if (!writable(b))
-                return;
-        upperlower_word(b, tolower, 1);
-
-        add_to_popxy(b);
-        adjust_scroll(b);
-}
-
-static void
-caps_word(buffer *b)
-{
-        if (!writable(b))
-                return;
-        upperlower_word(b, toupper, 1);
-
-        add_to_popxy(b);
-        adjust_scroll(b);
-}
-
-static void
-swap_chars(buffer *b)
-{
-        if (!writable(b))
-                return;
-
-        line *ln;
-        str  *s;
-        char  ch;
-
-        ln = b->lns.data[b->al];
-        s  = &ln->s;
-        ch = str_at(s, b->cx);
-
-        if (b->cx >= str_len(s)-1 || b->cx == 0)
-                return;
-
-        s->chars[b->cx]   = s->chars[b->cx-1];
-        s->chars[b->cx-1] = ch;
-
-        ++b->cx;
-        b->wish_col = b->cx;
-
-        add_to_popxy(b);
-}
-
-static int
-popxy(buffer *b)
-{
-        if (!b->popxy.len)
-                return 0;
-
-        b->al = b->popxy.data[b->popxy.len-1].r;
-        if (b->al >= b->lns.len)
-                b->al = b->lns.len-1;
-
-        const str *s = &b->lns.data[b->al]->s;
-        b->cx = b->popxy.data[b->popxy.len-1].l;
-
-        if (b->cx > str_len(s)-1)
-                b->cx = str_len(s)-1;
-
-        b->cy = b->al;
-        b->wish_col = b->cx;
-
-        dyn_array_rm_at(b->popxy, b->popxy.len-1);
-
-        adjust_scroll(b);
-
-        return 1;
+        clear_terminal();
+        disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
+        int _ = system("bash --rcfile <("
+               "echo 'source ~/.bashrc 2>/dev/null || true'; "
+               "echo 'PS1=\"(ww-shell) $PS1\"'"
+               ") -i"
+        );
+        (void)_;
+        enable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
+        buffer_draw(b);
+        return BA_REDRAW;
 }
 
 // entrypoint
-buffer_proc
-buffer_process(buffer     *b,
-               input_type  ty,
-               char        ch)
+buffer_action
+buffer_process(buffer *b)
 {
-        static int (*movement_ar[])(buffer *) = {
-                buffer_up,
-                buffer_down,
-                buffer_right,
-                buffer_left,
-                buffer_eol,
-                buffer_bol,
-        };
+        (void)visual_width_up_to;
 
-        switch (ty) {
-        case INPUT_TYPE_CTRL: {
-                if (TAB(ch)) {
-                        tab(b);
-                        return BP_INSERT;
+        input_type ty;
+        char ch;
+
+        switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_NORMAL: {
+                if (!BACKSPACE(ch))
+                        b->last_tab = 0;
+
+                if (b->builtin) {
+                        buffer_action ba;
+
+                        if ((ba = handle_normal_input_while_builtin(b, ch)) != BA_NONE) {
+                                return ba;
+                        }
                 }
 
-                b->last_tab = 0;
+                if (ch == '\t')                             assert(0);
+                else if (BACKSPACE(ch))                     return backspace(b);
+                else if (ch == 0)                           return selection(b);
+                else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
+                else                                        return insert_char(b, ch, 1);
+        } break;
+        case INPUT_TYPE_CTRL: {
+                if (ch != 9)
+                        b->last_tab = 0;
 
-                if (ch == CTRL_N) {
-                        return buffer_down(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == CTRL_P) {
-                        return buffer_up(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == CTRL_F) {
-                        return buffer_right(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == CTRL_B) {
-                        return buffer_left(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == CTRL_E) {
-                        return buffer_eol(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == CTRL_A) {
-                        return buffer_bol(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == CTRL_D) {
-                        return del_char(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == CTRL_K) {
-                        delete_until_eol(b);
-                        return BP_INSERT;
-                } else if (ch == CTRL_O) {
-                        insert_char(b, 10, 0);
-                        --b->cx;
-                        --b->wish_col;
-                        return BP_INSERTNL;
-                } else if (ch == CTRL_H) {
-                        return backspace(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == CTRL_S || ch == CTRL_R) {
+                if (ch == CTRL_N)      return down(b);
+                else if (ch == 9)      return tab(b);
+                else if (ch == CTRL_P) return up(b);
+                else if (ch == CTRL_F) return right(b);
+                else if (ch == CTRL_B) return left(b);
+                else if (ch == CTRL_E) return eol(b);
+                else if (ch == CTRL_A) return bol(b);
+                else if (ch == CTRL_K) return delete_until_eol(b);
+                else if (ch == CTRL_O) {
+                        if (insert_char(b, '\n', 0) != BA_NOP) {
+                                --b->cx;
+                                return BA_REDRAW;
+                        }
+                        return BA_NOP;
+                }
+                else if (ch == CTRL_H) return backspace(b);
+                else if (ch == CTRL_D) return del_char(b);
+                else if (ch == CTRL_L) return center_view(b);
+                else if (ch == CTRL_V) return page_down(b);
+                else if (ch == CTRL_T) return swap_chars(b);
+                else if (ch == CTRL_G) return cancel(b);
+                else if (ch == CTRL_Y) return paste(b);
+                else if (ch == CTRL_W) return cut_selection(b);
+                else if (ch == CTRL_X) return ctrlx(b);
+                else if (ch == CTRL_S || ch == CTRL_R) {
                         search(b, ch == CTRL_R);
-                        return BP_INSERTNL;
-                } else if (ch == CTRL_L) {
-                        center_view(b);
-                        return BP_INSERTNL;
-                } else if (ch == CTRL_Y) {
-                        return paste(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == CTRL_V) {
-                        page_down(b);
-                        return BP_INSERTNL;
-                } else if (ch == CTRL_G) {
-                        cancel(b);
-                        return BP_INSERTNL;
-                } else if (ch == CTRL_W) {
-                        cut_selection(b);
-                        return BP_INSERTNL;
-                } else if (ch == 8) { // ctrl+backspace
-                        assert(0);
-                } else if (ch == CTRL_T) {
-                        swap_chars(b);
-                        return BP_INSERT;
-                } else if (ch == CTRL_U) {
-                        return popxy(b) ? BP_INSERTNL : BP_MOV;
+                        return BA_REDRAW;
                 }
         } break;
         case INPUT_TYPE_ALT: {
                 b->last_tab = 0;
-                if (ch == '\\') {
-                        buffer_dupline(b);
-                        return BP_INSERTNL;
-                }
-                else if (ch == 'm') {
-                        jump_to_first_char(b);
-                        return BP_MOV;
-                } else if (ch == '<') {
-                        jump_to_bottom_of_buffer(b);
-                        return BP_INSERTNL;
-                } else if (ch == '>') {
-                        jump_to_top_of_buffer(b);
-                        return BP_INSERTNL;
-                } else if (ch == '{') {
-                        return prev_paragraph(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == '}') {
-                        return next_paragraph(b) ? BP_INSERTNL : BP_MOV;
-                } else if (ch == 'k') {
-                        kill_line(b);
-                        return BP_INSERTNL;
-                } else if (ch == 'f') {
-                        jump_next_word(b);
-                        return BP_MOV;
-                } else if (ch == 'b') {
-                        jump_prev_word(b);
-                        return BP_MOV;
-                } else if (ch == 'd') {
-                        del_word(b);
-                        return BP_INSERT;
-                } else if (ch == 'j') {
-                        combine_lines(b);
-                        return BP_INSERTNL;
-                } else if (ch == 'v') {
-                        page_up(b);
-                        return BP_INSERTNL;
-                } else if (ch == 'w') {
-                        copy_selection(b);
-                        cancel(b);
-                        return BP_INSERTNL;
-                } else if (ch == 'g') {
-                        jump_to_line(b);
-                        return BP_INSERTNL;
-                } else if (BACKSPACE(ch)) {
-                        return super_backspace(b) ? BP_INSERTNL : BP_INSERT;
-                } else if (ch == 'n') {
-                        movetxt_down(b);
-                        return BP_INSERTNL;
-                } else if (ch == 'p') {
-                        movetxt_up(b);
-                        return BP_INSERTNL;
-                } else if (ch == 'c') {
-                        uppercase_word(b);
-                        return BP_INSERT;
-                } else if (ch == 'l') {
-                        lowercase_word(b);
-                        return BP_INSERT;
-                } else if (ch == 'u') {
-                        caps_word(b);
-                        return BP_INSERT;
-                } else if (ch == '.') {
-                        expand_region(b);
-                        return BP_MOV;
-                } else if (ch == '\'') {
-                        buffer_shell(b);
-                        return BP_MOV;
-                }
+                if (ch == 'f')          return jump_next_word(b);
+                else if (ch == 'b')     return jump_prev_word(b);
+                else if (ch == 'd')     return del_word(b);
+                else if (ch == '}')     return next_paragraph(b);
+                else if (ch == '{')     return prev_paragraph(b);
+                else if (ch == '>')     return jump_to_top_of_buffer(b);
+                else if (ch == '<')     return jump_to_bottom_of_buffer(b);
+                else if (ch == 'k')     return kill_line(b);
+                else if (ch == 'm')     return jump_to_first_char(b);
+                else if (ch == 'j')     return combine_lines(b);
+                else if (ch == 'v')     return page_up(b);
+                else if (BACKSPACE(ch)) return super_backspace(b);
+                else if (ch == '\\')    return buffer_dupline(b);
+                else if (ch == 'n')     return movetxt_down(b);
+                else if (ch == 'p')     return movetxt_up(b);
+                else if (ch == 'u')     return caps_word(b);
+                else if (ch == 'l')     return lowercase_word(b);
+                else if (ch == 'c')     return uppercase_word(b);
+                else if (ch == 'w')     return copy_selection(b);
+                else if (ch == 'x')     return BA_REQ_METAX;
+                else if (ch == '.')     return jmp_and_highlight_forward(b);
+                else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
+                else if (ch == 'g')     return jump_to_line(b);
+                else if (ch == '\'')    return buffer_shell(b);
+                else if (ch == '/')     return accept_autocomplete(b);
         } break;
-        case INPUT_TYPE_ARROW: {
-                b->last_tab = 0;
-                return movement_ar[ch-'A'](b) ? BP_INSERTNL : BP_MOV;
-        } break;
-        case INPUT_TYPE_NORMAL: {
-                if (BACKSPACE(ch))
-                        return backspace(b) ? BP_INSERTNL : BP_INSERT;
 
-                b->last_tab = 0;
-
-                if (ch == 0) { // ctrl+space
-                        selection(b);
-                        return BP_INSERTNL;
-                }
-
-                insert_char(b, ch, 1);
-                return ch == 10 ? BP_INSERTNL : BP_INSERT;
-        } break;
         default: break;
         }
 
-        return BP_NOP;
+        return BA_NOP;
 }
 
-static void
-show_whitespace(const str    *s,
-                int           eol)
-{
-        char spc;
-
-        spc   = (glconf.flags & FT_SHOWTRAILS) != 0 ? '-' : ' ';
-
-        if (eol <= -1)
-                return;
-        else {
-                printf(GRAY);
-                for (size_t i = 0; i < str_len(s)-eol-1; ++i)
-                        putchar(spc);
-                printf(RESET);
-        }
-}
-
-static int_array
-find_line_matches(const buffer *b,
-                  const str    *s)
-{
-        assert(b->state == BS_SEARCH);
-
-        static int_array  ar;
-        const char       *sraw;
-        const char       *query;
-
-        ar    = dyn_array_empty(int_array);
-        sraw  = str_cstr(s);
-        query = str_cstr(&b->last_search);
-
-        if (!sraw || !query || !str_len(&b->last_search))
-                return ar;
-
-        for (size_t i = 0; i < str_len(s); ++i) {
-                if (!memcmp(query, sraw+i, str_len(&b->last_search))) {
-                        dyn_array_append(ar, i);
-                        i += str_len(&b->last_search)-1;
-                }
-        }
-
-        return ar;
-}
-
-static void
-drawln(const buffer *b,
-       const line   *l,
-       int           lineno)
-{
-        const str  *s;
-        const char *sraw;
-        int         eol;
-        size_t      n;
-
-        s    = &l->s;
-        n    = str_len(s);
-        sraw = str_cstr(s);
-        eol  = -1;
-
-        for (int i = n-1; i >= 0; --i) {
-                if (sraw[i] == '\n') continue;
-                if (sraw[i] == ' ')  eol = i;
-                else                 break;
-        }
-
-        if (eol == -1)
-                eol = n-1;
-
-        if (b->state == BS_SEARCH) {
-                int_array matches = find_line_matches(b, s);
-
-                for (size_t i = 0; i < str_len(s); ++i) {
-                        if (matches.len > 0 && (int)i == matches.data[0]) {
-                                if (b->cx >= i && b->cx <= matches.data[0] + str_len(&b->last_search)
-                                    && (int)b->al == lineno)
-                                        printf("%s%s" RESET, glconf.defaults.search_highlight_exact, str_cstr(&b->last_search));
-                                else
-                                        printf("%s%s" RESET, glconf.defaults.search_highlight, str_cstr(&b->last_search));
-                                dyn_array_rm_at(matches, 0);
-                                i += str_len(&b->last_search)-1;
-                        } else {
-                                char ch = str_at(s, i);
-                                if (ch == '\t') printf(GRAY ">" RESET);
-                                else            putchar(ch);
-                        }
-                }
-
-                dyn_array_free(matches);
-                goto done;
-        } else if (b->state == BS_SELECTION) {
-                size_t anchor_y = b->sy;
-                size_t cursor_y = b->al;
-                size_t anchor_x = b->sx;
-                size_t cursor_x = b->cx;
-
-                int forward = (anchor_y < cursor_y) ||
-                        (anchor_y == cursor_y && anchor_x <= cursor_x);
-
-                size_t start_y = forward ? anchor_y : cursor_y;
-                size_t end_y   = forward ? cursor_y : anchor_y;
-                size_t start_x = forward ? anchor_x : cursor_x;
-                size_t end_x   = forward ? cursor_x : anchor_x;
-
-                int is_start_line  = (lineno == (int)start_y);
-                int is_end_line    = (lineno == (int)end_y);
-                int is_middle_line = (lineno > (int)start_y && lineno < (int)end_y);
-
-                for (size_t i = 0; i < str_len(s); ++i) {
-                        int in_selection = 0;
-
-                        if (is_middle_line) {
-                                // whole line is selected
-                                in_selection = 1;
-                        } else if (is_start_line && is_end_line) {
-                                // selection starts and ends on same line
-                                in_selection = (i >= start_x && i < end_x);
-                        } else if (is_start_line) {
-                                // only beginning of selection
-                                in_selection = (i >= start_x);
-                        } else if (is_end_line) {
-                                // only end of selection
-                                in_selection = (i < end_x);
-                        }
-
-                        char ch = str_at(s, i);
-                        const char *color = in_selection ? glconf.defaults.selection_highlight : RESET;
-
-                        if (isprint(ch) || ch == '\n')
-                                printf("%s%c", color, ch);
-                        else
-                                printf("%s" GRAY ">" RESET, color);
-                }
-
-                goto done;
-        }
-
-        for (size_t i = 0; i < (size_t)eol; ++i) {
-                if (sraw[i] == '\t')
-                        printf(GRAY ">" RESET);
-                putchar(sraw[i]);
-        }
-
-done:
-        show_whitespace(s, eol);
-}
 
 static void
 draw_status(const buffer *b,
@@ -1877,16 +1842,17 @@ draw_status(const buffer *b,
 
         len = 0;
 
-        gotoxy(0, b->parent->h);
+        gotoxy(0, (unsigned)glconf.term.h);
 
         printf(INVERT);
 
-        sprintf(buf, "[ww-v" VERSION "] %s:%zu:%zu%s %s",
+        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s Monitor:%d",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
                 !b->saved ? "*" : "",
-                state_to_cstr(b));
+                state_to_cstr(b),
+                b->parent->am);
         printf("%s", buf);
         len += strlen(buf);
 
@@ -1896,134 +1862,251 @@ draw_status(const buffer *b,
                 len += strlen(buf);
         }
 
-        for (size_t i = len; i < b->parent->w; ++i)
+        for (size_t i = len; i < glconf.term.w; ++i)
                 putchar(' ');
 
         printf(RESET);
 
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
-        fflush(stdout);
+        gotoxy(b->cx - (unsigned)b->hoff, b->cy - (unsigned)b->voff);
 }
 
-void
-buffer_dump_xy(const buffer *b)
+static int
+line_selection_range(const buffer *b,
+                     size_t        idx,
+                     size_t        line_len,
+                     size_t       *sel_start,
+                     size_t       *sel_end)
 {
-        const line *l;
-        const str  *s;
+        // Computes the selection range for a given line
+        // Returns 1 if there is a selection on this line, 0 otherwise
 
-        l = b->lns.data[b->al];
-        s = &l->s;
+        if (b->state != BS_SELECTION)
+                return 0;
 
-        if (!s)
-                return;
+        size_t start_line, start_col, end_line, end_col;
 
-        size_t screen_y = b->cy - b->vscrloff;
-
-        gotoxy(0, screen_y);
-        printf("\x1b[K"); // clear rest of line
-        drawln(b, l, b->al);
-
-        gotoxy(b->cx - b->hscrloff, screen_y);
-        draw_status(b, NULL);
-}
-
-void
-buffer_dump(const buffer *b)
-{
-        size_t start;
-        size_t end;
-
-        start = b->vscrloff;
-        end   = start + b->parent->h;
-
-        clear_terminal();
-
-        for (size_t i = start; i < end; ++i) {
-                if (i >= b->lns.len) {
-                        gotoxy(0, i - b->vscrloff);
-                        printf("\x1b[K");
-                        if (glconf.defaults.empty_line_squiggles)
-                                printf(DIM "~");
-                } else {
-                        const line *l = b->lns.data[i];
-                        gotoxy(0, i - b->vscrloff);
-                        printf("\x1b[K");
-                        drawln(b, l, i);
-                }
+        // absolute selection bounds
+        if (b->sy < b->al || (b->sy == b->al && b->sx <= b->cx)) {
+                start_line = b->sy;
+                start_col  = b->sx;
+                end_line   = b->al;
+                end_col    = b->cx;
+        } else {
+                start_line = b->al;
+                start_col  = b->cx;
+                end_line   = b->sy;
+                end_col    = b->sx;
         }
 
-        printf(RESET);
+        if (idx < start_line || idx > end_line)
+                return 0; // no selection on this line
 
-        gotoxy(b->cx - b->hscrloff, b->cy - b->vscrloff);
+        if (start_line == end_line) {
+                *sel_start = start_col;
+                *sel_end   = end_col;
+        } else if (idx == start_line) {
+                *sel_start = start_col;
+                *sel_end   = line_len;
+        } else if (idx == end_line) {
+                *sel_start = 0;
+                *sel_end   = end_col;
+        } else {
+                *sel_start = 0;
+                *sel_end   = line_len;
+        }
+
+        return 1;
+}
+
+static ssize_t
+find_trailing_whitespace_start(const str *s)
+{
+        if (s->len == 0)
+                return -1;
+        if (s->len <= 1 || !isspace(s->chars[s->len-2]))
+                return -1;
+        for (int i = (int)s->len-1; i >= 0; --i) {
+                if (!isspace(s->chars[i]))
+                        return (ssize_t)i;
+        }
+        return 0;
+}
+
+static void
+drawln(const buffer *b, size_t idx)
+{
+        if (idx < b->voff || idx >= b->voff + get_win_hight(b))
+                return;
+        const line *ln = b->lines.data[idx];
+        const str *s = &ln->txt;
+        unsigned y = b->size.hs + (unsigned)(idx - b->voff);
+        unsigned win_w = get_win_width(b);
+        unsigned tabw = TAB_WIDTH;
+
+        // clear line
+        gotoxy(b->size.ws, y);
+        for (unsigned x = 0; x < win_w; ++x)
+                putchar(' ');
+
+        if (b->hoff >= visual_column(s, s->len, tabw))
+                return;
+
+        gotoxy(b->size.ws, y);
+        unsigned screen_col = 0;
+        size_t char_i = 0;
+
+        // skip characters until horizontal scroll offset
+        while (char_i < s->len && visual_column(s, char_i, tabw) < b->hoff) {
+                ++char_i;
+        }
+
+        // determine selection range on this line
+        size_t sel_start = 0, sel_end = 0;
+        int cursor_on_line = ((size_t)b->cy == idx);
+        int line_has_selection = line_selection_range(b, idx, s->len, &sel_start, &sel_end);
+        int_ar search_matches = {0};
+        size_t qlen = str_len(&b->last_search);
+        size_t match_idx = 0;
+
+        if (b->state == BS_SEARCH)
+                search_matches = find_line_matches(b, s);
+
+        ssize_t whitespace_start = find_trailing_whitespace_start(s);
+
+        // draw visible part
+        while (char_i < s->len && screen_col < win_w) {
+                char c = s->chars[char_i];
+                int in_search = 0;
+                int in_cursor_match = 0;
+
+                if (b->state == BS_SEARCH && search_matches.len > 0) {
+                        if (match_idx < search_matches.len) {
+                                int mstart = search_matches.data[match_idx];
+                                int mend = mstart + (int)qlen;
+                                if ((int)char_i >= mstart && (int)char_i < mend) {
+                                        in_search = 1;
+                                        if (cursor_on_line && (int)b->cx >= mstart && (int)b->cx < mend) {
+                                                in_cursor_match = 1;
+                                        }
+                                } else if ((int)char_i >= mend) {
+                                        ++match_idx;
+                                }
+                        }
+                }
+
+                int in_selection = line_has_selection && char_i >= sel_start && char_i < sel_end;
+
+                // Handle tab character
+                if (c == '\t') {
+                        unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
+                        for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
+                                if (in_selection) {
+                                        printf(INVERT YELLOW BOLD " " RESET);
+                                } else if (in_cursor_match) {
+                                        printf(INVERT ORANGE BOLD " " RESET);
+                                } else if (in_search) {
+                                        printf(INVERT YELLOW BOLD " " RESET);
+                                } else {
+                                        if (/*b->show_trailing_whitespace && */t == 0)
+                                                printf(GRAY ">" RESET);
+                                        else
+                                                putchar(' ');
+                                }
+                                ++screen_col;
+                        }
+                } else {
+                        int is_trailing_whitespace =
+                                (whitespace_start != -1)
+                                && (c != '\n')
+                                && (((size_t)whitespace_start < char_i)
+                                    || ((size_t)whitespace_start == 0
+                                    && (size_t)whitespace_start <= char_i
+                                    && isspace(c)));
+
+                        if (/*b->show_trailing_whitespace && */is_trailing_whitespace && !in_selection) {
+                                printf(GRAY "-" RESET);
+                        } else {
+                                if (in_selection) {
+                                        printf(INVERT YELLOW BOLD "%c" RESET, c);
+                                } else if (in_cursor_match) {
+                                        printf(INVERT ORANGE BOLD "%c" RESET, c);
+                                } else if (in_search) {
+                                        printf(INVERT YELLOW BOLD "%c" RESET, c);
+                                } else {
+                                        putchar(c);
+                                }
+                        }
+                        ++screen_col;
+                }
+                ++char_i;
+        }
+
+        // Clean up search matches
+        if (search_matches.data)
+                array_free(search_matches);
+}
+
+void
+buffer_drawxy(const buffer *b)
+{
+        drawln(b, b->cy);
+
+        const str *s = &b->lines.data[b->al]->txt;
+        unsigned visual_x = visual_column(s, b->cx, TAB_WIDTH);
+
+        unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
+        unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
+
         draw_status(b, NULL);
+        gotoxy(screen_x, screen_y);
 }
 
 void
-buffer_shell(buffer *b)
+buffer_draw(const buffer *b)
 {
-        clear_terminal();
-        disable_raw_terminal(STDIN_FILENO, &glconf.term.old);
-        system("bash --rcfile <("
-               "echo 'source ~/.bashrc 2>/dev/null || true'; "
-               "echo 'PS1=\"(ww-shell) $PS1\"'"
-               ") -i"
-        );
-        enable_raw_terminal(STDIN_FILENO, &glconf.term.old);
-        buffer_dump(b);
+        unsigned win_w = get_win_width(b);
+        unsigned win_h = get_win_hight(b);
+
+        // Clear the entire buffer area
+        for (unsigned y = 0; y < win_h+1; ++y) {
+                gotoxy(b->size.ws, b->size.hs + y);
+                for (unsigned x = 0; x < win_w; ++x)
+                        putchar(' ');
+        }
+
+        // Draw all visible lines once
+        for (size_t i = 0; i < win_h; ++i) {
+                size_t idx = b->voff + i;
+                if (idx >= b->lines.len)
+                        break;
+                drawln(b, idx);
+        }
+
+        // Place cursor
+        const str *s      = &b->lines.data[b->al]->txt;
+        unsigned visual_x = visual_column(s, b->cx, TAB_WIDTH);
+        unsigned screen_x = b->size.ws + (unsigned)(visual_x > b->hoff ? visual_x - b->hoff : 0);
+        unsigned screen_y = b->size.hs + (unsigned)(b->cy - b->voff);
+
+        draw_status(b, NULL);
+        gotoxy(screen_x, screen_y);
+}
+
+static unsigned
+cstr_set_hash(char **s)
+{
+        return (unsigned)**s;
+}
+
+static int
+cstr_set_cmp(char **s0, char **s1)
+{
+        return strcmp(*s0, *s1);
 }
 
 void
-init_buffer_context(void)
+init_buffer_translation_unit(void)
 {
-        g_cpy_buf = dyn_array_empty(char_array);
-}
-
-line_array
-buffer_info(const buffer *b)
-{
-        line_array  info;
-        str         name;
-        str         lines;
-        str         bytes;
-        size_t      bytes_n;
-        char        buf[256];
-
-        bytes_n = 0;
-
-        info = dyn_array_empty(line_array);
-
-        sprintf(buf, "%zu", b->lns.len);
-        lines = str_from("Line count: ");
-        str_concat(&lines, buf);
-        str_append(&lines, '\n');
-
-        name = str_from("Buffer name: ");
-        str_concat(&name, str_cstr(&b->name));
-        str_append(&name, '\n');
-
-        for (size_t i = 0; i < b->lns.len; ++i)
-                bytes_n += str_len(&b->lns.data[i]->s);
-        sprintf(buf, "%zu", bytes_n);
-        bytes = str_from("Bytes: ");
-        str_concat(&bytes, buf);
-        str_append(&bytes, '\n');
-
-        dyn_array_append(info, line_from(name));
-        dyn_array_append(info, line_from(lines));
-        dyn_array_append(info, line_from(bytes));
-        dyn_array_append(info, line_from_cstr(b->writable ? "Writable: Yes\n" : "Writable: No\n"));
-
-        return info;
-}
-
-line *
-buffer_getln(const buffer *b)
-{
-        return b->lns.data[b->al];
-}
-
-void
-buffer_appendln(buffer *b, line *ln)
-{
-        dyn_array_append(b->lns, ln);
+        g_cpy_buf     = array_empty(char_ar);
+        g_found_words = cstr_set_create(cstr_set_hash, cstr_set_cmp, NULL);
 }

@@ -80,12 +80,12 @@
 
 // Different input types.
 typedef enum {
-    INPUT_TYPE_CTRL = 0,
-    INPUT_TYPE_ALT,
-    INPUT_TYPE_ARROW,
-    INPUT_TYPE_SHIFT_ARROW,
-    INPUT_TYPE_NORMAL,
-    INPUT_TYPE_UNKNOWN,
+        INPUT_TYPE_CTRL = 0,
+        INPUT_TYPE_ALT,
+        INPUT_TYPE_ARROW,
+        INPUT_TYPE_SHIFT_ARROW,
+        INPUT_TYPE_NORMAL,
+        INPUT_TYPE_UNKNOWN,
 } input_type;
 
 int        get_terminal_xy(size_t *win_width, size_t *win_height);
@@ -94,9 +94,10 @@ int        enable_raw_terminal(int fd, struct termios *old_termios);
 int        disable_raw_terminal(int fd, struct termios *old_termios);
 input_type get_input(char *c);
 void       clear_terminal(void);
-void       gotoxy(int x, int y);
+void       gotoxy(unsigned x, unsigned y);
 // dx, dy -> return coordinates after clearing line
 void       clear_line(size_t dx, size_t dy);
+void       clear_line_imm(void);
 void       anykey(void);
 void       term_fullscrn(void);
 void       term_exit_fullscrn(void);

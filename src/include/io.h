@@ -9,8 +9,8 @@ int   is_dir(const char *path);
 int   write_file(const char *fp, const char *content);
 char *load_file(const char *path);
 
-cstr_array lsdir(const char *path);
-cstr_array walkdir(const char *path);
+cstr_ar lsdir(const char *path);
+cstr_ar walkdir(const char *path);
 
 const char *gethome(void);
 char       *get_realpath(const char *fp);

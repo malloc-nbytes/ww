@@ -7,7 +7,7 @@
 
 #define SET_DEFAULT_CAPACITY 256
 
-#define SET_TYPE(type, setname) \
+#define SET_DEFINE(type, setname) \
         typedef unsigned (*setname##_hash_sig)(type *); \
         typedef int      (*setname##_cmp_sig)(type *, type *); \
         typedef void     (*setname##_vfree_sig)(type *); \
@@ -36,8 +36,11 @@
         void    setname##_destroy(setname *s); \
         void    setname##_print(const setname *s, void (*show)(type *t)); \
         size_t  setname##_size(const setname *s); \
-        type  **setname##_iter(const setname *s); \
-        \
+        type  **setname##_iter(const setname *s)
+
+
+
+#define SET_IMPL(type, setname) \
         setname \
         setname##_create(setname##_hash_sig hash, \
                          setname##_cmp_sig cmp, \
@@ -62,7 +65,7 @@
         void \
         setname##_insert(setname *s, type v) \
         { \
-                unsigned idx = s->hash(&v) % s->tbl.cap; \
+                unsigned idx = s->hash(&v) % (unsigned)s->tbl.cap; \
                 __##setname##_node *it = s->tbl.data[idx]; \
                 __##setname##_node *prev = NULL; \
                 while (it) { \
@@ -85,7 +88,7 @@
         void \
         setname##_remove(setname *s, type v) \
         { \
-                unsigned idx = s->hash(&v) % s->tbl.cap; \
+                unsigned idx = s->hash(&v) % (unsigned)s->tbl.cap; \
                 __##setname##_node *it = s->tbl.data[idx]; \
                 __##setname##_node *prev = NULL; \
                 while (it) { \
@@ -108,7 +111,7 @@
         int \
         setname##_contains(const setname *s, type v) \
         { \
-                unsigned idx = s->hash(&v) % s->tbl.cap; \
+                unsigned idx = s->hash(&v) % (unsigned)s->tbl.cap; \
                 __##setname##_node *it = s->tbl.data[idx]; \
                 while (it) { \
                         if (s->cmp(&it->v, &v) == 0) return 1; \

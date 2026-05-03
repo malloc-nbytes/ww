@@ -1,70 +1,88 @@
 #include "line.h"
-
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "str.h"
+#include "mem.h"
 
 line *
-line_alloc()
+line_alloc(void)
 {
-        line *l = (line *)malloc(sizeof(line));
-        l->s    = str_create();
+        line *l;
+
+        l = (line *)alloc(sizeof(line));
+
+        l->txt = str_from("\n");
+
+        return l;
+}
+
+line *
+line_create_nothing(void)
+{
+        line *l;
+
+        l      = (line *)alloc(sizeof(line));
+        l->txt = str_create();
+
         return l;
 }
 
 line *
 line_from(str s)
 {
-        line *l = (line *)malloc(sizeof(line));
-        l->s    = s;
+        line *l;
+
+        l      = (line *)alloc(sizeof(line));
+        l->txt = s;
+
         return l;
 }
 
 line *
 line_from_cstr(const char *s)
 {
-        line *l = (line *)malloc(sizeof(line));
-        l->s    = str_from(s);
+        line *l;
+
+        l      = (line *)alloc(sizeof(line));
+        l->txt = str_from(s);
+
         return l;
 }
 
-line_array
-lines_of_cstr(const char *s)
+void
+line_append(line *ln, char ch)
 {
-        line_array lns;
-        char_array buf;
+        str_append(&ln->txt, ch);
+}
 
-        lns = dyn_array_empty(line_array);
+linep_ar
+lines_from(char *chars)
+{
+        linep_ar ar;
+        str      buf;
 
-        if (!s)
-                return lns;
+        ar  = array_empty(linep_ar);
+        buf = str_create();
 
-        buf = dyn_array_empty(char_array);
-
-        for (size_t i = 0; s[i]; ++i) {
-                dyn_array_append(buf, s[i]);
-                if (s[i] == 10) {
-                        dyn_array_append(buf, 0);
-                        dyn_array_append(lns, line_from_cstr(buf.data));
-                        dyn_array_clear(buf);
+        for (size_t i = 0; chars[i]; ++i) {
+                str_append(&buf, chars[i]);
+                if (chars[i] == '\n') {
+                        array_append(ar, line_from(str_from(buf.chars)));
+                        str_clear(&buf);
                 }
         }
 
-        if (buf.len) {
-                dyn_array_append(lns, line_from_cstr(buf.data));
+        if (buf.len > 0) {
+                str_append(&buf, '\n');
+                array_append(ar, line_from(str_dup(buf)));
         }
 
-        dyn_array_append(buf, 0);
+        str_destroy(&buf);
 
-        dyn_array_free(buf);
-
-        return lns;
+        return ar;
 }
 
 void
 line_free(line *ln)
 {
-        str_destroy(&ln->s);
+        str_destroy(&ln->txt);
         free(ln);
-        ln = NULL;
 }

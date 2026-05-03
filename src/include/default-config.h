@@ -3,4 +3,4 @@
 
 extern const char *g_default_config_str;
 
-#endif
+#endif // DEFAULT_CONFIG_H_INCLUDED

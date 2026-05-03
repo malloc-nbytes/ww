@@ -1,10 +1,10 @@
 main
 src/tmp
+docs
 ww
 src/include/config.h.in
+src/config.mk
 ww-debug-build
-Makefile
-src/Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache
@@ -17,9 +17,9 @@ depcomp
 install-sh
 missing
 src/.deps/
-src/Makefile
 src/Makefile.in
 src/ww-debug-build
+*.html
 src/include/config.h
 src/include/stamp-h1
 *.bin
@@ -27,3 +27,5 @@ src/include/stamp-h1
 *.o
 src/include/config.h.in
 src/tmp.txt
+src/bin
+src/obj

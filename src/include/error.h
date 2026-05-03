@@ -2,6 +2,7 @@
 #define ERROR_H_INCLUDED
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #if 0
 #define fatal(msg, ...) \

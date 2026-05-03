@@ -114,7 +114,7 @@ str_cut(str *s, size_t i)
         if (i >= s->len)
                 return;
 
-        memset(s->chars+i, 0, s->cap-i);
+        memset(s->chars+i, 0, s->len-i);
         s->len = i;
 }
 
@@ -212,4 +212,14 @@ str_remove_range(str *s, size_t start, size_t count)
 
       if (s->len < s->cap)
           s->chars[s->len] = 0;
+}
+
+str
+str_dup(str s)
+{
+        return (str) {
+                .chars = strdup(s.chars),
+                .len   = s.len,
+                .cap   = s.cap,
+        };
 }

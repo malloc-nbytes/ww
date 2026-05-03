@@ -1,24 +1,33 @@
 #ifndef PAIR_H_INCLUDED
 #define PAIR_H_INCLUDED
 
-#define PAIR_TYPE(ty1, ty2, name) \
+#define PAIR_DEFINE(ty0, ty1, name) \
         typedef struct { \
-                ty1 l; \
-                ty2 r; \
+                ty0 l; \
+                ty1 r; \
         } name; \
         \
-        name name##_create(ty1 l, ty2 r); \
+        name name##_create(ty0 l, ty1 r); \
+        ty0 name##_getl(name *p); \
+        ty1 name##_getr(name *p)
 
-#define PAIR_IMPL(ty1, ty2, name) \
+#define PAIR_IMPL(ty0, ty1, name) \
         name \
-        name##_create(ty1 l, ty2 r) \
+        name##_create(ty0 l, ty1 r) \
         { \
-                return (name) { \
-                        .l = l, \
-                        .r = r, \
-                }; \
+                return (name) { .l = l, .r = r, }; \
+        } \
+        \
+        ty0 \
+        name##_getl(name *p) \
+        { \
+                return p->l; \
+        } \
+        \
+        ty1 \
+        name##_getr(name *p) \
+        { \
+                return p->r; \
         }
-
-PAIR_TYPE(int, int, int_pair)
 
 #endif // PAIR_H_INCLUDED

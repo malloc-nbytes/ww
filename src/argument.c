@@ -1,105 +1,12 @@
 #include "argument.h"
 #include "error.h"
 #include "io.h"
-#include "glconf.h"
-#include "flags.h"
 #include "colors.h"
-#include "config.h"
 #include "copying.h"
-#include "default-config.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-void
-option_usage(argument **_)
-{
-        (void)_;
-
-        printf("ww version 1.0, Copyright (C) 2025 malloc-nbytes.\n");
-        printf("ww comes with ABSOLUTELY NO WARRANTY.\n");
-        printf("This is free software, and you are welcome to redistribute it\n");
-        printf("under certain conditions; see command `copying`.\n\n");
-
-        printf("Compiler information:\n");
-        printf("| cc: " COMPILER_NAME "\n");
-        printf("| path: " COMPILER_PATH "\n");
-        printf("| ver.: " COMPILER_VERSION "\n\n");
-
-        printf("Usage: ww " YELLOW "[OPTIONS...]" RESET " " GREEN BOLD "[FILEPATH]" RESET GRAY " [+LINENO]" RESET "\n\n");
-        printf("Options:\n");
-        printf("  " YELLOW BOLD "-h, --help" "            " RESET "        display this message\n");
-        printf("  " YELLOW BOLD "-v, --version" "         " RESET "        show the version\n");
-        printf("  " YELLOW BOLD "    --copying" "         " RESET "        show copying information\n");
-        printf("  " YELLOW BOLD "    --replace query=<str>\n");
-        printf("                repl=<str>  " RESET "    find and replace `query' with `repl'\n");
-        printf("  " YELLOW BOLD "    --create-default-config" RESET "   create a default config file to stdout\n");
-        printf("\nTo quickly get started and see the help buffer, do `ww .'\n");
-        exit(0);
-}
-
-static void
-option_copying(argument **_)
-{
-        (void)_;
-        printf(COPYING1);
-        printf(COPYING2);
-        printf(COPYING3);
-        printf(COPYING4);
-        printf(COPYING5);
-        printf(COPYING6);
-        exit(0);
-}
-
-static void
-option_version(argument **_)
-{
-        (void)_;
-
-        printf("ww-v" VERSION "\n");
-        exit(0);
-}
-
-static void
-option_replace(argument **a)
-{
-        char *query;
-        char *repl;
-
-        *a = (*a)->n;
-
-        if (!*a || !(*a)->n)
-                goto bad;
-
-        if (strcmp((*a)->s, "query"))
-                goto bad;
-
-        query = strdup((*a)->eq);
-
-        *a = (*a)->n;
-
-        if (strcmp((*a)->s, "repl"))
-                goto bad;
-
-        repl = strdup((*a)->eq);
-
-        glconf.flags         |= FT_REPLACE;
-        glconf.replace.query  = query;
-        glconf.replace.repl   = repl;
-
-        return;
- bad:
-        fatal("incorrect usage for option `replace', see --help");
-}
-
-static void
-option_show_default_config(argument **_)
-{
-        (void)_;
-        printf(g_default_config_str);
-        exit(0);
-}
 
 static char *
 argument_eat(int *argc, char ***argv)
@@ -175,73 +82,6 @@ argument_free(argument *arg)
         }
 }
 
-static void
-parse_option1(argument **a)
-{
-        const char *s;
-
-        static void (*cmdfunc[])(argument **) = {
-                option_usage,
-                option_version,
-        };
-
-        static const char options[] = FLAG1CPL;
-
-        _Static_assert(sizeof(cmdfunc)/sizeof(*cmdfunc) == sizeof(options)/sizeof(*options),
-                       "commands and options must match");
-
-        s = (*a)->s;
-
-        for (size_t i = 0; s[i]; ++i) {
-                ssize_t func = -1;
-                for (size_t j = 0; j < sizeof(options)/sizeof(*options); ++j) {
-                        if (s[i] == options[j]) {
-                                func = (ssize_t)j;
-                                break;
-                        }
-                }
-                if (func == -1)
-                        fatal("unknown option `%c'", s[i]);
-                cmdfunc[func](a);
-        }
-}
-
-static void
-parse_option2(argument **a)
-{
-        ssize_t func;
-        const char *s;
-
-        static void (*cmdfunc[])(argument **) = {
-                option_usage,
-                option_version,
-                option_copying,
-                option_replace,
-                option_show_default_config,
-        };
-
-        static const char *options[] = FLAG2CPL;
-
-        _Static_assert(sizeof(cmdfunc)/sizeof(*cmdfunc) == sizeof(options)/sizeof(*options),
-                       "commands and options must match");
-
-        func = -1;
-
-        s = (*a)->s;
-
-        for (size_t i = 0; i < sizeof(options)/sizeof(*options); ++i) {
-                if (!strcmp(s, options[i])) {
-                        func = (ssize_t)i;
-                        break;
-                }
-        }
-
-        if (func == -1)
-                fatal("unknown option `%s'", s);
-
-        cmdfunc[func](a);
-}
-
 char *
 parse_args(int argc, char *argv[])
 {
@@ -254,31 +94,15 @@ parse_args(int argc, char *argv[])
         it       = hd;
 
         while (it) {
-                if (!it->h && it->s[0] == '+') {
-                        int lineno = atoi(it->s+1);
-                        if (!lineno && it->s[0] == '0')
-                                fatal("invalid starting line number");
-                        glconf.starting_lineno = lineno;
-                }
-                else if (it->h == 1) {
-                        parse_option1(&it);
-                } else if (it->h == 2) {
-                        parse_option2(&it);
-                } else if (filename)
+                if (filename)
                         fatal("only one filename is supported");
                 else
-                        filename = strdup(it->s);
+                        filename = strdup(get_realpath(it->s));
                 it = it->n;
         }
 
-        if (glconf.flags & FT_REPLACE) {
-                if (!filename)
-                        fatal("option `replace' requires a file or directory");
-                glconf.replace.path = filename;
-        }
-
-        if (!filename)
-                filename = strdup(".");
+        /* if (!filename) */
+        /*         filename = strdup(get_realpath(".")); */
 
         return filename;
 }

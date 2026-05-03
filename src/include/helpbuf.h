@@ -10,6 +10,8 @@
 "a *very* heavy Emacs influence. It's controls are mostly\n" \
 "default Emacs keybindings (see controls).\n" \
 "\n" \
+"There is a tutorial built-in that can be called with M-x tutorial.\n" \
+"\n" \
 "To begin, try finding a file with `C-x C-f' and choosing a file.\n" \
 "\nTIP: Whenever there is a suggestion box, use `C-n' and `C-p' to\n" \
 "     navigate through it.\n" \
@@ -51,7 +53,7 @@
 "C-v         = page down\n" \
 "M-v         = page up\n" \
 "M-m         = go to first non-space char on line\n" \
-"C-u         = pop to last (x, y) location\n" \
+"C-u         = pop to last (x, y) location (UNIMPLEMENTED)\n" \
 "\n" \
 "Text Manipulation:\n" \
 "\n" \

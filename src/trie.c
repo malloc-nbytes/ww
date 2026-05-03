@@ -1,3 +1,4 @@
+#include "trie.h"
 #include "array.h"
 
 #include <stdlib.h>
@@ -5,13 +6,19 @@
 
 typedef struct node node;
 
-DYN_ARRAY_TYPE(node *, node_array);
+ARRAY_DEFINE(node *, nodep_ar);
 
 struct node {
         char ch;
         int is_end_of_word;
-        node_array children;
+        nodep_ar children;
 };
+
+int
+trie_empty(void *t)
+{
+        return !t || ((node *)t)->children.len == 0;
+}
 
 void *
 trie_alloc(void)
@@ -21,7 +28,7 @@ trie_alloc(void)
                 return NULL;
         root->ch = '\0';
         root->is_end_of_word = 0;
-        root->children = dyn_array_empty(node_array);
+        root->children = array_empty(nodep_ar);
         return (void *)root;
 }
 
@@ -33,7 +40,7 @@ node_alloc(char ch)
                 return NULL;
         n->ch = ch;
         n->is_end_of_word = 0;
-        n->children = dyn_array_empty(node_array);
+        n->children = array_empty(nodep_ar);
         return n;
 }
 
@@ -65,7 +72,7 @@ trie_insert(void       *trie,
                         next = node_alloc(ch);
                         if (!next)
                                 return 0;
-                        dyn_array_append(current->children, next);
+                        array_append(current->children, next);
                 }
                 current = next;
 
@@ -176,7 +183,7 @@ trie_destroy_node(node *n)
                 trie_destroy_node(n->children.data[i]);
         }
 
-        dyn_array_free(n->children);
+        array_free(n->children);
         free(n);
 }
 

@@ -1,70 +1,96 @@
-#ifndef BUFFER_H_INUCLUDED
-#define BUFFER_H_INUCLUDED
+#ifndef BUFFER_H_INCLUDED
+#define BUFFER_H_INCLUDED
 
+#include "array.h"
 #include "line.h"
 #include "str.h"
-#include "array.h"
-#include "term.h"
-#include "pair.h"
 
-#include <stddef.h>
+#define BUFFER_BUILTIN_COMPILE "ww-compile"
+#define BUFFER_BUILTIN_HELP    "ww-help"
 
-DYN_ARRAY_TYPE(int_pair, int_pair_array);
+extern char_ar g_cpy_buf;
 
-typedef struct window window;
+typedef struct ww ww;
 
 typedef enum {
-        BP_NOP = 0,
-        BP_INSERT,
-        BP_INSERTNL,
-        BP_MOV,
-} buffer_proc;
+        BA_NONE = 0,
+        BA_NOP,
+        BA_REDRAW,
+        BA_XY,
+        BA_REQ_EXIT,
+        BA_REQ_FINDFILE,
+        BA_REQ_SWITCHBUFFER,
+        BA_REQ_SPLITVER,
+        BA_REQ_JMPBUF,
+        BA_REQ_METAX,
+        BA_REQ_MAXIMIZEMON,
+        BA_REQ_COMPILE,
+        BA_REQ_RECOMPILE,
+        BA_REQ_CLOSE_BUILTIN,
+        BA_REQ_SPLITHOR,
+        BA_REQ_KILLBUF,
+        BA_REQ_SWITCHCOMPL,
+        BA_REQ_ERRJMP,
+} buffer_action;
 
 typedef enum {
         BS_NORMAL = 0,
         BS_SEARCH,
         BS_SELECTION,
+        BS_AUTO,
 } buffer_state;
 
 typedef struct {
-        str          name;
-        str          filename;    // file we are editing (if available)
-        line_array   lns;         // lines
-        size_t       cx;          // cursor x
-        size_t       cy;          // cursor y
-        size_t       al;          // active line
-        size_t       wish_col;    // wished column
-        size_t       hscrloff;    // horizontal scroll offset
-        size_t       vscrloff;    // vertical scroll offset
-        window      *parent;      // the parent window
-        int          saved;       // has the document been saved?
-        buffer_state state;       // our current state
+        str name; // name of buffer, can be same as path
+                  // if buffer by the same name exists
+        str path; // path to the file we are editing
+        int builtin; // is this a builtin buffer
+        struct {
+                unsigned w;  // width
+                unsigned h;  // height
+                unsigned ws; // width start
+                unsigned hs; // height start
+        } size;
+        linep_ar     lines;    // lines in the buffer
+        unsigned     cx;       // cursor x (logical & visual)
+        unsigned     cy;       // cursor y (visual)
+        unsigned     wish_col; // wished column to jump to
+        size_t       al;       // active line
+        size_t       voff;     // vertical scroll offset
+        size_t       hoff;     // horizontal scroll offset
+        buffer_state state;    // current state
+        int          saved;    // is the buffer saved
+        unsigned     sx;       // buffer selection x
+        unsigned     sy;       // buffer selection y
+        int          writable; // is buffer writable
         str          last_search; // last search query
-        str          cpy;         // the copy buffer
-        int          sy;          // the y position of selection mode
-        int          sx;          // the x position of selection mode
-        int          writable;    // mutable buffer?
-        int          last_tab;    // was the last character inserted a tab?
-        int_pair_array popxy;
+        ww          *parent;     // parent editor
+        int          last_tab; // was the last character a tab
+        void        *ac;       // autocomplete
+        size_t       ac_cycle; // current autocomplete cycle
 } buffer;
 
-DYN_ARRAY_TYPE(buffer *, bufferp_array);
+ARRAY_DEFINE(buffer *, bufferp_ar);
 
-buffer      *buffer_alloc(window *parent);
-buffer      *buffer_from_file(str filename, window *parent);
-buffer_proc  buffer_process(buffer *b, input_type ty, char ch);
-void         buffer_dump(const buffer *b);
-void         buffer_dump_xy(const buffer *b);
-int          buffer_save(buffer *b);
-int          adjust_scroll(buffer *b);
-void         buffer_copybuf_to_clipboard(const buffer *b);
-void         buffer_find_and_replace_in_selection(buffer *b, const char *from, const char *to);
-void         buffer_jump_to_verts(buffer *b, int x, int y);
-void         init_buffer_context(void);
-void         buffer_dupline(buffer *b);
-void         buffer_shell(buffer *b);
-line_array   buffer_info(const buffer *b);
-line        *buffer_getln(const buffer *b);
-void         buffer_appendln(buffer *b, line *ln);
+void    init_buffer_translation_unit(void);
+buffer *buffer_from(str       name,
+                    str       path,
+                    unsigned  w,
+                    unsigned  h,
+                    unsigned  ws,
+                    unsigned  hs,
+                    linep_ar  lns,
+                    ww       *parent);
 
-#endif
+void           buffer_draw(const buffer *b);
+void           buffer_drawxy(const buffer *b);
+buffer_action  buffer_process(buffer *b);
+void           buffer_make_readonly(buffer *b);
+buffer_action  buffer_save(buffer *b);
+buffer_action  buffer_adjust_scroll(buffer *b);
+void           buffer_make_builtin(buffer *b);
+buffer        *ww_helpbuf_alloc(unsigned w, unsigned h, unsigned ws, unsigned hs, ww *parent);
+void           buffer_free(buffer *b);
+void           buffer_jump_to_verts(buffer *b, size_t x, size_t y);
+
+#endif // BUFFER_H_INCLUDED
