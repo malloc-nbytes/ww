@@ -19,6 +19,9 @@ run(const char *path)
 
         ed = ww_create();
 
+        if (!file_exists(path))
+                create_file(path, 1);
+
         if (path && !is_dir(path)) {
                 ww_add_buffer(&ed, buffer_from(str_from(get_basename(path)),
                                                str_from(path),
