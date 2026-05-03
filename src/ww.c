@@ -473,19 +473,41 @@ make_command(str *s)
         return ar.data;
 }
 
-static char *
-capture_command_output(str *input)
+typedef void (*output_callback)(const char *chunk, size_t len, void *userdata);
+
+static void
+append_to_buffer_callback(const char *chunk,
+                          size_t      len,
+                          void       *userdata)
 {
-        int     pipefd[2];
-        pid_t   pid;
-        char   *output      = NULL;
-        size_t  output_size = 0;
-        size_t  output_cap  = 0;
-        char    buf[4096];
+        buffer *b = (buffer *)userdata;
+        char tmp[len + 1];
+        memcpy(tmp, chunk, len);
+        tmp[len] = '\0';
+
+        linep_ar new_lines = lines_from(tmp);
+        for (size_t i = 0; i < new_lines.len; ++i) {
+                array_append(b->lines, new_lines.data[i]);
+                ++b->al;
+                ++b->cy;
+        }
+        array_free(new_lines);
+
+        buffer_adjust_scroll(b);
+        buffer_draw(b);
+}
+
+static void
+capture_command_output_stream(str             *input,
+                              output_callback  cb,
+                              void            *userdata)
+{
+        int   pipefd[2];
+        pid_t pid;
 
         if (pipe(pipefd) == -1) {
                 perror("pipe");
-                return NULL;
+                return;
         }
 
         pid = fork();
@@ -493,70 +515,29 @@ capture_command_output(str *input)
                 perror("fork");
                 close(pipefd[0]);
                 close(pipefd[1]);
-                return NULL;
+                return;
         }
 
         if (pid == 0) {
-                // Child
+                // child
                 close(pipefd[0]);
-
-                if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
-                        perror("dup2 stdout");
-                        _exit(1);
-                }
-
-                if (dup2(pipefd[1], STDERR_FILENO) == -1) {
-                        perror("dup2 stderr");
-                        _exit(1);
-                }
-
+                dup2(pipefd[1], STDOUT_FILENO);
+                dup2(pipefd[1], STDERR_FILENO);
                 close(pipefd[1]);
-
-                //char **args = make_command(input);
-                //if (!args || !*args)
-                //        _exit(127);
-                //execvp(args[0], args);
-
-                int _ = system(input->chars);
-                (void)_;
-                //perror("system");
-                fflush(stdout);
-                _exit(127);
+                execl("/bin/sh", "sh", "-c", input->chars, NULL);
+                _exit(127); // exec failed
         }
 
-        // Parent
+        // parent
         close(pipefd[1]);
 
-        // Read loop
+        char buf[4096];
         ssize_t n;
-        while ((n = read(pipefd[0], buf, sizeof(buf) - 1)) > 0) {
-                buf[n] = '\0';
-
-                size_t needed = output_size + (size_t)n + 1;
-                if (needed > output_cap) {
-                        output_cap = needed * 2 < 8192 ? 8192 : needed * 2;
-                        char *new_out = realloc(output, output_cap);
-                        if (!new_out) {
-                                perror("realloc");
-                                free(output);
-                                close(pipefd[0]);
-                                waitpid(pid, NULL, 0);
-                                return NULL;
-                        }
-                        output = new_out;
-                }
-
-                memcpy(output + output_size, buf, (size_t)n);
-                output_size += (size_t)n;
-                output[output_size] = '\0';
-        }
+        while ((n = read(pipefd[0], buf, sizeof(buf))) > 0)
+                cb(buf, (size_t)n, userdata); // sending chunk to buffer
 
         close(pipefd[0]);
-
-        int status;
-        waitpid(pid, &status, 0);
-
-        return output;
+        waitpid(pid, NULL, 0);
 }
 
 static void
@@ -585,7 +566,7 @@ do_compilation(ww *ed)
                 exists = 1;
                 for (size_t i = 0; i < b->lines.len; ++i)
                         line_free(b->lines.data[i]);
-                array_free(b->lines);
+                array_clear(b->lines);
         }
 
         if (!exists)
@@ -593,8 +574,9 @@ do_compilation(ww *ed)
 
         ed->monitors[ed->am] = ed->buffers.data[get_buffer_by_path(ed, BUFFER_BUILTIN_COMPILE)];
 
-        char *output = capture_command_output(&input);
-        ed->monitors[ed->am]->lines = lines_from(output);
+        ed->monitors[ed->am]->cx = 0;
+        ed->monitors[ed->am]->al = 0;
+        ed->monitors[ed->am]->cy = 0;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
@@ -604,12 +586,14 @@ do_compilation(ww *ed)
         for (int i = (int)header.len-1; i >= 0; --i)
                 array_insert_at(ed->monitors[ed->am]->lines, 0, header.data[i]);
 #pragma GCC diagnostic pop
+        buffer_adjust_scroll(ed->monitors[ed->am]);
 
+        buffer_draw(ed->monitors[ed->am]);
+        capture_command_output_stream(&input, append_to_buffer_callback, ed->monitors[ed->am]);
         array_append(ed->monitors[ed->am]->lines, line_from(str_from("\n")));
         array_append(ed->monitors[ed->am]->lines, line_from(str_from("[ Done ] ")));
-        ed->monitors[ed->am]->cx = 0;
-        ed->monitors[ed->am]->al = 0;
-        ed->monitors[ed->am]->cy = 0;
+        ed->monitors[ed->am]->al = ed->monitors[ed->am]->lines.len-1;
+        ed->monitors[ed->am]->cy = ed->monitors[ed->am]->lines.len-1;
         buffer_adjust_scroll(ed->monitors[ed->am]);
 
         str_destroy(&input);
