@@ -379,8 +379,8 @@ static void
 split_vertical(ww *ed)
 {
         // TODO: check for monitor[2]
-        if (ed->buffers.len <= 1)
-                return;
+        /*if (ed->buffers.len <= 1)
+                return;*/
 
         buffer *b = NULL;
 
@@ -401,8 +401,10 @@ split_vertical(ww *ed)
                         break;
         }
 
-        if (!b)
-                return;
+        if (!b) {
+                b = ww_helpbuf_alloc((unsigned)glconf.term.w, (unsigned)glconf.term.w, 0, 0, ed);
+                array_append(ed->buffers, b);
+        }
 
         ed->monitors[1] = b;
         //ed->monitors[1] = ed->monitors[ed->ab];
@@ -412,8 +414,8 @@ split_vertical(ww *ed)
 static void
 split_horizontal(ww *ed)
 {
-        if (ed->buffers.len <= 1)
-                return;
+        /*if (ed->buffers.len <= 1)
+                return;*/
 
         buffer *b = NULL;
 
@@ -434,8 +436,10 @@ split_horizontal(ww *ed)
                         break;
         }
 
-        if (!b)
-                return;
+        if (!b) {
+                b = ww_helpbuf_alloc((unsigned)glconf.term.w, (unsigned)glconf.term.w, 0, 0, ed);
+                array_append(ed->buffers, b);
+        }
 
         ed->monitors[2] = b;
         ed->am          = 2;
