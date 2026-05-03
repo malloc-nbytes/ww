@@ -1533,15 +1533,15 @@ jump_to_line(buffer *b)
         int   no;
 
         if (!(input = minibuffer_input(b->parent, "lineno", NULL, array_empty(cstr_ar))))
-                 return BA_NOP;
+                 return BA_REDRAW;
 
         if (!cstr_isdigit(input))
                 return BA_NOP;
 
         no = atoi(input);
 
-        if (no-1 >= (int)b->lines.len || no-1 <= 0)
-                return BA_NOP;
+        if (no > (int)b->lines.len || no <= 0)
+                return BA_REDRAW;
 
         b->cx = 0;
         b->cy = (unsigned)no-1;
