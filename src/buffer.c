@@ -1622,8 +1622,8 @@ accept_autocomplete(buffer *b)
         /*if (!glconf.runtime.enable_auto)
                 return;*/
 
-        if (b->state != BS_AUTO)
-                return BA_NOP;
+        /*if (b->state != BS_AUTO)
+                return BA_NOP;*/
 
         str      prev;
         size_t   words_n;
@@ -1761,7 +1761,7 @@ buffer_process(buffer *b)
                 if (ch == '\t')                             assert(0);
                 else if (BACKSPACE(ch))                     return backspace(b);
                 else if (ch == 0)                           return selection(b);
-                else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
+                else if (ch == '\n' /*&& b->state == BS_AUTO*/) return accept_autocomplete(b);
                 else                                        return insert_char(b, ch, 1);
         } break;
         case INPUT_TYPE_CTRL: {
