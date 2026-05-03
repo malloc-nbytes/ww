@@ -136,6 +136,14 @@ find_file(ww *ed)
                 return;
         }
 
+        for (size_t i = 0; i < 4; ++i) {
+                if (ed->monitors[i] && !strcmp(ed->monitors[i]->path.chars, chosen_file)) {
+                        ed->am = (uint8_t)i;
+                        buffer_draw(ed->monitors[ed->am]);
+                        return;
+                }
+        }
+
         if (!ww_buffer_exists_by_path(ed, chosen_file)) {
                 ww_add_buffer(ed, buffer_from(str_from(get_basename(chosen_file)),
                                               str_from(chosen_file),
@@ -593,7 +601,7 @@ do_compilation(ww *ed)
         array_append(ed->monitors[ed->am]->lines, line_from(str_from("\n")));
         array_append(ed->monitors[ed->am]->lines, line_from(str_from("[ Done ] ")));
         ed->monitors[ed->am]->al = ed->monitors[ed->am]->lines.len-1;
-        ed->monitors[ed->am]->cy = ed->monitors[ed->am]->lines.len-1;
+        ed->monitors[ed->am]->cy = (unsigned)ed->monitors[ed->am]->lines.len-1;
         buffer_adjust_scroll(ed->monitors[ed->am]);
 
         str_destroy(&input);
