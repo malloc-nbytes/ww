@@ -169,4 +169,6 @@
                 return ar; \
         } \
 
+SET_DEFINE(char *, cstr_set);
+
 #endif // SET_H_INCLUDED
