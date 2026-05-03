@@ -34,9 +34,10 @@ typedef enum {
 } buffer_action;
 
 typedef enum {
-        BS_NORMAL,
+        BS_NORMAL = 0,
         BS_SEARCH,
         BS_SELECTION,
+        BS_AUTO,
 } buffer_state;
 
 typedef struct {
@@ -63,8 +64,10 @@ typedef struct {
         unsigned     sy;       // buffer selection y
         int          writable; // is buffer writable
         str          last_search; // last search query
-        ww          *parent;
+        ww          *parent;     // parent editor
         int          last_tab; // was the last character a tab
+        void        *ac;       // autocomplete
+        size_t       ac_cycle; // current autocomplete cycle
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);

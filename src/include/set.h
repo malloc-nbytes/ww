@@ -38,6 +38,8 @@
         size_t  setname##_size(const setname *s); \
         type  **setname##_iter(const setname *s)
 
+
+
 #define SET_IMPL(type, setname) \
         setname \
         setname##_create(setname##_hash_sig hash, \
@@ -63,7 +65,7 @@
         void \
         setname##_insert(setname *s, type v) \
         { \
-                unsigned idx = s->hash(&v) % s->tbl.cap; \
+                unsigned idx = s->hash(&v) % (unsigned)s->tbl.cap; \
                 __##setname##_node *it = s->tbl.data[idx]; \
                 __##setname##_node *prev = NULL; \
                 while (it) { \
@@ -86,7 +88,7 @@
         void \
         setname##_remove(setname *s, type v) \
         { \
-                unsigned idx = s->hash(&v) % s->tbl.cap; \
+                unsigned idx = s->hash(&v) % (unsigned)s->tbl.cap; \
                 __##setname##_node *it = s->tbl.data[idx]; \
                 __##setname##_node *prev = NULL; \
                 while (it) { \
@@ -109,7 +111,7 @@
         int \
         setname##_contains(const setname *s, type v) \
         { \
-                unsigned idx = s->hash(&v) % s->tbl.cap; \
+                unsigned idx = s->hash(&v) % (unsigned)s->tbl.cap; \
                 __##setname##_node *it = s->tbl.data[idx]; \
                 while (it) { \
                         if (s->cmp(&it->v, &v) == 0) return 1; \

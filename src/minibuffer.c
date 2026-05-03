@@ -224,6 +224,14 @@ minibuffer_input(ww         *ed,
                 } break;
 
                 case INPUT_TYPE_CTRL: {
+                        if (ch == CTRL_H) {
+                                if (cx > 0 && st.input.len > 0) {
+                                        str_rm(&st.input, cx - 1);
+                                        cx--;
+                                        st.selected_idx = 0;
+                                        st.offset       = 0;
+                                }
+                        }
                         if (ch == CTRL_N) {
                                 if (total_matches > 0 &&
                                     st.selected_idx < total_matches - 1)

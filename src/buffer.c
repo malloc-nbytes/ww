@@ -10,6 +10,8 @@
 #include "helpbuf.h"
 #include "flags.h"
 #include "utils.h"
+#include "trie.h"
+#include "set.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -22,12 +24,15 @@
 #endif
 #include <unistd.h>
 
-#define TAB_WIDTH 8
+#define TAB_WIDTH        8
+#define MAX_AUTOCOMPLETE 32
 
-PAIR_DEFINE(int, int, int_pair);
-PAIR_IMPL(int, int, int_pair);
-
+PAIR_DEFINE (int, int, int_pair);
+PAIR_IMPL   (int, int, int_pair);
 ARRAY_DEFINE(int_pair, int_pair_ar);
+
+SET_DEFINE(char *, cstr_set);
+SET_IMPL  (char *, cstr_set);
 
 static int
 line_selection_range(const buffer *b,
@@ -44,6 +49,52 @@ static buffer_action
 center_view(buffer *b);
 
 char_ar g_cpy_buf = {0};
+
+static cstr_set g_found_words = {0};
+
+static void
+collect_ac_from_buffer(buffer *b)
+{
+#define BUFCAP 1024
+        assert(g_found_words.hash);
+        assert(g_found_words.cmp);
+
+        for (size_t i = 0; i < b->lines.len; ++i) {
+                const line *ln = b->lines.data[i];
+                const str *s = &ln->txt;
+                const char *sraw = str_cstr(s);
+                int foundalpha = 0;
+                char buf[BUFCAP] = {0};
+                size_t bufn = 0;
+
+                for (size_t j = 0; j < s->len; ++j) {
+                        char ch = sraw[j];
+
+                        if (!isalpha(ch) && ch != '_') {
+                                if (foundalpha) {
+                                        if (!cstr_set_contains(&g_found_words, buf)) {
+                                                char *word = strdup(buf);
+                                                cstr_set_insert(&g_found_words, word);
+                                                trie_insert(b->ac, word);
+                                        }
+                                        bufn = 0;
+                                        memset(buf, 0, sizeof(buf));
+                                }
+                        } else if (bufn < BUFCAP) {
+                                buf[bufn++] = ch;
+                                foundalpha = 1;
+                        }
+                }
+
+                if (strlen(buf) && !cstr_set_contains(&g_found_words, buf)) {
+                        char *word = strdup(buf);
+                        cstr_set_insert(&g_found_words, word);
+                        trie_insert(b->ac, word);
+                }
+        }
+
+#undef BUFCAP
+}
 
 void
 buffer_jump_to_verts(buffer *b,
@@ -132,6 +183,10 @@ buffer_from(str      name,
         b->last_search = str_create();
         b->parent      = parent;
         b->last_tab    = 0;
+        b->ac          = trie_alloc();
+        b->ac_cycle    = 0;
+
+        collect_ac_from_buffer(b);
 
         return b;
 }
@@ -808,6 +863,9 @@ insert_char(buffer *b, char ch, int newline_advance)
         if (!writable(b))
                 return BA_NOP;
 
+        if (b->state == BS_AUTO)
+                b->state = BS_NORMAL;
+
         b->saved = 0;
 
         if (!b->lines.data) {
@@ -818,6 +876,7 @@ insert_char(buffer *b, char ch, int newline_advance)
 
         str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
         ++b->cx;
+        ++b->wish_col;
 
         if (ch == '\n') {
                 const char *rest;
@@ -910,6 +969,9 @@ backspace(buffer *b)
         if (!writable(b))
                 return BA_NOP;
 
+        if (b->state == BS_AUTO)
+                b->state = BS_NORMAL;
+
         line *ln;
         int   newline;
 
@@ -950,6 +1012,8 @@ backspace(buffer *b)
                 if (b->cx > str_len(&ln->txt)-1)
                         b->cx = (unsigned)str_len(&ln->txt)-1;
         }
+
+        b->wish_col = b->cx;
 
         //add_to_popxy(b);
         return (buffer_adjust_scroll(b) == BA_REDRAW || newline) ? BA_REDRAW : BA_XY;
@@ -1445,6 +1509,9 @@ buffer_save(buffer *b)
         }
 
         b->saved = 1;
+
+        collect_ac_from_buffer(b);
+
         return BA_XY;
 }
 
@@ -1499,12 +1566,111 @@ handle_normal_input_while_builtin(buffer *b, char ch)
         return BA_NONE;
 }
 
+static str
+get_word_behind_cursor(const buffer *b)
+{
+        str res;
+
+        res = str_create();
+
+        for (int i = (int)b->cx-1; i >= 0; --i) {
+                char ch = b->lines.data[b->al]->txt.chars[(size_t)i];
+                if (!isalpha(ch) && ch != '_')
+                        break;
+                else
+                        str_insert(&res, 0/*res.len*/, ch);
+        }
+
+        return res;
+}
+
+static void
+display_autocomplete(buffer *b)
+{
+        str      prev;
+        size_t   words_n;
+        char   **words;
+
+        prev = get_word_behind_cursor(b);
+
+        if (prev.len == 0)
+                goto done;
+
+        words_n = 0;
+        words   = trie_get_completions(b->ac, str_cstr(&prev), MAX_AUTOCOMPLETE, &words_n);
+
+        if (words_n > 0) {
+                for (size_t i = 0; i < strlen(words[(b->ac_cycle-1)%words_n]); ++i)
+                        putchar(' ');
+
+                gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+                printf(GRAY "%s " RESET, words[(b->ac_cycle++)%words_n] + str_len(&prev));
+                gotoxy((unsigned)(b->cx - b->hoff), (unsigned)(b->cy - b->voff));
+                fflush(stdout);
+
+                b->state = BS_AUTO;
+        }
+
+        free(words);
+done:
+        str_destroy(&prev);
+}
+
+static buffer_action
+accept_autocomplete(buffer *b)
+{
+        /*if (!glconf.runtime.enable_auto)
+                return;*/
+
+        if (b->state != BS_AUTO)
+                return BA_NOP;
+
+        str      prev;
+        size_t   words_n;
+        char   **words;
+
+        prev    = get_word_behind_cursor(b);
+        words_n = 0;
+        words   = trie_get_completions(b->ac, str_cstr(&prev), MAX_AUTOCOMPLETE, &words_n);
+
+       if (words_n == 0)
+                goto done;
+
+        char *s = words[(b->ac_cycle-1)%words_n];
+        size_t n = strlen(s);
+        if (isspace(s[n-1]))
+                s[n-1] = 0;
+
+        for (size_t i = str_len(&prev); s[i]; ++i)
+                str_insert(&b->lines.data[b->al]->txt, b->cx++, s[i]);
+
+done:
+        str_destroy(&prev);
+        free(words);
+        b->state    = BS_NORMAL;
+        b->ac_cycle = 0;
+        b->wish_col = b->cx;
+
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
 static buffer_action
 tab(buffer *b)
 {
         buffer_action ba;
+        char          prevchar;
 
         ba = BA_NOP;
+
+        if (b->cx > 0)
+                prevchar = b->lines.data[b->al]->txt.chars[b->cx-1];
+        else
+                prevchar = 0;
+
+        if ((prevchar && isalpha(prevchar)) || prevchar == '_') {
+                display_autocomplete(b);
+                return BA_NOP;
+        }
 
         ++b->last_tab;
 
@@ -1592,10 +1758,11 @@ buffer_process(buffer *b)
                         }
                 }
 
-                if (ch == '\t')         assert(0);
-                else if (BACKSPACE(ch)) return backspace(b);
-                else if (ch == 0)       return selection(b);
-                else                    return insert_char(b, ch, 1);
+                if (ch == '\t')                             assert(0);
+                else if (BACKSPACE(ch))                     return backspace(b);
+                else if (ch == 0)                           return selection(b);
+                else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
+                else                                        return insert_char(b, ch, 1);
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch != 9)
@@ -1656,6 +1823,7 @@ buffer_process(buffer *b)
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
                 else if (ch == 'g')     return jump_to_line(b);
                 else if (ch == '\'')    return buffer_shell(b);
+                else if (ch == '/')     return accept_autocomplete(b);
         } break;
 
         default: break;
@@ -1924,8 +2092,21 @@ buffer_draw(const buffer *b)
         gotoxy(screen_x, screen_y);
 }
 
+static unsigned
+cstr_set_hash(char **s)
+{
+        return (unsigned)**s;
+}
+
+static int
+cstr_set_cmp(char **s0, char **s1)
+{
+        return strcmp(*s0, *s1);
+}
+
 void
 init_buffer_translation_unit(void)
 {
-        g_cpy_buf = array_empty(char_ar);
+        g_cpy_buf     = array_empty(char_ar);
+        g_found_words = cstr_set_create(cstr_set_hash, cstr_set_cmp, NULL);
 }
