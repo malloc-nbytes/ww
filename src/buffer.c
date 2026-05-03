@@ -1831,7 +1831,8 @@ drawln(const buffer *b, size_t idx)
                                 && (c != '\n')
                                 && (((size_t)whitespace_start < char_i)
                                     || ((size_t)whitespace_start == 0
-                                    && (size_t)whitespace_start <= char_i));
+                                    && (size_t)whitespace_start <= char_i
+                                    && isspace(c)));
 
                         if (/*b->show_trailing_whitespace && */is_trailing_whitespace && !in_selection) {
                                 printf(GRAY "-" RESET);
