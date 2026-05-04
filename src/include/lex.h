@@ -5,6 +5,16 @@
 #include "location.h"
 #include "array.h"
 
+#include <stdint.h>
+#include <stddef.h>
+
+#define LEXER_CFG_NO_BITS        (0)
+#define LEXER_CFG_TRACK_NEWLINES (1 << 0)
+#define LEXER_CFG_TRACK_TABS     (1 << 1)
+#define LEXER_CFG_TRACK_SPACES   (1 << 2)
+#define LEXER_CFG_CHARS_AS_STRS  (1 << 3)
+#define LEXER_CFG_C_OPERATORS    (1 << 4)
+
 typedef enum {
         TK_EOF = 0,
         TK_IDENT,
@@ -56,11 +66,23 @@ typedef struct {
 ARRAY_DEFINE(token *, tokenp_ar);
 
 typedef struct {
+        const char *path;
+        const char *src;
+        struct {
+                const char *single;
+                const char *multi_begin;
+                const char *multi_end;
+        } comment;
+        const char **kwds;
+        uint32_t bits;
 } lexer_cfg;
 
 typedef struct {
+        tokenp_ar tokens;
+        size_t pos;
+        lexer_cfg cfg;
 } lexer;
 
-lexer lex(const char *path, const char *src, lexer_cfg cfg);
+lexer lex(lexer_cfg cfg);
 
 #endif // LEX_H_INCLUDED
