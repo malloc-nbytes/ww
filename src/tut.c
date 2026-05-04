@@ -1,6 +1,7 @@
 #include "tut.h"
 #include "glconf.h"
 
+#include <assert.h>
 #include <string.h>
 
 char *g_tut01 = "*** ww Tutorial Chapter 1 - Basic Navigation ***\n"
@@ -72,10 +73,12 @@ tut_alloc(ww *ed, const char *chapter)
         int writable = 0;
 
         if (!strcmp(chapter, TUT_CH1_NAME)) {
-                name = "ch1";
+                name = chapter;
                 lns = lines_from(g_tut01);
                 writable = 0;
         }
+        else
+                assert(0 && "unreachable");
 
         buffer *b = buffer_from(str_from(name),
                                str_from(name),
