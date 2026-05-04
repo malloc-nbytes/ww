@@ -746,6 +746,8 @@ metax(ww *ed)
                 tutorial(ed);
         else if (!strcmp(inp, WW_CMD_HELP))
                 help(ed);
+        else if (!strcmp(inp, WW_CMD_QUIT))
+                exit(0);
 
         free(inp);
         array_free(cmds);

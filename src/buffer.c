@@ -680,7 +680,7 @@ eol(buffer *b)
 }
 
 static buffer_action
-jump_next_word(buffer *b)
+jump_next_word(buffer *b, int skip_underscores)
 {
         const line *ln;
         const str  *s;
@@ -698,7 +698,7 @@ jump_next_word(buffer *b)
                 return BA_NOP;
 
         while (i < str_len(s)) {
-                if (isalnum(sraw[i]))
+                if (isalnum(sraw[i]) || (skip_underscores && sraw[i] == '_'))
                         hitchars = 1;
                 else if (hitchars)
                         break;
@@ -1702,11 +1702,11 @@ tab(buffer *b)
 }
 
 static buffer_action
-jmp_and_highlight_forward(buffer *b)
+jmp_and_highlight_forward(buffer *b, int skip_underscores)
 {
         if (b->state != BS_SELECTION)
                 selection(b);
-        jump_next_word(b);
+        jump_next_word(b, skip_underscores);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
@@ -1819,7 +1819,7 @@ buffer_process(buffer *b)
         } break;
         case INPUT_TYPE_ALT: {
                 b->last_tab = 0;
-                if (ch == 'f')          return jump_next_word(b);
+                if (ch == 'f')          return jump_next_word(b, 0);
                 else if (ch == 'b')     return jump_prev_word(b);
                 else if (ch == 'd')     return del_word(b);
                 else if (ch == '}')     return next_paragraph(b);
@@ -1839,11 +1839,12 @@ buffer_process(buffer *b)
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
                 else if (ch == 'x')     return BA_REQ_METAX;
-                else if (ch == '.')     return jmp_and_highlight_forward(b);
+                else if (ch == '.')     return jmp_and_highlight_forward(b, 0);
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
                 else if (ch == 'g')     return jump_to_line(b);
                 else if (ch == '\'')    return buffer_shell(b);
                 else if (ch == '/')     return accept_autocomplete(b);
+                else if (ch == 0)       return jmp_and_highlight_forward(b, 1);
         } break;
 
         default: break;
