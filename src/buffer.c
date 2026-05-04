@@ -1861,13 +1861,15 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s Monitor:%d",
+        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s Monitor:%d %s%d>",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
                 !b->saved ? "*" : "",
                 state_to_cstr(b),
-                b->parent->am);
+                b->parent->am,
+                (glconf.flags & FK_TABMODE) == 0 ? "<space x" : "<tab x",
+                (glconf.flags & FK_TABMODE) == 0 ? glconf.runtime.space_amt : TAB_WIDTH);
         printf("%s", buf);
         len += strlen(buf);
 
