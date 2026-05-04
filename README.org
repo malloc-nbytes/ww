@@ -18,9 +18,11 @@ Also, dependencies such as =ncurses= are not needed, just a =C= compiler and pyt
 
 ** Compilation
 
+*NOTE:* The =--prefix= option for =premake.py= is optional and is =/usr/local= by default.
+
 #+begin_src bash
   cd src
-  python3 premake.py
+  python3 premake.py --prefix=<prefix>
   make
   make install
 #+end_src
