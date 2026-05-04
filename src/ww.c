@@ -855,10 +855,10 @@ try_jump_to_error(ww *ed)
         }
 
         buffer *b = NULL;
+        char *real = get_realpath(filename);
+        assert(real);
 
-        if (!ww_buffer_exists_by_path(ed, filename)) {
-                char *real = get_realpath(filename);
-                assert(real);
+        if (!ww_buffer_exists_by_path(ed, real)) {
                 b = buffer_from(str_from(filename),
                                 str_from(real),
                                 (unsigned)glconf.term.w, (unsigned)glconf.term.h,
@@ -867,7 +867,7 @@ try_jump_to_error(ww *ed)
                 ww_add_buffer(ed, b);
         }
         else
-                b = ed->buffers.data[(size_t)get_buffer_by_path(ed, filename)];
+                b = ed->buffers.data[(size_t)get_buffer_by_path(ed, real)];
 
         ed->monitors[ed->am] = b;
         buffer_jump_to_verts(ed->monitors[ed->am], (size_t)col-1, (size_t)row-1);
