@@ -65,7 +65,6 @@ get_input(char *c)
         return INPUT_TYPE_UNKNOWN;
 }
 
-
 int
 get_terminal_xy(size_t *win_width,
                 size_t *win_height)
@@ -210,4 +209,16 @@ clear_line_imm(void)
         printf("\033[2K");
         printf("\033[0G");
         fflush(stdout);
+}
+
+void
+enable_mousewheel_capture(void)
+{
+        printf("\033[?1000h");
+}
+
+void
+disable_mousewheel_capture(void)
+{
+        printf("\033[?1000l");
 }

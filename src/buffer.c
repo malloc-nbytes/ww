@@ -803,7 +803,7 @@ prev_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -829,7 +829,7 @@ next_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1755,6 +1755,11 @@ buffer_process(buffer *b)
         char ch;
 
         switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_ARROW: {
+                assert(0);
+                if (ch == DOWN_ARROW) return down(b);
+                if (ch == UP_ARROW)   return up(b);
+        } break;
         case INPUT_TYPE_NORMAL: {
                 if (!BACKSPACE(ch))
                         b->last_tab = 0;
