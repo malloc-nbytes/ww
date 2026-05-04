@@ -882,7 +882,6 @@ insert_char(buffer *b, char ch, int newline_advance)
         if (!b->lines.data) {
                 char tmp[] = {'\n', 0};
                 array_append(b->lines, line_from(str_from(tmp)));
-                /* array_append(b->lines, line_from(str_from("\n"))); */
         }
 
         str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
@@ -905,6 +904,10 @@ insert_char(buffer *b, char ch, int newline_advance)
                         ++b->cy;
                         ++b->al;
                 }
+        } else if (((glconf.flags & FK_NOAUTOBRACKET) == 0)
+                    && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
+                char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
+                str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
         }
 
         //add_to_popxy(b);
