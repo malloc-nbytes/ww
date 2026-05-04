@@ -1756,9 +1756,10 @@ buffer_process(buffer *b)
 
         switch (ty = get_input(&ch)) {
         case INPUT_TYPE_ARROW: {
-                assert(0);
-                if (ch == DOWN_ARROW) return down(b);
-                if (ch == UP_ARROW)   return up(b);
+                if (ch == DOWN_ARROW)  return down(b);
+                if (ch == UP_ARROW)    return up(b);
+                if (ch == LEFT_ARROW)  return left(b);
+                if (ch == RIGHT_ARROW) return right(b);
         } break;
         case INPUT_TYPE_NORMAL: {
                 if (!BACKSPACE(ch))
