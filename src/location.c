@@ -4,9 +4,9 @@
 #include <stdlib.h>
 
 location
-location_from(char     *path,
-              unsigned  r,
-              unsigned  c)
+location_from(const char *path,
+              unsigned   r,
+              unsigned   c)
 {
         return (location) {
                 .path = strdup(path),
