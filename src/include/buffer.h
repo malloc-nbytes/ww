@@ -4,6 +4,7 @@
 #include "array.h"
 #include "line.h"
 #include "str.h"
+#include "set.h"
 
 #define BUFFER_BUILTIN_COMPILE "ww-compile"
 #define BUFFER_BUILTIN_HELP    "ww-help"
@@ -64,10 +65,11 @@ typedef struct {
         unsigned     sy;       // buffer selection y
         int          writable; // is buffer writable
         str          last_search; // last search query
-        ww          *parent;     // parent editor
-        int          last_tab; // was the last character a tab
-        void        *ac;       // autocomplete
-        size_t       ac_cycle; // current autocomplete cycle
+        ww          *parent;      // parent editor
+        int          last_tab;    // was the last character a tab
+        void        *ac;          // autocomplete
+        size_t       ac_cycle;    // current autocomplete cycle
+        cstr_set     found_words; // found words for autocomplete
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);

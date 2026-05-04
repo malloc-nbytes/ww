@@ -856,7 +856,7 @@ try_jump_to_error(ww *ed)
 
         buffer *b = NULL;
 
-        if (!(b = get_buffer_by_name(ed, filename))) {
+        if (!ww_buffer_exists_by_path(ed, filename)) {
                 char *real = get_realpath(filename);
                 assert(real);
                 b = buffer_from(str_from(filename),
@@ -866,6 +866,8 @@ try_jump_to_error(ww *ed)
                                 lines_from(load_file(real)), ed);
                 ww_add_buffer(ed, b);
         }
+        else
+                b = ed->buffers.data[(size_t)get_buffer_by_path(ed, filename)];
 
         ed->monitors[ed->am] = b;
         buffer_jump_to_verts(ed->monitors[ed->am], (size_t)col-1, (size_t)row-1);

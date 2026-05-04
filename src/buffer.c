@@ -31,8 +31,7 @@ PAIR_DEFINE (int, int, int_pair);
 PAIR_IMPL   (int, int, int_pair);
 ARRAY_DEFINE(int_pair, int_pair_ar);
 
-SET_DEFINE(char *, cstr_set);
-SET_IMPL  (char *, cstr_set);
+SET_IMPL(char *, cstr_set);
 
 static int
 line_selection_range(const buffer *b,
@@ -50,15 +49,10 @@ center_view(buffer *b);
 
 char_ar g_cpy_buf = {0};
 
-static cstr_set g_found_words = {0};
-
 static void
 collect_ac_from_buffer(buffer *b)
 {
 #define BUFCAP 1024
-        assert(g_found_words.hash);
-        assert(g_found_words.cmp);
-
         for (size_t i = 0; i < b->lines.len; ++i) {
                 const line *ln = b->lines.data[i];
                 const str *s = &ln->txt;
@@ -72,9 +66,9 @@ collect_ac_from_buffer(buffer *b)
 
                         if (!isalpha(ch) && ch != '_') {
                                 if (foundalpha) {
-                                        if (!cstr_set_contains(&g_found_words, buf)) {
+                                        if (!cstr_set_contains(&b->found_words, buf)) {
                                                 char *word = strdup(buf);
-                                                cstr_set_insert(&g_found_words, word);
+                                                cstr_set_insert(&b->found_words, word);
                                                 trie_insert(b->ac, word);
                                         }
                                         bufn = 0;
@@ -86,9 +80,9 @@ collect_ac_from_buffer(buffer *b)
                         }
                 }
 
-                if (strlen(buf) && !cstr_set_contains(&g_found_words, buf)) {
+                if (strlen(buf) && !cstr_set_contains(&b->found_words, buf)) {
                         char *word = strdup(buf);
-                        cstr_set_insert(&g_found_words, word);
+                        cstr_set_insert(&b->found_words, word);
                         trie_insert(b->ac, word);
                 }
         }
@@ -118,6 +112,8 @@ buffer_free(buffer *b)
         str_destroy(&b->name);
         str_destroy(&b->path);
         str_destroy(&b->last_search);
+        cstr_set_destroy(&b->found_words);
+        trie_destroy(b->ac);
 
         free(b);
 }
@@ -146,6 +142,18 @@ ww_helpbuf_alloc(unsigned  w,
         buffer_make_builtin(b);
 
         return b;
+}
+
+static unsigned
+cstr_set_hash(char **s)
+{
+        return (unsigned)**s;
+}
+
+static int
+cstr_set_cmp(char **s0, char **s1)
+{
+        return strcmp(*s0, *s1);
 }
 
 buffer *
@@ -185,6 +193,7 @@ buffer_from(str      name,
         b->last_tab    = 0;
         b->ac          = trie_alloc();
         b->ac_cycle    = 0;
+        b->found_words = cstr_set_create(cstr_set_hash, cstr_set_cmp, NULL);
 
         collect_ac_from_buffer(b);
 
@@ -2092,21 +2101,8 @@ buffer_draw(const buffer *b)
         gotoxy(screen_x, screen_y);
 }
 
-static unsigned
-cstr_set_hash(char **s)
-{
-        return (unsigned)**s;
-}
-
-static int
-cstr_set_cmp(char **s0, char **s1)
-{
-        return strcmp(*s0, *s1);
-}
-
 void
 init_buffer_translation_unit(void)
 {
         g_cpy_buf     = array_empty(char_ar);
-        g_found_words = cstr_set_create(cstr_set_hash, cstr_set_cmp, NULL);
 }
