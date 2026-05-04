@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#ifdef __linux__
+#if PATH_MAX
 #include <limits.h>
 #else
 #define PATH_MAX 4096
@@ -709,6 +709,8 @@ jump_next_word(buffer *b)
                 b->cx = (unsigned)str_len(s)-1;
         else
                 b->cx = (unsigned)i;
+
+        b->wish_col = b->cx;
 
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;

@@ -703,6 +703,22 @@ done:
 }
 
 static void
+help(ww *ed)
+{
+        ssize_t idx;
+        buffer *b;
+
+        if ((idx = get_buffer_by_path(ed, BUFFER_BUILTIN_HELP)) == -1) {
+                b = ww_helpbuf_alloc((unsigned)glconf.term.w, (unsigned)glconf.term.w, 0, 0, ed);
+                array_append(ed->buffers, b);
+        }
+        else
+                b = ed->buffers.data[(size_t)idx];
+
+        ed->monitors[ed->am] = b;
+}
+
+static void
 metax(ww *ed)
 {
         char *inp;
@@ -728,6 +744,8 @@ metax(ww *ed)
                 set_spaceamt(ed);
         else if (!strcmp(inp, WW_CMD_TUT))
                 tutorial(ed);
+        else if (!strcmp(inp, WW_CMD_HELP))
+                help(ed);
 
         free(inp);
         array_free(cmds);
