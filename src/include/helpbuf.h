@@ -53,6 +53,8 @@
 "C-v         = page down\n" \
 "M-v         = page up\n" \
 "M-m         = go to first non-space char on line\n" \
+"M-g n       = go to next error\n" \
+"M-g p       = go to previous error\n" \
 "C-u         = pop to last (x, y) location (UNIMPLEMENTED)\n" \
 "\n" \
 "Text Manipulation:\n" \
@@ -70,7 +72,7 @@
 "C-y           = paste *\n" \
 "C-k           = cut until end of line\n" \
 "M-j           = combine lines\n" \
-"M-g           = jump to line number\n" \
+"M-g M-g       = jump to line number\n" \
 "M-n           = move text down\n" \
 "M-p           = move text up\n" \
 "M-c           = capitalize letter under cursor\n" \

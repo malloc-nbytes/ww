@@ -337,7 +337,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_SPLITHOR
             || ba == BA_REQ_KILLBUF
             || ba == BA_REQ_SWITCHCOMPL
-            || ba == BA_REQ_ERRJMP)
+            || ba == BA_REQ_ERRJMP
+            || ba == BA_REQ_NEXTERROR)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -821,8 +822,8 @@ switch_to_compilation_buffer(ww *ed)
         }
 }
 
-static void
-try_jump_to_error(ww *ed)
+static int
+try_jump_to_error(ww *ed, buffer *compilation)
 {
         const line *ln       = NULL;
         char       *filename = NULL;
@@ -830,7 +831,11 @@ try_jump_to_error(ww *ed)
         int         col      = -1;
         buffer     *ab       = NULL;
 
-        ab = ed->monitors[ed->am];
+        if (!compilation)
+                ab = ed->monitors[ed->am];
+        else
+                ab = compilation;
+
         ln = ab->lines.data[ab->al];
 
         regex_t regex;
@@ -840,7 +845,7 @@ try_jump_to_error(ww *ed)
 
         if (regcomp(&regex, pattern, REG_EXTENDED)) {
                 fprintf(stderr, "Could not compile regex\n");
-                return;
+                return 0;
         }
 
         if (regexec(&regex, ln->txt.chars, 4, matches, 0) == 0) {
@@ -848,7 +853,7 @@ try_jump_to_error(ww *ed)
 
                 if (!(filename = malloc((size_t)fname_len + 1))) {
                         regfree(&regex);
-                        return;
+                        return 0;
                 }
 
                 memcpy(filename,
@@ -864,13 +869,13 @@ try_jump_to_error(ww *ed)
 
         if (!filename) {
                 buffer_draw(ab);
-                return;
+                return 0;
         }
 
         if (row == -1 || col == -1) {
                 free(filename);
                 buffer_draw(ab);
-                return;
+                return 0;
         }
 
         buffer *b = NULL;
@@ -895,6 +900,51 @@ try_jump_to_error(ww *ed)
         buffer_draw(ed->monitors[ed->am]);
 
         sort_buffers(ed);
+
+        return filename != NULL;
+}
+
+static void
+jmp_next_error(ww *ed, int prev)
+{
+        buffer  *b;
+        ssize_t  idx;
+        size_t   old_al;
+
+        if ((idx = get_buffer_by_path(ed, BUFFER_BUILTIN_COMPILE)) == -1)
+                return;
+        else
+                b = ed->buffers.data[(size_t)idx];
+
+        old_al = b->al;
+
+        if (!prev) {
+                b->al = (b->al+1) % b->lines.len;
+                b->cy = (b->cy+1) % (unsigned)b->lines.len;
+        } else {
+                if (b->al == 0)
+                        b->al = b->lines.len;
+                if (b->cy == 0)
+                        b->cy = (unsigned)b->lines.len;
+                --b->al;
+                --b->cy;
+        }
+
+        do {
+                if (try_jump_to_error(ed, b))
+                        break;
+                if (!prev) {
+                        b->al = (b->al+1) % b->lines.len;
+                        b->cy = (b->cy+1) % (unsigned)b->lines.len;
+                } else {
+                        if (b->al == 0)
+                                b->al = b->lines.len;
+                        if (b->cy == 0)
+                                b->cy = (unsigned)b->lines.len;
+                        --b->al;
+                        --b->cy;
+                }
+        } while (b->al != old_al);
 }
 
 void
@@ -935,7 +985,9 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_SPLITHOR)      split_horizontal(ed);
                 else if (act == BA_REQ_KILLBUF)       kill_current_buffer(ed);
                 else if (act == BA_REQ_SWITCHCOMPL)   switch_to_compilation_buffer(ed);
-                else if (act == BA_REQ_ERRJMP)        try_jump_to_error(ed);
+                else if (act == BA_REQ_ERRJMP)        (void)try_jump_to_error(ed, NULL);
+                else if (act == BA_REQ_NEXTERROR)     jmp_next_error(ed, 0);
+                else if (act == BA_REQ_PREVERROR)     jmp_next_error(ed, 1);
 
                 ww_display_monitors(ed, act);
         }
