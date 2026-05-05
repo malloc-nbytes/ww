@@ -1605,6 +1605,8 @@ ctrlx(buffer *b)
                         return BA_REQ_SPLITHOR;
                 if (ch == 'k')
                         return BA_REQ_KILLBUF;
+                if (ch == '0')
+                        return BA_REQ_KILLMON;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)

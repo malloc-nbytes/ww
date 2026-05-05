@@ -893,7 +893,18 @@ try_jump_to_error(ww *ed, buffer *compilation)
         else
                 b = ed->buffers.data[(size_t)get_buffer_by_path(ed, real)];
 
-        ed->monitors[ed->am] = b;
+        int found_buffer = -1;
+        for (size_t i = 0; i < 4; ++i) {
+                if (ed->monitors[i] && !strcmp(ed->monitors[i]->path.chars, real)) {
+                        found_buffer = (int)i;
+                        break;
+                }
+        }
+
+        if (found_buffer == -1)
+                ed->monitors[ed->am] = b;
+        else
+                ed->am = (uint8_t)found_buffer;
         buffer_jump_to_verts(ed->monitors[ed->am], (size_t)col-1, (size_t)row-1);
 
         free(filename);
@@ -933,6 +944,7 @@ jmp_next_error(ww *ed, int prev)
         do {
                 if (try_jump_to_error(ed, b))
                         break;
+
                 if (!prev) {
                         b->al = (b->al+1) % b->lines.len;
                         b->cy = (b->cy+1) % (unsigned)b->lines.len;
@@ -945,6 +957,20 @@ jmp_next_error(ww *ed, int prev)
                         --b->cy;
                 }
         } while (b->al != old_al);
+
+        int found = 0;
+        for (size_t i = 0; i < 4; ++i) {
+                if (ed->monitors[i] && !strcmp(ed->monitors[i]->path.chars,
+                                               BUFFER_BUILTIN_COMPILE)) {
+                        found = 1;
+                        break;
+                }
+        }
+
+        if (!found) {
+                ed->monitors[2] = b;
+                sort_buffers(ed);
+        }
 }
 
 void
