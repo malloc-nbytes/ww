@@ -678,19 +678,18 @@ tutorial(ww *ed)
 
         chapters = array_empty(cstr_ar);
         array_append(chapters, TUT_CH1_NAME);
+        array_append(chapters, TUT_CH2_NAME);
 
         input = minibuffer_input(ed, "tutorial", NULL, chapters);
 
         if (!input || strlen(input) == 0)
                 goto done;
 
-        if (strcmp(input, TUT_CH1_NAME))
-                goto done;
-
-        ssize_t idx = get_buffer_by_path(ed, TUT_CH1_NAME);
+        ssize_t idx = get_buffer_by_path(ed, input);
 
         if (idx == -1) {
                 b = tut_alloc(ed, input);
+                if (!b) goto done;
                 ww_add_buffer(ed, b);
         }
         else

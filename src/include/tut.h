@@ -5,6 +5,7 @@
 #include "ww.h"
 
 #define TUT_CH1_NAME "ww-tut-ch1 - Basic Navigation"
+#define TUT_CH2_NAME "ww-tut-ch2 - Basic Editing"
 
 extern char *g_tut01;
 

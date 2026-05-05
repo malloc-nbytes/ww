@@ -73,7 +73,7 @@ init(void)
 
         term_fullscrn();
         clear_terminal();
-        enable_mousewheel_capture();
+        //enable_mousewheel_capture();
 
         return 1;
 }
@@ -83,7 +83,7 @@ cleanup(void)
 {
         (void)disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
         term_exit_fullscrn();
-        disable_mousewheel_capture();
+        //disable_mousewheel_capture();
 }
 
 int

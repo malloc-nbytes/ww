@@ -747,6 +747,8 @@ jump_prev_word(buffer *b)
         if (!isalnum(sraw[b->cx]))
                 ++b->cx;
 
+        b->wish_col = b->cx;
+
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
@@ -869,8 +871,10 @@ kill_line(buffer *b)
 }
 
 static buffer_action
-insert_char(buffer *b, char ch, int newline_advance)
+insert_char(buffer *b, char ch, int newline_advance, int autobracket)
 {
+        (void)autobracket;
+
         if (!writable(b))
                 return BA_NOP;
 
@@ -904,11 +908,10 @@ insert_char(buffer *b, char ch, int newline_advance)
                         ++b->cy;
                         ++b->al;
                 }
-        } else if (((glconf.flags & FK_NOAUTOBRACKET) == 0)
-                    && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
+        } /*else if (autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
                 char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
                 str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
-        }
+        }*/
 
         //add_to_popxy(b);
 
@@ -1489,7 +1492,7 @@ paste(buffer *b)
         }
 
         for (size_t i = 0; i < g_cpy_buf.len; ++i) {
-                insert_char(b, g_cpy_buf.data[i], 1);
+                insert_char(b, g_cpy_buf.data[i], 1, 0);
                 if (g_cpy_buf.data[i] == '\n')
                         newline = 1;
         }
@@ -1689,13 +1692,13 @@ tab(buffer *b)
         ++b->last_tab;
 
         if (glconf.flags & FK_TABMODE)
-                return insert_char(b, '\t', 1);
+                return insert_char(b, '\t', 1, 0);
 
         for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
                 if (ba == BA_REDRAW)
-                        insert_char(b, ' ', 1);
+                        insert_char(b, ' ', 1, 0);
                 else
-                        ba = insert_char(b, ' ', 1);
+                        ba = insert_char(b, ' ', 1, 0);
         }
 
         return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
@@ -1782,7 +1785,7 @@ buffer_process(buffer *b)
                 else if (BACKSPACE(ch))                     return backspace(b);
                 else if (ch == 0)                           return selection(b);
                 else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
-                else                                        return insert_char(b, ch, 1);
+                else                                        return insert_char(b, ch, 1, (glconf.flags & FK_NOAUTOBRACKET) == 0);
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch != 9)
@@ -1797,7 +1800,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_A) return bol(b);
                 else if (ch == CTRL_K) return delete_until_eol(b);
                 else if (ch == CTRL_O) {
-                        if (insert_char(b, '\n', 0) != BA_NOP) {
+                        if (insert_char(b, '\n', 0, 0) != BA_NOP) {
                                 --b->cx;
                                 return BA_REDRAW;
                         }
