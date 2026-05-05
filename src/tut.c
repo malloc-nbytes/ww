@@ -1,6 +1,7 @@
 #include "tut.h"
 #include "glconf.h"
 
+#include <assert.h>
 #include <string.h>
 
 char *g_tut01 = "*** ww Tutorial Chapter 1 - Basic Navigation ***\n"
@@ -62,6 +63,20 @@ char *g_tut01 = "*** ww Tutorial Chapter 1 - Basic Navigation ***\n"
 "\n"
 "Feel free to try these out in this buffer as well.\n"
 "\n"
+"Invoke `C-x k' to kill this buffer\n"
+"\n"
+"END OF TUTORIAL\n";
+
+char *g_tut02 = "*** ww Tutorial Chapter 2 - Basic Editing ***\n"
+"\n"
+"This chapter goes over basic editing of documents.\n"
+"\n"
+"You can do the following:\n"
+"- type normally to insert characters\n"
+"- use `C-<space>' to begin highlighting\n"
+"- use `C-d' to delete the character under the cursor\n"
+"- and many more. See `M-x help' to see all controls.\n"
+"\n"
 "END OF TUTORIAL\n";
 
 buffer *
@@ -71,11 +86,17 @@ tut_alloc(ww *ed, const char *chapter)
         linep_ar lns;
         int writable = 0;
 
+        name = chapter;
+
         if (!strcmp(chapter, TUT_CH1_NAME)) {
-                name = "ch1";
-                lns = lines_from(g_tut01);
+                lns      = lines_from(g_tut01);
+                writable = 0;
+        } else if (!strcmp(chapter, TUT_CH2_NAME)) {
+                lns      = lines_from(g_tut02);
                 writable = 0;
         }
+        else
+                return NULL;
 
         buffer *b = buffer_from(str_from(name),
                                str_from(name),

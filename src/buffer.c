@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#ifdef __linux__
+#if PATH_MAX
 #include <limits.h>
 #else
 #define PATH_MAX 4096
@@ -680,7 +680,7 @@ eol(buffer *b)
 }
 
 static buffer_action
-jump_next_word(buffer *b)
+jump_next_word(buffer *b, int skip_underscores)
 {
         const line *ln;
         const str  *s;
@@ -698,7 +698,7 @@ jump_next_word(buffer *b)
                 return BA_NOP;
 
         while (i < str_len(s)) {
-                if (isalnum(sraw[i]))
+                if (isalnum(sraw[i]) || (skip_underscores && sraw[i] == '_'))
                         hitchars = 1;
                 else if (hitchars)
                         break;
@@ -709,6 +709,8 @@ jump_next_word(buffer *b)
                 b->cx = (unsigned)str_len(s)-1;
         else
                 b->cx = (unsigned)i;
+
+        b->wish_col = b->cx;
 
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
@@ -744,6 +746,8 @@ jump_prev_word(buffer *b)
 
         if (!isalnum(sraw[b->cx]))
                 ++b->cx;
+
+        b->wish_col = b->cx;
 
         adjust_cursor(b);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
@@ -803,7 +807,7 @@ prev_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -829,7 +833,7 @@ next_paragraph(buffer *b)
         b->al = nextln;
 
         adjust_cursor(b);
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -867,8 +871,10 @@ kill_line(buffer *b)
 }
 
 static buffer_action
-insert_char(buffer *b, char ch, int newline_advance)
+insert_char(buffer *b, char ch, int newline_advance, int autobracket)
 {
+        (void)autobracket;
+
         if (!writable(b))
                 return BA_NOP;
 
@@ -880,7 +886,6 @@ insert_char(buffer *b, char ch, int newline_advance)
         if (!b->lines.data) {
                 char tmp[] = {'\n', 0};
                 array_append(b->lines, line_from(str_from(tmp)));
-                /* array_append(b->lines, line_from(str_from("\n"))); */
         }
 
         str_insert(&b->lines.data[b->al]->txt, b->cx, ch);
@@ -903,7 +908,10 @@ insert_char(buffer *b, char ch, int newline_advance)
                         ++b->cy;
                         ++b->al;
                 }
-        }
+        } /*else if (autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
+                char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
+                str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
+        }*/
 
         //add_to_popxy(b);
 
@@ -1484,7 +1492,7 @@ paste(buffer *b)
         }
 
         for (size_t i = 0; i < g_cpy_buf.len; ++i) {
-                insert_char(b, g_cpy_buf.data[i], 1);
+                insert_char(b, g_cpy_buf.data[i], 1, 0);
                 if (g_cpy_buf.data[i] == '\n')
                         newline = 1;
         }
@@ -1684,24 +1692,24 @@ tab(buffer *b)
         ++b->last_tab;
 
         if (glconf.flags & FK_TABMODE)
-                return insert_char(b, '\t', 1);
+                return insert_char(b, '\t', 1, 0);
 
         for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
                 if (ba == BA_REDRAW)
-                        insert_char(b, ' ', 1);
+                        insert_char(b, ' ', 1, 0);
                 else
-                        ba = insert_char(b, ' ', 1);
+                        ba = insert_char(b, ' ', 1, 0);
         }
 
         return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
-jmp_and_highlight_forward(buffer *b)
+jmp_and_highlight_forward(buffer *b, int skip_underscores)
 {
         if (b->state != BS_SELECTION)
                 selection(b);
-        jump_next_word(b);
+        jump_next_word(b, skip_underscores);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
@@ -1755,6 +1763,12 @@ buffer_process(buffer *b)
         char ch;
 
         switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_ARROW: {
+                if (ch == DOWN_ARROW)  return down(b);
+                if (ch == UP_ARROW)    return up(b);
+                if (ch == LEFT_ARROW)  return left(b);
+                if (ch == RIGHT_ARROW) return right(b);
+        } break;
         case INPUT_TYPE_NORMAL: {
                 if (!BACKSPACE(ch))
                         b->last_tab = 0;
@@ -1771,7 +1785,7 @@ buffer_process(buffer *b)
                 else if (BACKSPACE(ch))                     return backspace(b);
                 else if (ch == 0)                           return selection(b);
                 else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
-                else                                        return insert_char(b, ch, 1);
+                else                                        return insert_char(b, ch, 1, (glconf.flags & FK_NOAUTOBRACKET) == 0);
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch != 9)
@@ -1786,7 +1800,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_A) return bol(b);
                 else if (ch == CTRL_K) return delete_until_eol(b);
                 else if (ch == CTRL_O) {
-                        if (insert_char(b, '\n', 0) != BA_NOP) {
+                        if (insert_char(b, '\n', 0, 0) != BA_NOP) {
                                 --b->cx;
                                 return BA_REDRAW;
                         }
@@ -1808,7 +1822,7 @@ buffer_process(buffer *b)
         } break;
         case INPUT_TYPE_ALT: {
                 b->last_tab = 0;
-                if (ch == 'f')          return jump_next_word(b);
+                if (ch == 'f')          return jump_next_word(b, 0);
                 else if (ch == 'b')     return jump_prev_word(b);
                 else if (ch == 'd')     return del_word(b);
                 else if (ch == '}')     return next_paragraph(b);
@@ -1828,11 +1842,12 @@ buffer_process(buffer *b)
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
                 else if (ch == 'x')     return BA_REQ_METAX;
-                else if (ch == '.')     return jmp_and_highlight_forward(b);
+                else if (ch == '.')     return jmp_and_highlight_forward(b, 0);
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
                 else if (ch == 'g')     return jump_to_line(b);
                 else if (ch == '\'')    return buffer_shell(b);
                 else if (ch == '/')     return accept_autocomplete(b);
+                else if (ch == 0)       return jmp_and_highlight_forward(b, 1);
         } break;
 
         default: break;
@@ -1855,13 +1870,15 @@ draw_status(const buffer *b,
 
         printf(INVERT);
 
-        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s Monitor:%d",
+        sprintf(buf, "[ww-v" VERSION "] %s:%d:%d%s %s Monitor:%d %s%d>",
                 str_cstr(&b->name),
                 b->cy+1,
                 b->cx+1,
                 !b->saved ? "*" : "",
                 state_to_cstr(b),
-                b->parent->am);
+                b->parent->am,
+                (glconf.flags & FK_TABMODE) == 0 ? "<space x" : "<tab x",
+                (glconf.flags & FK_TABMODE) == 0 ? glconf.runtime.space_amt : TAB_WIDTH);
         printf("%s", buf);
         len += strlen(buf);
 

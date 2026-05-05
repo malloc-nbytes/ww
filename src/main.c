@@ -9,8 +9,15 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
+#define _GNU_SOURCE
+#include <unistd.h>
+
+static void
+sigint_handler(int sig)
+{
+        (void)sig;
+}
 
 static void
 run(const char *path)
@@ -49,6 +56,16 @@ init(void)
 {
         glconf.runtime.compile = strdup("make");
 
+        struct sigaction sa;
+        sa.sa_handler = sigint_handler;
+        sa.sa_flags = 0;
+        sigemptyset(&sa.sa_mask);
+
+        if (sigaction(SIGINT, &sa, NULL) == 1) {
+                perror("sigaction");
+                return 0;
+        }
+
         if (!get_terminal_xy(&glconf.term.w, &glconf.term.h))
                 return 0;
         if (!enable_raw_terminal(STDIN_FILENO, &glconf.term.termios))
@@ -56,6 +73,7 @@ init(void)
 
         term_fullscrn();
         clear_terminal();
+        //enable_mousewheel_capture();
 
         return 1;
 }
@@ -65,6 +83,7 @@ cleanup(void)
 {
         (void)disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
         term_exit_fullscrn();
+        //disable_mousewheel_capture();
 }
 
 int

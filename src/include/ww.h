@@ -12,6 +12,8 @@
 #define WW_CMD_TOGGLE_SPACEMODE "toggle-spacemode"
 #define WW_CMD_SPACEAMT         "space-amt"
 #define WW_CMD_TUT              "tutorial"
+#define WW_CMD_HELP             "help"
+#define WW_CMD_QUIT             "quit"
 
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
@@ -20,6 +22,8 @@
         WW_CMD_TOGGLE_SPACEMODE, \
         WW_CMD_SPACEAMT, \
         WW_CMD_TUT, \
+        WW_CMD_HELP, \
+        WW_CMD_QUIT, \
 }
 
 typedef struct ww {

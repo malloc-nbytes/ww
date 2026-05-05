@@ -678,19 +678,18 @@ tutorial(ww *ed)
 
         chapters = array_empty(cstr_ar);
         array_append(chapters, TUT_CH1_NAME);
+        array_append(chapters, TUT_CH2_NAME);
 
         input = minibuffer_input(ed, "tutorial", NULL, chapters);
 
         if (!input || strlen(input) == 0)
                 goto done;
 
-        if (strcmp(input, TUT_CH1_NAME))
-                goto done;
-
-        ssize_t idx = get_buffer_by_path(ed, TUT_CH1_NAME);
+        ssize_t idx = get_buffer_by_path(ed, input);
 
         if (idx == -1) {
                 b = tut_alloc(ed, input);
+                if (!b) goto done;
                 ww_add_buffer(ed, b);
         }
         else
@@ -700,6 +699,22 @@ tutorial(ww *ed)
 
 done:
         array_free(chapters);
+}
+
+static void
+help(ww *ed)
+{
+        ssize_t idx;
+        buffer *b;
+
+        if ((idx = get_buffer_by_path(ed, BUFFER_BUILTIN_HELP)) == -1) {
+                b = ww_helpbuf_alloc((unsigned)glconf.term.w, (unsigned)glconf.term.w, 0, 0, ed);
+                array_append(ed->buffers, b);
+        }
+        else
+                b = ed->buffers.data[(size_t)idx];
+
+        ed->monitors[ed->am] = b;
 }
 
 static void
@@ -728,6 +743,10 @@ metax(ww *ed)
                 set_spaceamt(ed);
         else if (!strcmp(inp, WW_CMD_TUT))
                 tutorial(ed);
+        else if (!strcmp(inp, WW_CMD_HELP))
+                help(ed);
+        else if (!strcmp(inp, WW_CMD_QUIT))
+                exit(0);
 
         free(inp);
         array_free(cmds);

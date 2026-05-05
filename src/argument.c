@@ -96,8 +96,10 @@ parse_args(int argc, char *argv[])
         while (it) {
                 if (filename)
                         fatal("only one filename is supported");
-                else
+                else if (file_exists(it->s))
                         filename = strdup(get_realpath(it->s));
+                else
+                        filename = strdup(it->s);
                 it = it->n;
         }
 

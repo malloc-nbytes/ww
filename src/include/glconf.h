@@ -2,6 +2,7 @@
 #define GLCONF_H_INCLUDED
 
 #include <stddef.h>
+#include <stdint.h>
 #include <termios.h>
 
 extern struct {
