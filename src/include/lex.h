@@ -59,8 +59,8 @@ typedef enum {
 
 typedef struct {
         token_kind kind;
-        str lx;
-        location loc;
+        str        lx;
+        location   loc;
 } token;
 
 ARRAY_DEFINE(token *, tokenp_ar);
@@ -74,12 +74,12 @@ typedef struct {
                 const char *multi_end;
         } comment;
         const char **kwds;
-        uint32_t bits;
+        uint32_t     bits;
 } lexer_cfg;
 
 typedef struct {
         tokenp_ar tokens;
-        size_t pos;
+        size_t    pos;
         lexer_cfg cfg;
 } lexer;
 

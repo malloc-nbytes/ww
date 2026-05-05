@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 static token *
 token_alloc(token_kind kind,
@@ -31,5 +32,28 @@ token_alloc(token_kind kind,
 lexer
 lex(lexer_cfg cfg)
 {
-        assert(0);
+        lexer       l;
+        const char *src;
+        const char *path;
+        size_t      r;
+        size_t      c;
+        size_t      i;
+        size_t      n;
+
+        l = (lexer) {
+                .tokens = array_empty(tokenp_ar),
+                .pos    = 0,
+                .cfg    = cfg,
+        };
+
+        src  = cfg.src;
+        path = cfg.path;
+        r    = 1;
+        c    = 1;
+        i    = 0;
+        n    = strlen(src);
+
+        while (i < n) {
+                assert(0);
+        }
 }
