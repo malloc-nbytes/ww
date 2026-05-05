@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#if PATH_MAX
+#if HAVE_PATH_MAX
 #include <limits.h>
 #else
 #define PATH_MAX 4096
@@ -1533,6 +1533,57 @@ buffer_save(buffer *b)
 }
 
 static buffer_action
+jump_to_line(buffer *b)
+{
+        char *input;
+        int   no;
+
+        if (!(input = minibuffer_input(b->parent, "lineno", NULL, array_empty(cstr_ar))))
+                 return BA_REDRAW;
+
+        if (!cstr_isdigit(input))
+                return BA_NOP;
+
+        no = atoi(input);
+
+        if (no > (int)b->lines.len || no <= 0)
+                return BA_REDRAW;
+
+        b->cx = 0;
+        b->cy = (unsigned)no-1;
+        b->al = (unsigned)no-1;
+
+        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+}
+
+static buffer_action
+metag(buffer *b)
+{
+        char       ch;
+        input_type ty;
+
+        switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_NORMAL: {
+                if (ch == 'n')
+                        return BA_REQ_NEXTERROR;
+                if (ch == 'p')
+                        return BA_REQ_PREVERROR;
+        } break;
+        case INPUT_TYPE_ALT: {
+                if (ch == 'g')
+                        return jump_to_line(b);
+                if (ch == 'n')
+                        return BA_REQ_NEXTERROR;
+                if (ch == 'p')
+                        return BA_REQ_PREVERROR;
+        } break;
+        default: break;
+        }
+
+        return BA_NOP;
+}
+
+static buffer_action
 ctrlx(buffer *b)
 {
         char       ch;
@@ -1714,30 +1765,6 @@ jmp_and_highlight_forward(buffer *b, int skip_underscores)
 }
 
 static buffer_action
-jump_to_line(buffer *b)
-{
-        char *input;
-        int   no;
-
-        if (!(input = minibuffer_input(b->parent, "lineno", NULL, array_empty(cstr_ar))))
-                 return BA_REDRAW;
-
-        if (!cstr_isdigit(input))
-                return BA_NOP;
-
-        no = atoi(input);
-
-        if (no > (int)b->lines.len || no <= 0)
-                return BA_REDRAW;
-
-        b->cx = 0;
-        b->cy = (unsigned)no-1;
-        b->al = (unsigned)no-1;
-
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
-}
-
-static buffer_action
 buffer_shell(buffer *b)
 {
         clear_terminal();
@@ -1844,7 +1871,7 @@ buffer_process(buffer *b)
                 else if (ch == 'x')     return BA_REQ_METAX;
                 else if (ch == '.')     return jmp_and_highlight_forward(b, 0);
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
-                else if (ch == 'g')     return jump_to_line(b);
+                else if (ch == 'g')     return metag(b);
                 else if (ch == '\'')    return buffer_shell(b);
                 else if (ch == '/')     return accept_autocomplete(b);
                 else if (ch == 0)       return jmp_and_highlight_forward(b, 1);

@@ -32,6 +32,8 @@ typedef enum {
         BA_REQ_KILLBUF,
         BA_REQ_SWITCHCOMPL,
         BA_REQ_ERRJMP,
+        BA_REQ_NEXTERROR,
+        BA_REQ_PREVERROR,
 } buffer_action;
 
 typedef enum {
