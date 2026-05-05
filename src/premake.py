@@ -220,7 +220,7 @@ def generate_config():
         f.write(f'#define COMPILER "{compiler_version}"\n\n')
         f.write(f'#define PREFIX "{PREFIX}"\n\n')
         for macro, exists in macro_results.items():
-            f.write(f"#define {macro} {1 if exists else 0}\n\n")
+            f.write(f"#define HAVE_{macro} {1 if exists else 0}\n\n")
         for func, exists in function_results.items():
             f.write(f"#define HAVE_{func[0].upper()} {1 if exists else 0}\n\n")
         f.write("#endif // CONFIG_H_INCLUDED\n")

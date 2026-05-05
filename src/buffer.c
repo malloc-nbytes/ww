@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#if PATH_MAX
+#if HAVE_PATH_MAX
 #include <limits.h>
 #else
 #define PATH_MAX 4096
