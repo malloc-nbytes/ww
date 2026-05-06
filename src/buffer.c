@@ -44,10 +44,63 @@ static void
 draw_status(const buffer *b,
             const char   *msg);
 
-static buffer_action
-center_view(buffer *b);
+static buffer_action right(buffer *b);
+static buffer_action left(buffer *b);
 
 char_ar g_cpy_buf = {0};
+
+static int
+find_next_expand_region(buffer *b,
+                        size_t *out_x,
+                        size_t *out_y)
+{
+        *out_x = 0;
+        *out_y = 0;
+
+        char start;
+        int  stack;
+
+        start = str_at(&b->lines.data[b->al]->txt, b->cx);
+        stack = 1;
+
+        right(b);
+
+        for (size_t i = b->al; i < b->lines.len; ++i) {
+                const line *ln   = b->lines.data[i];
+                const str  *s    = &ln->txt;
+                size_t      j    = 0;
+
+                for (j = i == b->al ? b->cx : 0; j < str_len(s); ++j) {
+                        char ch = str_at(s, j);
+
+                        if (start == '(' && ch == ')')
+                                --stack;
+                        else if (start == '(' && ch == '(')
+                                ++stack;
+                        else if (start == '[' && ch == ']')
+                                --stack;
+                        else if (start == '[' && ch == '[')
+                                ++stack;
+                        else if (start == '{' && ch == '}')
+                                --stack;
+                        else if (start == '{' && ch == '{')
+                                ++stack;
+
+                        if (stack == 0)
+                                break;
+                }
+
+                if (stack == 0) {
+                        *out_x = j+1;
+                        *out_y = i;
+                        return 1;
+                }
+        }
+
+        left(b);
+
+        return 0;
+}
 
 static void
 collect_ac_from_buffer(buffer *b)
@@ -296,7 +349,7 @@ search(buffer *b, int reverse)
                         buffer_adjust_scroll(b);
                 }
 
-                center_view(b);
+                buffer_center_view(b);
                 buffer_draw(b);
 
                 gotoxy(0, b->size.h);
@@ -354,7 +407,7 @@ search(buffer *b, int reverse)
 
         b->state = BS_NORMAL;
 
-        center_view(b);
+        buffer_center_view(b);
         buffer_adjust_scroll(b);
 }
 
@@ -1084,8 +1137,8 @@ jump_to_first_char(buffer *b)
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
-static buffer_action
-center_view(buffer *b)
+buffer_action
+buffer_center_view(buffer *b)
 {
         int rows = (int)get_win_hight(b);
         int vertical_offset = (int)b->cy - (rows/2);
@@ -1756,11 +1809,11 @@ tab(buffer *b)
 }
 
 static buffer_action
-jmp_and_highlight_forward(buffer *b, int skip_underscores)
+jmp_and_highlight_forward(buffer *b)
 {
         if (b->state != BS_SELECTION)
                 selection(b);
-        jump_next_word(b, skip_underscores);
+        jump_next_word(b, 0);
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
@@ -1777,6 +1830,75 @@ buffer_shell(buffer *b)
         (void)_;
         enable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
         buffer_draw(b);
+        return BA_REDRAW;
+}
+
+static buffer_action
+expand_region(buffer *b)
+{
+        char start;
+        const line *ln;
+        const str *s;
+
+        start = str_at(&b->lines.data[b->al]->txt, b->cx);
+        ln = b->lines.data[b->al];
+        s = &ln->txt;
+
+        if (s->len <= 1)
+                return BA_NOP;
+
+        if (start == '(' || start == '[' || start == '{') {
+                if (b->state != BS_SELECTION)
+                        selection(b);
+                size_t x, y;
+                if (find_next_expand_region(b, &x, &y)) {
+                        b->cx = (unsigned)x;
+                        b->cy = (unsigned)y;
+                        b->al = y;
+                }
+                else
+                        selection(b);
+        } else if (start == '\'' || start == '"') {
+                if (b->state != BS_SELECTION)
+                        selection(b);
+                right(b);
+                int found = -1;
+                for (size_t i = b->cx+1; i < str_len(s); ++i) {
+                        if (str_at(s, i) == start) {
+                                found = (int)i;
+                                break;
+                        }
+                }
+                if (found == -1) {
+                        selection(b);
+                        left(b);
+                }
+                else
+                        b->cx = (unsigned)found + 1;
+        } else {
+                if (b->state != BS_SELECTION)
+                        selection(b);
+                if (isspace(str_at(s, b->cx)) || !isalnum(str_at(s, b->cx))) {
+                        while (b->cx < str_len(s)
+                                && str_at(s, b->cx) != '\n'
+                                && str_at(s, b->cx) != ')'
+                                && str_at(s, b->cx) != '('
+                                && str_at(s, b->cx) != ']'
+                                && str_at(s, b->cx) != '['
+                                && str_at(s, b->cx) != '}'
+                                && str_at(s, b->cx) != '{')
+                                ++b->cx;
+                } else {
+                        while (b->cx < str_len(s)
+                                && (isalnum(str_at(s, b->cx))
+                                || str_at(s, b->cx) == '_'
+                                || str_at(s, b->cx) == '.')) {
+                                ++b->cx;
+                        }
+                }
+        }
+
+        buffer_adjust_scroll(b);
         return BA_REDRAW;
 }
 
@@ -1835,7 +1957,7 @@ buffer_process(buffer *b)
                 }
                 else if (ch == CTRL_H) return backspace(b);
                 else if (ch == CTRL_D) return del_char(b);
-                else if (ch == CTRL_L) return center_view(b);
+                else if (ch == CTRL_L) return buffer_center_view(b);
                 else if (ch == CTRL_V) return page_down(b);
                 else if (ch == CTRL_T) return swap_chars(b);
                 else if (ch == CTRL_G) return cancel(b);
@@ -1869,12 +1991,12 @@ buffer_process(buffer *b)
                 else if (ch == 'c')     return uppercase_word(b);
                 else if (ch == 'w')     return copy_selection(b);
                 else if (ch == 'x')     return BA_REQ_METAX;
-                else if (ch == '.')     return jmp_and_highlight_forward(b, 0);
+                else if (ch == '.')     return jmp_and_highlight_forward(b);
                 else if (ch == '\t')    return BA_REQ_SWITCHCOMPL;
                 else if (ch == 'g')     return metag(b);
                 else if (ch == '\'')    return buffer_shell(b);
                 else if (ch == '/')     return accept_autocomplete(b);
-                else if (ch == 0)       return jmp_and_highlight_forward(b, 1);
+                else if (ch == 0)       return expand_region(b);
         } break;
 
         default: break;
@@ -2148,5 +2270,5 @@ buffer_draw(const buffer *b)
 void
 init_buffer_translation_unit(void)
 {
-        g_cpy_buf     = array_empty(char_ar);
+        g_cpy_buf = array_empty(char_ar);
 }
