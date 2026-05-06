@@ -66,6 +66,7 @@
 "C-d           = delete char under cursor *\n" \
 "M-d           = delete word\n" \
 "C-SPACE | C-c = begin/end selection *\n" \
+"C-M-SPACE     = begin smart selection (use on opening brackets, quotes, function params, etc.) *\n" \
 "M-.           = highlight word\n" \
 "M-w           = copy selection *\n" \
 "C-w           = cut selection\n" \
