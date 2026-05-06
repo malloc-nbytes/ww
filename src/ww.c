@@ -347,12 +347,22 @@ draw_monitor_based_on_action(ww            *ed,
 void
 ww_display_monitors(ww *ed, buffer_action ba)
 {
+        buffer *opened[4] = {0};
+        size_t opened_n = 0;
+
         for (size_t i = 0; i < 4; ++i) {
+                for (size_t j = 0; j < 4; ++j) {
+                        if (opened[j] && ed->monitors[i] && opened[j] == ed->monitors[i])
+                                ed->monitors[i] = ww_helpbuf_alloc(0, 0, 0, 0, ed);
+                }
+
                 if (ed->monitors[i]) {
                         ed->monitors[i]->size.w  = (unsigned)glconf.term.w;
                         ed->monitors[i]->size.h  = (unsigned)glconf.term.h;
                         ed->monitors[i]->size.ws = 0;
                         ed->monitors[i]->size.hs = 0;
+
+                        opened[opened_n++] = ed->monitors[i];
                 }
         }
 
@@ -905,6 +915,7 @@ try_jump_to_error(ww *ed, buffer *compilation)
                 ed->monitors[ed->am] = b;
         else
                 ed->am = (uint8_t)found_buffer;
+
         buffer_jump_to_verts(ed->monitors[ed->am], (size_t)col-1, (size_t)row-1);
 
         free(filename);
@@ -958,19 +969,18 @@ jmp_next_error(ww *ed, int prev)
                 }
         } while (b->al != old_al);
 
-        int found = 0;
-        for (size_t i = 0; i < 4; ++i) {
-                if (ed->monitors[i] && !strcmp(ed->monitors[i]->path.chars,
-                                               BUFFER_BUILTIN_COMPILE)) {
-                        found = 1;
-                        break;
-                }
-        }
+        ed->monitors[0] = ed->monitors[ed->am];
+        ed->monitors[2] = b;
 
-        if (!found) {
-                ed->monitors[2] = b;
-                sort_buffers(ed);
-        }
+        buffer_center_view(ed->monitors[0]);
+        buffer_center_view(ed->monitors[2]);
+
+        buffer_adjust_scroll(ed->monitors[0]);
+        buffer_adjust_scroll(ed->monitors[2]);
+
+        ed->am = 0;
+
+        sort_buffers(ed);
 }
 
 void

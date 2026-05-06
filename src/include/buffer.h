@@ -34,7 +34,6 @@ typedef enum {
         BA_REQ_ERRJMP,
         BA_REQ_NEXTERROR,
         BA_REQ_PREVERROR,
-        BA_REQ_KILLMON,
 } buffer_action;
 
 typedef enum {
@@ -97,5 +96,6 @@ void           buffer_make_builtin(buffer *b);
 buffer        *ww_helpbuf_alloc(unsigned w, unsigned h, unsigned ws, unsigned hs, ww *parent);
 void           buffer_free(buffer *b);
 void           buffer_jump_to_verts(buffer *b, size_t x, size_t y);
+buffer_action  buffer_center_view(buffer *b);
 
 #endif // BUFFER_H_INCLUDED

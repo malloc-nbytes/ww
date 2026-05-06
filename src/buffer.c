@@ -44,9 +44,6 @@ static void
 draw_status(const buffer *b,
             const char   *msg);
 
-static buffer_action
-center_view(buffer *b);
-
 char_ar g_cpy_buf = {0};
 
 static void
@@ -296,7 +293,7 @@ search(buffer *b, int reverse)
                         buffer_adjust_scroll(b);
                 }
 
-                center_view(b);
+                buffer_center_view(b);
                 buffer_draw(b);
 
                 gotoxy(0, b->size.h);
@@ -354,7 +351,7 @@ search(buffer *b, int reverse)
 
         b->state = BS_NORMAL;
 
-        center_view(b);
+        buffer_center_view(b);
         buffer_adjust_scroll(b);
 }
 
@@ -1084,8 +1081,8 @@ jump_to_first_char(buffer *b)
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
-static buffer_action
-center_view(buffer *b)
+buffer_action
+buffer_center_view(buffer *b)
 {
         int rows = (int)get_win_hight(b);
         int vertical_offset = (int)b->cy - (rows/2);
@@ -1605,8 +1602,6 @@ ctrlx(buffer *b)
                         return BA_REQ_SPLITHOR;
                 if (ch == 'k')
                         return BA_REQ_KILLBUF;
-                if (ch == '0')
-                        return BA_REQ_KILLMON;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)
@@ -1837,7 +1832,7 @@ buffer_process(buffer *b)
                 }
                 else if (ch == CTRL_H) return backspace(b);
                 else if (ch == CTRL_D) return del_char(b);
-                else if (ch == CTRL_L) return center_view(b);
+                else if (ch == CTRL_L) return buffer_center_view(b);
                 else if (ch == CTRL_V) return page_down(b);
                 else if (ch == CTRL_T) return swap_chars(b);
                 else if (ch == CTRL_G) return cancel(b);
