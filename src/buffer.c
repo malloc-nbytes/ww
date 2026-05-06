@@ -1858,7 +1858,24 @@ expand_region(buffer *b)
                 }
                 else
                         selection(b);
-        } else if (isalnum(start) || start == '_' || isspace(str_at(s, b->cx))) {
+        } else if (start == '\'' || start == '"') {
+                if (b->state != BS_SELECTION)
+                        selection(b);
+                right(b);
+                int found = -1;
+                for (size_t i = b->cx+1; i < str_len(s); ++i) {
+                        if (str_at(s, i) == start) {
+                                found = (int)i;
+                                break;
+                        }
+                }
+                if (found == -1) {
+                        selection(b);
+                        left(b);
+                }
+                else
+                        b->cx = (unsigned)found + 1;
+        } else {
                 if (b->state != BS_SELECTION)
                         selection(b);
                 if (isspace(str_at(s, b->cx)) || !isalnum(str_at(s, b->cx))) {
@@ -1879,26 +1896,7 @@ expand_region(buffer *b)
                                 ++b->cx;
                         }
                 }
-        } else if (start == '\'' || start == '"') {
-                if (b->state != BS_SELECTION)
-                        selection(b);
-                right(b);
-                int found = -1;
-                for (size_t i = b->cx+1; i < str_len(s); ++i) {
-                        if (str_at(s, i) == start) {
-                                found = (int)i;
-                                break;
-                        }
-                }
-                if (found == -1) {
-                        selection(b);
-                        left(b);
-                }
-                else
-                        b->cx = (unsigned)found + 1;
         }
-        else
-                return BA_NOP;
 
         buffer_adjust_scroll(b);
         return BA_REDRAW;
