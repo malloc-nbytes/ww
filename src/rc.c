@@ -116,8 +116,9 @@ parse_rc(void)
                 if (compile_command->kind != QCL_VALUE_KIND_STRING) {
                         printf("wwrc error: compile_command is expected to be a string\n");
                         ok = 0;
-                } else {
                 }
+                else
+                        glconf.runtime.compile = strdup(((qcl_value_string *)compile_command)->s);
         }
         if (to_clipboard) {
                 if (to_clipboard->kind != QCL_VALUE_KIND_STRING) {
