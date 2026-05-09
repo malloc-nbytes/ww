@@ -103,5 +103,7 @@ void       term_fullscrn(void);
 void       term_exit_fullscrn(void);
 void       enable_mousewheel_capture(void);
 void       disable_mousewheel_capture(void);
+void       hide_cursor(void);
+void       show_cursor(void);
 
 #endif // TERM_H_INCLUDED

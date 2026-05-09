@@ -1,6 +1,8 @@
 #ifndef GLCONF_H_INCLUDED
 #define GLCONF_H_INCLUDED
 
+#include "qcl.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <termios.h>

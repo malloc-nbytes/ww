@@ -5,6 +5,7 @@
 #include "buffer.h"
 #include "line.h"
 #include "ww.h"
+#include "rc.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -54,7 +55,10 @@ run(const char *path)
 static int
 init(void)
 {
-        glconf.runtime.compile = strdup("make");
+        (void)parse_rc();
+
+        if (!glconf.runtime.compile)
+                glconf.runtime.compile = strdup("make");
 
         struct sigaction sa;
         sa.sa_handler = sigint_handler;
@@ -92,8 +96,6 @@ main(int argc, char *argv[])
         char *path;
 
         path = parse_args(argc, argv);
-
-        /* assert(!is_dir(path)); */
 
         if (!init())
                 fatal("init");

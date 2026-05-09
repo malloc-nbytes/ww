@@ -16,5 +16,6 @@ argument *argument_alloc(int    argc,
                          int    skip_first);
 void argument_free(argument *arg);
 void option_usage(argument **_);
+int  parse_config_file(void);
 
 #endif // ARGUMENT_H_INCLUDED

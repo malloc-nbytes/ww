@@ -607,6 +607,8 @@ do_compilation(ww *ed)
         ed->monitors[ed->am]->al = 0;
         ed->monitors[ed->am]->cy = 0;
 
+        hide_cursor();
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
         char buf[1024] = {0};
@@ -627,6 +629,8 @@ do_compilation(ww *ed)
 
         str_destroy(&input);
         buffer_draw(ed->monitors[ed->am]);
+
+        show_cursor();
 
 #undef COMPILATION_HEADER
 }

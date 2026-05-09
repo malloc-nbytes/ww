@@ -3,6 +3,7 @@
 #include "io.h"
 #include "colors.h"
 #include "copying.h"
+#include "config.h"
 
 #include <assert.h>
 #include <stdlib.h>

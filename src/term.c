@@ -188,7 +188,7 @@ anykey(void)
 {
         printf("Press any key to continue...\n");
         char _;
-        get_input(&_);
+        (void)get_input(&_);
 }
 
 void
@@ -222,3 +222,16 @@ disable_mousewheel_capture(void)
 {
         printf("\033[?1000l");
 }
+
+void
+hide_cursor(void)
+{
+        printf("\033[?25l");
+}
+
+void
+show_cursor(void)
+{
+        printf("\033[?25h");
+}
+
