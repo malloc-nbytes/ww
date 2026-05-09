@@ -713,6 +713,8 @@ tutorial(ww *ed)
         chapters = array_empty(cstr_ar);
         array_append(chapters, TUT_CH1_NAME);
         array_append(chapters, TUT_CH2_NAME);
+        array_append(chapters, TUT_CH3_NAME);
+        array_append(chapters, TUT_CH4_NAME);
 
         input = minibuffer_input(ed, "tutorial", NULL, chapters);
 

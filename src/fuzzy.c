@@ -104,7 +104,6 @@ fuzzy_find(cstr_ar     words,
         if (words.len == 0)
                 return result;
 
-        // Temporary match storage
         match_t *matches = malloc(sizeof(match_t) * words.len);
         size_t match_count = 0;
 
@@ -118,10 +117,8 @@ fuzzy_find(cstr_ar     words,
                 }
         }
 
-        // Sort matches by score
         qsort(matches, match_count, sizeof(match_t), cmp_match);
 
-        // Build result array
         for (size_t i = 0; i < match_count; ++i)
                 array_append(result, matches[i].word);
 

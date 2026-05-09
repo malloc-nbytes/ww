@@ -23,10 +23,10 @@
 #include "buffer.h"
 #include "ww.h"
 
-#define TUT_CH1_NAME "ww-tut-ch1 - Basic Navigation"
-#define TUT_CH2_NAME "ww-tut-ch2 - Basic Editing"
-
-extern char *g_tut01;
+#define TUT_CH1_NAME "Basic Navigation"
+#define TUT_CH2_NAME "Basic Editing"
+#define TUT_CH3_NAME "Status Bar"
+#define TUT_CH4_NAME "Autocomplete"
 
 buffer *tut_alloc(ww *ed, const char *chapter);
 
