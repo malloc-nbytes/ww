@@ -1,3 +1,22 @@
+/*
+ * ww: a simple editor
+ * Copyright (C) 2026 malloc-nbytes
+ * Contact: zdhdev@yahoo.com
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "ww.h"
 #include "minibuffer.h"
 #include "term.h"
@@ -32,7 +51,7 @@ completion_draw(ww                *ed,
 {
         (void)ed;
 
-        /* Keep indices sane */
+        // keepp indices sane
         if (total_matches == 0) {
                 st->selected_idx = 0;
                 st->offset = 0;
@@ -55,7 +74,7 @@ completion_draw(ww                *ed,
                         st->offset = max_offset;
         }
 
-        /* Prompt line */
+        // prompt line
         gotoxy(0, (unsigned)glconf.term.h);
         clear_line(0, glconf.term.h);
 
@@ -71,7 +90,7 @@ completion_draw(ww                *ed,
         if (total_matches >= MAX_COMPLETIONS_REQUEST)
                 printf(" [more...]");
 
-        /* Completion line */
+        // completion line
         gotoxy(0, (unsigned)glconf.term.h - 1);
         clear_line(0, glconf.term.h - 1);
 
@@ -139,7 +158,6 @@ completion_draw(ww                *ed,
                 }
         }
 
-        /* Cursor position */
         gotoxy((unsigned)strlen(label)
                + (unsigned)strlen(" [ ")
                + (unsigned)str_len(&st->input),
@@ -197,11 +215,10 @@ minibuffer_input(ww         *ed,
                         if (ENTER(ch)) {
                                 char *res;
                                 if (total_matches > 0 &&
-                                    st.selected_idx < total_matches) {
+                                    st.selected_idx < total_matches)
                                         res = strdup(matches.data[st.selected_idx]);
-                                } else {
+                                else
                                         res = strdup(str_cstr(&st.input));
-                                }
 
                                 array_free(matches);
                                 str_destroy(&st.input);
