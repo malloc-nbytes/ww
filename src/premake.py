@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
 
+# ww: a simple editor
+# Copyright (C) 2026 malloc-nbytes
+# Contact: zdhdev@yahoo.com
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, see <https://www.gnu.org/licenses/>.
+
 # This is the file that should run before compiling ww.
 
 import subprocess
@@ -36,7 +53,6 @@ def print_file(path):
 # Compiler detection
 # --------------------------
 def detect_compiler():
-    """Detect an available C compiler in the system, prioritizing x86_64-linux-gnu.*"""
     candidates = [
         shutil.which('x86_64-pc-linux-gnu-gcc'),
         shutil.which('x86_64-pc-linux-gnu-cc'),
@@ -67,7 +83,6 @@ def detect_compiler():
 # Utility checks
 # --------------------------
 def check_command(cc, args=None):
-    """Check if a command exists and optionally run it."""
     args = args or []
     full_cmd = [cc] + args
     try:

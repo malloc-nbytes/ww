@@ -1,3 +1,22 @@
+/*
+ * ww: a simple editor
+ * Copyright (C) 2026 malloc-nbytes
+ * Contact: zdhdev@yahoo.com
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "fuzzy.h"
 
 #include <string.h>
@@ -85,7 +104,6 @@ fuzzy_find(cstr_ar     words,
         if (words.len == 0)
                 return result;
 
-        // Temporary match storage
         match_t *matches = malloc(sizeof(match_t) * words.len);
         size_t match_count = 0;
 
@@ -99,10 +117,8 @@ fuzzy_find(cstr_ar     words,
                 }
         }
 
-        // Sort matches by score
         qsort(matches, match_count, sizeof(match_t), cmp_match);
 
-        // Build result array
         for (size_t i = 0; i < match_count; ++i)
                 array_append(result, matches[i].word);
 

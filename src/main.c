@@ -1,3 +1,22 @@
+/*
+ * ww: a simple editor
+ * Copyright (C) 2026 malloc-nbytes
+ * Contact: zdhdev@yahoo.com
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "argument.h"
 #include "io.h"
 #include "error.h"
@@ -5,6 +24,7 @@
 #include "buffer.h"
 #include "line.h"
 #include "ww.h"
+#include "rc.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -26,8 +46,10 @@ run(const char *path)
 
         ed = ww_create();
 
-        if (!file_exists(path))
-                create_file(path, 1);
+        if (!file_exists(path)) {
+                (void)create_file(path, 1);
+                (void)write_file(path, "\n");
+        }
 
         if (path && !is_dir(path)) {
                 ww_add_buffer(&ed, buffer_from(str_from(get_basename(path)),
@@ -54,7 +76,10 @@ run(const char *path)
 static int
 init(void)
 {
-        glconf.runtime.compile = strdup("make");
+        (void)parse_rc();
+
+        if (!glconf.runtime.compile)
+                glconf.runtime.compile = strdup("make");
 
         struct sigaction sa;
         sa.sa_handler = sigint_handler;
@@ -92,8 +117,6 @@ main(int argc, char *argv[])
         char *path;
 
         path = parse_args(argc, argv);
-
-        /* assert(!is_dir(path)); */
 
         if (!init())
                 fatal("init");

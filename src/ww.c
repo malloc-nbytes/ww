@@ -1,3 +1,22 @@
+/*
+ * ww: a simple editor
+ * Copyright (C) 2026 malloc-nbytes
+ * Contact: zdhdev@yahoo.com
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "ww.h"
 #include "array.h"
 #include "term.h"
@@ -607,6 +626,8 @@ do_compilation(ww *ed)
         ed->monitors[ed->am]->al = 0;
         ed->monitors[ed->am]->cy = 0;
 
+        hide_cursor();
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
         char buf[1024] = {0};
@@ -627,6 +648,8 @@ do_compilation(ww *ed)
 
         str_destroy(&input);
         buffer_draw(ed->monitors[ed->am]);
+
+        show_cursor();
 
 #undef COMPILATION_HEADER
 }
@@ -690,6 +713,8 @@ tutorial(ww *ed)
         chapters = array_empty(cstr_ar);
         array_append(chapters, TUT_CH1_NAME);
         array_append(chapters, TUT_CH2_NAME);
+        array_append(chapters, TUT_CH3_NAME);
+        array_append(chapters, TUT_CH4_NAME);
 
         input = minibuffer_input(ed, "tutorial", NULL, chapters);
 

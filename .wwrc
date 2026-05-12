@@ -2,10 +2,11 @@
 # feel free to edit this file as you wish.
 
 # This file is written in 'qcl' which is a
-# custom configuration language. It has similar
-# syntax to rust.
+# custom configuration language.
 
 # See the repo: https://github.com/malloc-nbytes/qcl
+
+wayland = $"WAYLAND_DISPLAY";
 
 # Show ghost trailing whitespace characters
 show-trails = true;
@@ -17,12 +18,57 @@ tab-mode = false;
 space-amt = '8';
 
 # The default compilation command
-compile-command = 'make';
+compile-command = 'make -j12';
 
 # The way of copying the internal copy buffer
 # to the system clipboard. The `%s' is the data
 # from the copy buffer.
-to-clipboard = "echo '%s' | xclip -selection clipboard";
+if !wayland: to-clipboard = "echo -E '%s' | xclip -selection clipboard";
+else         to-clipboard = "echo -E '%s' | wl-copy";
 
 # Show the tilde character `~' on EOF lines.
 empty-line-squiggles = true;
+
+# How to colorize highlighting in selection mode.
+#
+# Valid options are:
+#   yellow, green, bright_green, gray, red, blue, magenta, orange
+#   white, black, cyan, pink, bright_pink, purple, bright_purple, brown.
+#
+# Valid effects are:
+#  underline, bold, italic, dim, invert, reset.
+#
+# You can mix-and-match them such as:
+#  selection-highlight = 'yellow invert bold'.
+#
+selection-highlight = 'yellow invert bold';
+
+# The colors when highlighting matches.
+search-highlight = 'invert yellow';
+
+# The colors when highlighting the match under the cursor.
+search-highlight-exact = 'invert bold orange';
+
+# The color to use when highlighting something in
+# an autocomplete menu in `find-file', 'switch-buffer', etc.
+menu-highlight = 'invert yellow';
+
+# Which buffers to open when `ww' is called on a directory
+# or with no filepath provided at all. If this variable is
+# undefined, invalid buffers are given, or it is `= ['']', it defaults to `ww-help'.
+# Some valid options are:
+#   ww-help, ww-calc
+initial-buffers = ['ww-help'];
+
+# Disable the quit keybind if you somehow find yourself accidentally
+# hitting it a lot. If this is true, use `M-x quit' instead.
+disable-quit-keybind = false;
+
+# Artwork displayed in `ww-help'. Remove this variable to not have it
+# or set it to an empty string.
+# Valid options are:
+#   ww1, ww2, flag1
+ascii-art = 'ww1';
+
+# Enable auto-completion in buffers.
+enable-auto = true;

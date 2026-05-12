@@ -9,14 +9,14 @@
 =ww= is a text editor similar to vim or nano but with a _very_ heavy Emacs influence (but nowhere near as customizable as it!).
 It's controls are mostly default Emacs keybindings (see the help buffer in =ww= by doing =M-x help=).
 
-Also, dependencies such as =ncurses= are not needed, just a =C= compiler and python for some pre-compile file generation.
+Also, dependencies such as =ncurses= are not needed, just a =C= compiler and python for some pre-compile stuff.
 
 ** Dependencies
 
 - A =C= compiler
 - =python3=
 
-** Compilation
+** Build
 
 *NOTE:* The =--prefix= option for =premake.py= is optional and is =/usr/local= by default.
 

@@ -1,25 +1,20 @@
 # NOTE: run premake.py to generate config.mk
 -include config.mk
 
-# Directory for generated docs
 DOCDIR := ../docs
 
-# Debug flags
 DEBUG_FLAGS := -O0 -g3
 
-# Linker flags
 LDFLAGS :=
 
-# Directories
 SRCDIR := .
 OBJDIR := obj
 BINDIR := bin
 INCLUDE := include
 
-# Executable name
 TARGET := ww
 
-# Find all .c files recursively
+# Find all .c files
 SOURCES := $(shell find $(SRCDIR) -type f -name '*.c')
 OBJECTS := $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SOURCES))
 
@@ -37,7 +32,7 @@ DESTDIR ?=
 .PHONY: all
 all: $(BINDIR)/$(TARGET)
 
-# Create necessary directories
+# Create directories
 $(OBJDIR) $(BINDIR):
 	mkdir -p $@
 
@@ -50,7 +45,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
 $(BINDIR)/$(TARGET): $(OBJECTS) | $(BINDIR)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
 
-# Debug build
 .PHONY: debug
 debug: CFLAGS := $(filter-out -O2,$(CFLAGS)) $(DEBUG_FLAGS)
 debug: all
@@ -64,7 +58,6 @@ install: all
 uninstall:
 	-rm -f "$(DESTDIR)$(PREFIX)/bin/$(TARGET)"
 
-# Clean build artifacts (now also cleans docs)
 .PHONY: clean
 clean:
 	rm -rf $(OBJDIR) $(BINDIR)
@@ -75,12 +68,10 @@ distclean:
 	rm -f include/config.h
 	rm -f ../*.html
 
-# Run the program
 .PHONY: run
 run: all
 	./$(BINDIR)/$(TARGET)
 
-# Run debug version
 .PHONY: run-debug
 run-debug: debug
 	./$(BINDIR)/$(TARGET)
@@ -122,5 +113,5 @@ help:
 	@echo "  distclean   - Remove premake artifacts and docs directory"
 	@echo "  help        - Show this help"
 
-# Prevent make from deleting intermediate files
+# Prevent deleting intermediate files
 .PRECIOUS: $(OBJDIR)/%.o

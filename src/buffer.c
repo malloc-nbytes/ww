@@ -1,3 +1,22 @@
+/*
+ * ww: a simple editor
+ * Copyright (C) 2026 malloc-nbytes
+ * Contact: zdhdev@yahoo.com
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "buffer.h"
 #include "mem.h"
 #include "term.h"
@@ -2118,7 +2137,6 @@ drawln(const buffer *b, size_t idx)
         unsigned win_w = get_win_width(b);
         unsigned tabw = TAB_WIDTH;
 
-        // clear line
         gotoxy(b->size.ws, y);
         for (unsigned x = 0; x < win_w; ++x)
                 putchar(' ');
@@ -2131,9 +2149,8 @@ drawln(const buffer *b, size_t idx)
         size_t char_i = 0;
 
         // skip characters until horizontal scroll offset
-        while (char_i < s->len && visual_column(s, char_i, tabw) < b->hoff) {
+        while (char_i < s->len && visual_column(s, char_i, tabw) < b->hoff)
                 ++char_i;
-        }
 
         // determine selection range on this line
         size_t sel_start = 0, sel_end = 0;
@@ -2160,12 +2177,11 @@ drawln(const buffer *b, size_t idx)
                                 int mend = mstart + (int)qlen;
                                 if ((int)char_i >= mstart && (int)char_i < mend) {
                                         in_search = 1;
-                                        if (cursor_on_line && (int)b->cx >= mstart && (int)b->cx < mend) {
+                                        if (cursor_on_line && (int)b->cx >= mstart && (int)b->cx < mend)
                                                 in_cursor_match = 1;
-                                        }
-                                } else if ((int)char_i >= mend) {
-                                        ++match_idx;
                                 }
+                                else if ((int)char_i >= mend)
+                                        ++match_idx;
                         }
                 }
 
@@ -2175,13 +2191,13 @@ drawln(const buffer *b, size_t idx)
                 if (c == '\t') {
                         unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
                         for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
-                                if (in_selection) {
+                                if (in_selection)
                                         printf(INVERT YELLOW BOLD " " RESET);
-                                } else if (in_cursor_match) {
+                                else if (in_cursor_match)
                                         printf(INVERT ORANGE BOLD " " RESET);
-                                } else if (in_search) {
+                                else if (in_search)
                                         printf(INVERT YELLOW BOLD " " RESET);
-                                } else {
+                                else {
                                         if (/*b->show_trailing_whitespace && */t == 0)
                                                 printf(GRAY ">" RESET);
                                         else
@@ -2201,22 +2217,20 @@ drawln(const buffer *b, size_t idx)
                         if (/*b->show_trailing_whitespace && */is_trailing_whitespace && !in_selection) {
                                 printf(GRAY "-" RESET);
                         } else {
-                                if (in_selection) {
+                                if (in_selection)
                                         printf(INVERT YELLOW BOLD "%c" RESET, c);
-                                } else if (in_cursor_match) {
+                                else if (in_cursor_match)
                                         printf(INVERT ORANGE BOLD "%c" RESET, c);
-                                } else if (in_search) {
+                                else if (in_search)
                                         printf(INVERT YELLOW BOLD "%c" RESET, c);
-                                } else {
+                                else
                                         putchar(c);
-                                }
                         }
                         ++screen_col;
                 }
                 ++char_i;
         }
 
-        // Clean up search matches
         if (search_matches.data)
                 array_free(search_matches);
 }
