@@ -29,6 +29,15 @@ token_alloc(token_kind kind,
         return t;
 }
 
+static size_t
+consume_while(const char *s, int (*pred)(int))
+{
+        size_t i;
+        while (s[i] && pred(s[i]))
+                ++i;
+        return i;
+}
+
 lexer
 lex(lexer_cfg cfg)
 {
@@ -54,6 +63,14 @@ lex(lexer_cfg cfg)
         n    = strlen(src);
 
         while (i < n) {
-                assert(0);
+                char ch = src[i];
+                if (isalpha(ch) || ch == '_') {
+                } else if (isdigit(ch)) {
+                } else if (ch == '"') {
+                } else if (ch == '\'') {
+                } else {
+                }
         }
+
+        return l;
 }
