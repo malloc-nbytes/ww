@@ -2,6 +2,7 @@
 #+AUTHOR: malloc-nbytes
 
 * TODO
+- fix: autocomplete position breaks in a file with tabs
 - add: compile option to not include the tutorial to save space
 - add: write the default config (=src/default-config.c=) instead of empty file when creating the config for the first time
 - add: highlight whole buffer
@@ -15,3 +16,4 @@
 - add: floats to ww-calc
 - add: bitwise to ww-calc
 - add: parenthesis to ww-calc
+
