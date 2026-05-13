@@ -197,6 +197,25 @@ buffer_make_builtin(buffer *b)
         b->builtin = 1;
 }
 
+static str
+get_artwork(void)
+{
+        str res;
+
+        res = str_from("flag1");
+
+        const char *name = glconf.runtime.artwork;
+
+        if (!strcmp(name, "flag1"))
+                str_overwrite(&res, g_art_flag1);
+        else if (!strcmp(name, "ww1"))
+                str_overwrite(&res, g_art_ww1);
+        else if (!strcmp(name, "ww2"))
+                str_overwrite(&res, g_art_ww2);
+
+        return res;
+}
+
 buffer *
 ww_helpbuf_alloc(unsigned  w,
                  unsigned  h,
@@ -206,7 +225,7 @@ ww_helpbuf_alloc(unsigned  w,
 {
         buffer *b;
 
-        str data = str_from(g_art_flag1);
+        str data = get_artwork();
         str_append(&data, '\n');
         str_concat(&data, HELP_DEF CONTROLS_DEF);
 

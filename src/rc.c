@@ -83,6 +83,7 @@ parse_rc(void)
         qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
         qcl_value *compile_command = qcl_value_get(&config, "compile-command");
         qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
+        qcl_value *artwork         = qcl_value_get(&config, "artwork");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -92,7 +93,6 @@ parse_rc(void)
                 else if (((qcl_value_bool *)tabmode)->b)
                         glconf.flags |= FK_TABMODE;
         }
-
         if (show_trails) {
                 if (show_trails->kind != QCL_VALUE_KIND_BOOL) {
                         printf("wwrc error: show_trails is expected to be a bool\n");
@@ -127,6 +127,14 @@ parse_rc(void)
                 }
                 else
                         glconf.runtime.compile = strdup(((qcl_value_string *)to_clipboard)->s);
+        }
+        if (artwork) {
+                if (artwork->kind != QCL_VALUE_KIND_STRING) {
+                        printf("wwrc error: artwork is expected to be a string\n");
+                        ok = 0;
+                }
+                else
+                        glconf.runtime.artwork = strdup(((qcl_value_string *)artwork)->s);
         }
 
         if (!ok) {
