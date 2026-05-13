@@ -31,6 +31,7 @@
 #include "utils.h"
 #include "trie.h"
 #include "set.h"
+#include "art.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -205,13 +206,19 @@ ww_helpbuf_alloc(unsigned  w,
 {
         buffer *b;
 
+        str data = str_from(g_art_flag1);
+        str_append(&data, '\n');
+        str_concat(&data, HELP_DEF CONTROLS_DEF);
+
         b = buffer_from(str_from(BUFFER_BUILTIN_HELP),
                         str_from(BUFFER_BUILTIN_HELP),
-                        w, h, ws, hs, lines_from(HELP_DEF CONTROLS_DEF),
+                        w, h, ws, hs, lines_from(data.chars),
                         parent);
 
         buffer_make_readonly(b);
         buffer_make_builtin(b);
+
+        str_destroy(&data);
 
         return b;
 }
