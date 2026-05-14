@@ -36,6 +36,7 @@ extern struct {
                 char *compile;
                 int   space_amt;
                 char *artwork;
+                const char *to_clipboard;
         } runtime;
         uint32_t flags;
 } glconf;

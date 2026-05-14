@@ -24,6 +24,8 @@
 #include "copying.h"
 #include "config.h"
 #include "flags.h"
+#include "rc.h"
+#include "default-config.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -123,8 +125,9 @@ usage(void)
 
         printf("Usage: ww [OPTIONS...] [FILEPATH]\n");
         printf("Options:\n");
-        printf("  -h, --help       show this information\n");
-        printf("      --copying    show copying information\n");
+        printf("  -h, --help             show this information\n");
+        printf("      --copying          show copying information\n");
+        printf("      --create-config    create a default configuration file\n");
         exit(0);
 }
 
@@ -141,6 +144,29 @@ copying(void)
 }
 
 static void
+create_config(void)
+{
+        const char *path;
+
+        if (!(path = get_config_path())) {
+                perror("get_config_path");
+                fatal("could not get config path");
+        }
+
+        if (!create_file(path, 0)) {
+                perror("create_file");
+                fatal("could not create config file");
+        }
+
+        if (!write_file(path, g_default_config_str)) {
+                perror("write_file");
+                fatal("could not write to config filepath");
+        }
+
+        exit(0);
+}
+
+static void
 parse_2hy_option(argument **a)
 {
         const char *s = (*a)->s;
@@ -149,6 +175,8 @@ parse_2hy_option(argument **a)
                 usage();
         if (!strcmp(s, FLAG_2HY_COPYING))
                 copying();
+        if (!strcmp(s, FLAG_2HY_CREATECONFIG))
+                create_config();
         else
                 fatal("unknown flag --%s", s);
 }

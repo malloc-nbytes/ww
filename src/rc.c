@@ -47,7 +47,7 @@
 #define PATH_MAX 4096
 #endif
 
-static const char *
+const char *
 get_config_path(void)
 {
         static char buf[PATH_MAX] = {0};
@@ -126,7 +126,7 @@ parse_rc(void)
                         ok = 0;
                 }
                 else
-                        glconf.runtime.compile = strdup(((qcl_value_string *)to_clipboard)->s);
+                        glconf.runtime.to_clipboard = strdup(((qcl_value_string *)to_clipboard)->s);
         }
         if (artwork) {
                 if (artwork->kind != QCL_VALUE_KIND_STRING) {
