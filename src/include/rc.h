@@ -20,6 +20,7 @@
 #ifndef RC_H_INCLUDED
 #define RC_H_INCLUDED
 
-int parse_rc(void);
+int         parse_rc(void);
+const char *get_config_path(void);
 
 #endif // RC_H_INCLUDED

@@ -21,6 +21,7 @@
 
 const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "# feel free to edit this file as you wish.\n"
+"# Note: this file is out-of-date, and some options are unavailable.\n"
 "\n"
 "# This file is written in 'qcl' which is a\n"
 "# custom configuration language.\n"

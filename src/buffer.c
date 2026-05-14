@@ -31,6 +31,7 @@
 #include "utils.h"
 #include "trie.h"
 #include "set.h"
+#include "art.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -196,6 +197,25 @@ buffer_make_builtin(buffer *b)
         b->builtin = 1;
 }
 
+static str
+get_artwork(void)
+{
+        str res;
+
+        res = str_from("flag1");
+
+        const char *name = glconf.runtime.artwork;
+
+        if (!strcmp(name, "flag1"))
+                str_overwrite(&res, g_art_flag1);
+        else if (!strcmp(name, "ww1"))
+                str_overwrite(&res, g_art_ww1);
+        else if (!strcmp(name, "ww2"))
+                str_overwrite(&res, g_art_ww2);
+
+        return res;
+}
+
 buffer *
 ww_helpbuf_alloc(unsigned  w,
                  unsigned  h,
@@ -205,13 +225,19 @@ ww_helpbuf_alloc(unsigned  w,
 {
         buffer *b;
 
+        str data = get_artwork();
+        str_append(&data, '\n');
+        str_concat(&data, HELP_DEF CONTROLS_DEF);
+
         b = buffer_from(str_from(BUFFER_BUILTIN_HELP),
                         str_from(BUFFER_BUILTIN_HELP),
-                        w, h, ws, hs, lines_from(HELP_DEF CONTROLS_DEF),
+                        w, h, ws, hs, lines_from(data.chars),
                         parent);
 
         buffer_make_readonly(b);
         buffer_make_builtin(b);
+
+        str_destroy(&data);
 
         return b;
 }

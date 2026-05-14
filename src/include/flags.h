@@ -31,4 +31,6 @@ typedef enum {
 
 #define FLAG_2HY_COPYING "copying"
 
+#define FLAG_2HY_CREATECONFIG "create-config"
+
 #endif // FLAGS_H_INCLUDED

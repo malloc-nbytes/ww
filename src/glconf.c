@@ -28,8 +28,10 @@ struct {
                 struct termios termios;
         } term;
         struct {
-                const char *compile;
-                int         space_amt;
+                char *compile;
+                int   space_amt;
+                char *artwork;
+                const char *to_clipboard;
         } runtime;
         uint32_t flags;
 } glconf = {
@@ -41,6 +43,8 @@ struct {
         .runtime = {
                 .compile   = NULL,
                 .space_amt = 8,
+                .artwork   = "flag1",
+                .to_clipboard = "echo -E '%%s' | xclip -selection clipboard",
         },
         .flags = 0x0000,
 };
