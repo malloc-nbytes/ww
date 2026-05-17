@@ -33,4 +33,7 @@ typedef enum {
 
 #define FLAG_2HY_CREATECONFIG "create-config"
 
+#define FLAG_1HY_VERSION 'v'
+#define FLAG_2HY_VERSION "version"
+
 #endif // FLAGS_H_INCLUDED

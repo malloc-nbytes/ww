@@ -126,8 +126,16 @@ usage(void)
         printf("Usage: ww [OPTIONS...] [FILEPATH]\n");
         printf("Options:\n");
         printf("  -h, --help             show this information\n");
+        printf("  -v, --version          show only version information\n");
         printf("      --copying          show copying information\n");
         printf("      --create-config    create a default configuration file\n");
+        exit(0);
+}
+
+static void
+version(void)
+{
+        printf(VERSION "\n");
         exit(0);
 }
 
@@ -177,6 +185,8 @@ parse_2hy_option(argument **a)
                 copying();
         if (!strcmp(s, FLAG_2HY_CREATECONFIG))
                 create_config();
+        if (!strcmp(s, FLAG_2HY_VERSION))
+                version();
         else
                 fatal("unknown flag --%s", s);
 }
@@ -190,6 +200,9 @@ parse_1hy_option(argument **a)
                 switch (s[i]) {
                 case FLAG_1HY_HELP:
                         usage();
+                        break;
+                case FLAG_1HY_VERSION:
+                        version();
                         break;
                 default:
                         fatal("unknown flag -%c", s[i]);
