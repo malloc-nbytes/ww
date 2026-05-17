@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
 
 static token *
 token_alloc(token_kind kind,
@@ -32,10 +33,16 @@ token_alloc(token_kind kind,
 static size_t
 consume_while(const char *s, int (*pred)(int))
 {
-        size_t i;
+        size_t i = 0;
         while (s[i] && pred(s[i]))
                 ++i;
         return i;
+}
+
+static int
+isident(int c)
+{
+        return isalnum(c) || c == '_';
 }
 
 lexer
@@ -65,10 +72,19 @@ lex(lexer_cfg cfg)
         while (i < n) {
                 char ch = src[i];
                 if (isalpha(ch) || ch == '_') {
+                        size_t len = consume_while(src+i, isident);
+                        token *t = token_alloc(TK_IDENT, src+i, len, path, (unsigned)r, (unsigned)c);
+                        array_append(l.tokens, t);
+                        i += len;
+                        c += len;
                 } else if (isdigit(ch)) {
-                } else if (ch == '"') {
-                } else if (ch == '\'') {
+                        size_t len = consume_while(src+i, isdigit);
+                        token *t = token_alloc(TK_INTLIT, src+i, len, path, (unsigned)r, (unsigned)c);
+                        array_append(l.tokens, t);
+                        i += len;
+                        c += len;
                 } else {
+                        assert(0);
                 }
         }
 
