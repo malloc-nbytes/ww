@@ -33,6 +33,7 @@
 #define WW_CMD_TUT              "tutorial"
 #define WW_CMD_HELP             "help"
 #define WW_CMD_QUIT             "quit"
+#define WW_CMD_MAN              "man"
 
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
@@ -43,6 +44,7 @@
         WW_CMD_TUT, \
         WW_CMD_HELP, \
         WW_CMD_QUIT, \
+        WW_CMD_MAN, \
 }
 
 typedef struct ww {

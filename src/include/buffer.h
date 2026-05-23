@@ -27,6 +27,7 @@
 
 #define BUFFER_BUILTIN_COMPILE "ww-compile"
 #define BUFFER_BUILTIN_HELP    "ww-help"
+#define BUFFER_BUILTIN_MAN     "ww-man"
 
 extern char_ar g_cpy_buf;
 

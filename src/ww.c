@@ -754,12 +754,85 @@ help(ww *ed)
 }
 
 static void
+man(ww *ed)
+{
+        char *input_raw;
+        cstr_ar lns;
+        FILE *fp;
+        char ln[1024];
+        buffer *b;
+        int exists;
+
+        lns = array_empty(cstr_ar);
+
+        if (!(fp = popen("man -k .", "r"))) {
+                perror("popen");
+                return;
+        }
+
+        while (fgets(ln, sizeof(ln), fp)) {
+                for (size_t i = 0; ln[i]; ++i) {
+                        if (ln[i] == ' ') {
+                                ln[i] = 0;
+                                break;
+                        }
+                }
+                array_append(lns, strdup(ln));
+        }
+
+        pclose(fp);
+
+        input_raw = minibuffer_input(ed, "man", NULL, lns);
+
+        if (!input_raw || strlen(input_raw) == 0)
+                goto done;
+
+        b      = get_buffer_by_name(ed, BUFFER_BUILTIN_MAN);
+        exists = 0;
+
+        if (!b) {
+                b = buffer_from(str_from(BUFFER_BUILTIN_MAN),
+                                str_from(BUFFER_BUILTIN_MAN),
+                                (unsigned)glconf.term.w, (unsigned)glconf.term.h,
+                                0, 0,
+                                array_empty(linep_ar), ed);
+                buffer_make_readonly(b);
+                buffer_make_builtin(b);
+        } else {
+                exists = 1;
+                for (size_t i = 0; i < b->lines.len; ++i)
+                        line_free(b->lines.data[i]);
+                array_clear(b->lines);
+        }
+
+        if (!exists)
+                ww_add_buffer(ed, b);
+
+        ed->monitors[ed->am] = ed->buffers.data[get_buffer_by_path(ed, BUFFER_BUILTIN_MAN)];
+
+        str cmd = str_from("man ");
+        str_concat(&cmd, input_raw);
+        capture_command_output_stream(&cmd, append_to_buffer_callback, ed->monitors[ed->am]);
+        str_destroy(&cmd);
+
+        ed->monitors[ed->am]->cx = 0;
+        ed->monitors[ed->am]->al = 0;
+        ed->monitors[ed->am]->cy = 0;
+        buffer_adjust_scroll(ed->monitors[ed->am]);
+
+done:
+        for (size_t i = 0; i < lns.len; ++i)
+                free(lns.data[i]);
+        array_free(lns);
+}
+
+static void
 metax(ww *ed)
 {
         char *inp;
 
         static char *cmds_raw[] = WW_CMD_CPL;
-        cstr_ar            cmds = array_empty(cstr_ar);
+        cstr_ar      cmds = array_empty(cstr_ar);
 
         for (size_t i = 0; i < sizeof(cmds_raw)/sizeof(*cmds_raw); ++i)
                 array_append(cmds, cmds_raw[i]);
@@ -783,6 +856,8 @@ metax(ww *ed)
                 help(ed);
         else if (!strcmp(inp, WW_CMD_QUIT))
                 exit(0);
+        else if (!strcmp(inp, WW_CMD_MAN))
+                man(ed);
 
         free(inp);
         array_free(cmds);
