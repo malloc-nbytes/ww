@@ -45,6 +45,7 @@ def err(msg):
 
 def info(msg, end='\n'):
     print('[premake]:', msg, end=end)
+    sys.stdout.flush()
 
 def print_file(path):
     with open(path, 'r') as f: print(f.read(), end='')
