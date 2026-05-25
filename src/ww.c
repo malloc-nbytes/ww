@@ -866,6 +866,8 @@ metax(ww *ed)
 static void
 close_builtin(ww *ed)
 {
+        if (ed->buffers.len <= 1)
+                return;
         ed->monitors[ed->am] = ed->buffers.data[1];
         sort_buffers(ed);
 }
