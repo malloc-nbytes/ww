@@ -941,69 +941,87 @@ try_jump_to_error(ww *ed, buffer *compilation)
         char       *filename = NULL;
         int         row      = -1;
         int         col      = -1;
-        buffer     *ab       = NULL;
+        buffer     *ab       = compilation ? compilation : ed->monitors[ed->am];
 
-        if (!compilation)
-                ab = ed->monitors[ed->am];
-        else
-                ab = compilation;
+        if (!ab || ab->al >= ab->lines.len)
+                return 0;
 
         ln = ab->lines.data[ab->al];
 
         regex_t regex;
-        regmatch_t matches[4]; // full match + 3 capture groups
+        regmatch_t matches[5];
 
-        const char *pattern = "([^[:space:]:]+):([0-9]+):([0-9]+):";
-
-        if (regcomp(&regex, pattern, REG_EXTENDED)) {
-                fprintf(stderr, "Could not compile regex\n");
-                return 0;
-        }
-
-        if (regexec(&regex, ln->txt.chars, 4, matches, 0) == 0) {
-                int fname_len = matches[1].rm_eo - matches[1].rm_so;
-
-                if (!(filename = malloc((size_t)fname_len + 1))) {
-                        regfree(&regex);
-                        return 0;
+        const char *gcc_pattern = "([^[:space:]:]+):([0-9]+):([0-9]+):";
+        if (regcomp(&regex, gcc_pattern, REG_EXTENDED) == 0) {
+                if (regexec(&regex, ln->txt.chars, 4, matches, 0) == 0) {
+                        int fname_len = matches[1].rm_eo - matches[1].rm_so;
+                        filename = malloc((size_t)fname_len + 1);
+                        if (filename) {
+                                memcpy(filename, ln->txt.chars + matches[1].rm_so, (size_t)fname_len);
+                                filename[fname_len] = '\0';
+                                row = atoi(ln->txt.chars + matches[2].rm_so);
+                                col = atoi(ln->txt.chars + matches[3].rm_so);
+                        }
                 }
-
-                memcpy(filename,
-                       ln->txt.chars + matches[1].rm_so,
-                       (size_t)fname_len);
-                filename[fname_len] = '\0';
-
-                row = atoi(ln->txt.chars + matches[2].rm_so);
-                col = atoi(ln->txt.chars + matches[3].rm_so);
+                regfree(&regex);
         }
-
-        regfree(&regex);
 
         if (!filename) {
+                const char *py_pattern = "File \"([^\"]+)\", line ([0-9]+)";
+                if (regcomp(&regex, py_pattern, REG_EXTENDED) == 0) {
+                        if (regexec(&regex, ln->txt.chars, 3, matches, 0) == 0) {
+                                int fname_len = matches[1].rm_eo - matches[1].rm_so;
+                                filename = malloc((size_t)fname_len + 1);
+                                if (filename) {
+                                        memcpy(filename, ln->txt.chars + matches[1].rm_so, (size_t)fname_len);
+                                        filename[fname_len] = '\0';
+                                        row = atoi(ln->txt.chars + matches[2].rm_so);
+                                        col = 0;                    // Python rarely gives column
+                                }
+                        }
+                        regfree(&regex);
+                }
+        }
+
+        if (!filename) {
+                const char *py_caret_pattern = "File \"([^\"]+)\", line ([0-9]+),";
+                if (regcomp(&regex, py_caret_pattern, REG_EXTENDED) == 0) {
+                        if (regexec(&regex, ln->txt.chars, 3, matches, 0) == 0) {
+                                int fname_len = matches[1].rm_eo - matches[1].rm_so;
+                                filename = malloc((size_t)fname_len + 1);
+                                if (filename) {
+                                        memcpy(filename, ln->txt.chars + matches[1].rm_so, (size_t)fname_len);
+                                        filename[fname_len] = '\0';
+                                        row = atoi(ln->txt.chars + matches[2].rm_so);
+                                        col = 0;
+                                }
+                        }
+                        regfree(&regex);
+                }
+        }
+
+        if (!filename || row == -1) {
+                if (filename) free(filename);
                 buffer_draw(ab);
                 return 0;
         }
 
-        if (row == -1 || col == -1) {
+        char *real = get_realpath(filename);
+        if (!real) {
                 free(filename);
                 buffer_draw(ab);
                 return 0;
         }
 
         buffer *b = NULL;
-        char *real = get_realpath(filename);
-        assert(real);
-
         if (!ww_buffer_exists_by_path(ed, real)) {
-                b = buffer_from(str_from(filename),
-                                str_from(real),
+                b = buffer_from(str_from(filename), str_from(real),
                                 (unsigned)glconf.term.w, (unsigned)glconf.term.h,
-                                0, 0,
-                                lines_from(load_file(real)), ed);
+                                0, 0, lines_from(load_file(real)), ed);
                 ww_add_buffer(ed, b);
-        }
-        else
+        } else {
                 b = ed->buffers.data[(size_t)get_buffer_by_path(ed, real)];
+        }
 
         int found_buffer = -1;
         for (size_t i = 0; i < 4; ++i) {
@@ -1018,14 +1036,14 @@ try_jump_to_error(ww *ed, buffer *compilation)
         else
                 ed->am = (uint8_t)found_buffer;
 
-        buffer_jump_to_verts(ed->monitors[ed->am], (size_t)col-1, (size_t)row-1);
+        buffer_jump_to_verts(ed->monitors[ed->am], (size_t)(col > 0 ? col-1 : 0), (size_t)row-1);
 
         free(filename);
+        free(real);
         buffer_draw(ed->monitors[ed->am]);
-
         sort_buffers(ed);
 
-        return filename != NULL;
+        return 1;
 }
 
 static void
