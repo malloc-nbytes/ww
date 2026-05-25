@@ -2213,12 +2213,11 @@ drawln(const buffer *b, size_t idx)
 
                 int in_selection = line_has_selection && char_i >= sel_start && char_i < sel_end;
 
-                // Handle tab character
                 if (c == '\t') {
                         unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
                         for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
                                 if (in_selection)
-                                        printf(INVERT YELLOW BOLD " " RESET);
+                                        printf(INVERT BOLD " " RESET);
                                 else if (in_cursor_match)
                                         printf(INVERT ORANGE BOLD " " RESET);
                                 else if (in_search)
@@ -2244,7 +2243,7 @@ drawln(const buffer *b, size_t idx)
                                 printf(GRAY "-" RESET);
                         } else {
                                 if (in_selection)
-                                        printf(INVERT YELLOW BOLD "%c" RESET, c);
+                                        printf(INVERT BOLD "%c" RESET, c);
                                 else if (in_cursor_match)
                                         printf(INVERT ORANGE BOLD "%c" RESET, c);
                                 else if (in_search)
