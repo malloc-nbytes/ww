@@ -28,6 +28,7 @@
 #define BUFFER_BUILTIN_COMPILE "ww-compile"
 #define BUFFER_BUILTIN_HELP    "ww-help"
 #define BUFFER_BUILTIN_MAN     "ww-man"
+#define BUFFER_BUILTIN_DIR     "ww-dir"
 
 extern char_ar g_cpy_buf;
 
@@ -54,6 +55,7 @@ typedef enum {
         BA_REQ_ERRJMP,
         BA_REQ_NEXTERROR,
         BA_REQ_PREVERROR,
+        BA_REQ_FILEEXPLORER,
 } buffer_action;
 
 typedef enum {

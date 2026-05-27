@@ -357,7 +357,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_KILLBUF
             || ba == BA_REQ_SWITCHCOMPL
             || ba == BA_REQ_ERRJMP
-            || ba == BA_REQ_NEXTERROR)
+            || ba == BA_REQ_NEXTERROR
+            || ba == BA_REQ_FILEEXPLORER)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -1037,10 +1038,11 @@ try_jump_to_error(ww *ed, buffer *compilation)
                 ed->am = (uint8_t)found_buffer;
 
         buffer_jump_to_verts(ed->monitors[ed->am], (size_t)(col > 0 ? col-1 : 0), (size_t)row-1);
+        buffer_center_view(ed->monitors[ed->am]);
+        buffer_draw(ed->monitors[ed->am]);
 
         free(filename);
         free(real);
-        buffer_draw(ed->monitors[ed->am]);
         sort_buffers(ed);
 
         return 1;
@@ -1103,6 +1105,32 @@ jmp_next_error(ww *ed, int prev)
         sort_buffers(ed);
 }
 
+static void
+file_explorer(ww *ed)
+{
+        cstr_ar files;
+        linep_ar lns;
+
+        files = lsdir(".");
+        lns = array_empty(linep_ar);
+
+        for (size_t i = 0; i < files.len; ++i) {
+                str data = str_from(files.data[i]);
+                str_append(&data, '\n');
+                array_append(lns, line_from(data));
+                //array_append(lns, line_from(str_from_fmt("%s\n", lns.data[i])));
+        }
+
+        buffer *b = buffer_from(str_from(BUFFER_BUILTIN_DIR),
+                                str_from(BUFFER_BUILTIN_DIR),
+                                0, 0, 0, 0, lns, ed);
+        buffer_make_builtin(b);
+        buffer_make_readonly(b);
+
+        array_append(ed->buffers, b);
+        ed->monitors[ed->am] = b;
+}
+
 void
 ww_run(ww *ed)
 {
@@ -1144,6 +1172,7 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_ERRJMP)        (void)try_jump_to_error(ed, NULL);
                 else if (act == BA_REQ_NEXTERROR)     jmp_next_error(ed, 0);
                 else if (act == BA_REQ_PREVERROR)     jmp_next_error(ed, 1);
+                else if (act == BA_REQ_FILEEXPLORER)  file_explorer(ed);
 
                 ww_display_monitors(ed, act);
         }

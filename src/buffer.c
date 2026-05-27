@@ -1703,6 +1703,8 @@ ctrlx(buffer *b)
                         return BA_REQ_SPLITHOR;
                 if (ch == 'k')
                         return BA_REQ_KILLBUF;
+                if (ch == '\n')
+                        return BA_REQ_FILEEXPLORER;
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch == CTRL_S)
@@ -1725,6 +1727,9 @@ handle_normal_input_while_builtin(buffer *b, char ch)
                 return BA_REQ_RECOMPILE;
         if (!strcmp(b->name.chars, BUFFER_BUILTIN_COMPILE) && ch == '\n')
                 return BA_REQ_ERRJMP;
+        if (!strcmp(b->name.chars, BUFFER_BUILTIN_DIR) && ch == '\n') {
+                assert(0);
+        }
 
         if (ch == 'q')
                 return BA_REQ_CLOSE_BUILTIN;
