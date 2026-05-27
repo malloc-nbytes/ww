@@ -202,16 +202,16 @@ get_artwork(void)
 {
         str res;
 
-        res = str_from("flag1");
-
         const char *name = glconf.runtime.artwork;
 
         if (!strcmp(name, "flag1"))
-                str_overwrite(&res, g_art_flag1);
+                res = str_from(g_art_flag1);
         else if (!strcmp(name, "ww1"))
-                str_overwrite(&res, g_art_ww1);
+                res = str_from(g_art_ww1);
         else if (!strcmp(name, "ww2"))
-                str_overwrite(&res, g_art_ww2);
+                res = str_from(g_art_ww2);
+        else
+                res = str_from("ww1");
 
         return res;
 }

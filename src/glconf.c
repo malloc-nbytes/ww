@@ -43,7 +43,7 @@ struct {
         .runtime = {
                 .compile   = NULL,
                 .space_amt = 8,
-                .artwork   = "flag1",
+                .artwork   = "ww1",
                 .to_clipboard = "echo -E '%%s' | xclip -selection clipboard",
         },
         .flags = 0x0000,
