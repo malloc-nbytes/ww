@@ -827,6 +827,12 @@ done:
 }
 
 static void
+cfgvars(ww *ed)
+{
+        assert(0);
+}
+
+static void
 metax(ww *ed)
 {
         char *inp;
@@ -858,6 +864,8 @@ metax(ww *ed)
                 exit(0);
         else if (!strcmp(inp, WW_CMD_MAN))
                 man(ed);
+        else if (!strcmp(inp, WW_CMD_CFGVARS))
+                cfgvars(ed);
 
         free(inp);
         array_free(cmds);
@@ -1124,7 +1132,8 @@ ww_run(ww *ed)
 
                 buffer_action act = buffer_process(b);
 
-                if      (act == BA_REQ_EXIT)         break;
+                if (act == BA_REQ_EXIT && ((glconf.flags & FK_DISABLE_QUITKB) == 0))
+                        break;
                 else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
                 else if (act == BA_REQ_MAXIMIZEMON)

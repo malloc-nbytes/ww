@@ -24,6 +24,7 @@ typedef enum {
         FK_TABMODE        = 1 << 0,
         FK_NOAUTOBRACKET  = 1 << 1,
         FK_SHOWTRAILS     = 1 << 2,
+        FK_DISABLE_QUITKB = 1 << 3,
 } flag_kind;
 
 #define FLAG_1HY_HELP 'h'

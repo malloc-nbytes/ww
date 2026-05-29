@@ -34,17 +34,19 @@
 #define WW_CMD_HELP             "help"
 #define WW_CMD_QUIT             "quit"
 #define WW_CMD_MAN              "man"
+#define WW_CMD_CFGVARS          "cfgvars"
 
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
         WW_CMD_FIND_FILE, \
         WW_CMD_COMPILE, \
+        WW_CMD_QUIT, \
+        WW_CMD_HELP, \
+        WW_CMD_TUT, \
         WW_CMD_TOGGLE_TABMODE, \
         WW_CMD_SPACEAMT, \
-        WW_CMD_TUT, \
-        WW_CMD_HELP, \
-        WW_CMD_QUIT, \
         WW_CMD_MAN, \
+        WW_CMD_CFGVARS, \
 }
 
 typedef struct ww {

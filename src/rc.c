@@ -147,6 +147,7 @@ parse_rc(void)
         qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
         qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
         qcl_value *menu_highlight         = qcl_value_get(&config, "menu-highlight");
+        qcl_value *disable_quit_keybind   = qcl_value_get(&config, "disable-quit-keybind");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -246,6 +247,14 @@ parse_rc(void)
                         else
                                 glconf.runtime.menu_highlight = c;
                 }
+        }
+        if (disable_quit_keybind) {
+                if (disable_quit_keybind->kind != QCL_VALUE_KIND_BOOL) {
+                        printf("wwrc error: disable-quit-keybind is expected to be a bool\n");
+                        ok = 0;
+                }
+                else if (((qcl_value_bool *)disable_quit_keybind)->b)
+                        glconf.flags |= FK_DISABLE_QUITKB;
         }
 
         if (!ok) {
