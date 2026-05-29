@@ -136,14 +136,16 @@ parse_rc(void)
                 return 0;
         }
 
-        int ok                         = 1;
-        qcl_value *tabmode             = qcl_value_get(&config, "tab-mode");
-        qcl_value *show_trails         = qcl_value_get(&config, "show-trails");
-        qcl_value *space_amt           = qcl_value_get(&config, "space-amt");
-        qcl_value *compile_command     = qcl_value_get(&config, "compile-command");
-        qcl_value *to_clipboard        = qcl_value_get(&config, "to-clipboard");
-        qcl_value *artwork             = qcl_value_get(&config, "artwork");
-        qcl_value *selection_highlight = qcl_value_get(&config, "selection-highlight");
+        int ok                            = 1;
+        qcl_value *tabmode                = qcl_value_get(&config, "tab-mode");
+        qcl_value *show_trails            = qcl_value_get(&config, "show-trails");
+        qcl_value *space_amt              = qcl_value_get(&config, "space-amt");
+        qcl_value *compile_command        = qcl_value_get(&config, "compile-command");
+        qcl_value *to_clipboard           = qcl_value_get(&config, "to-clipboard");
+        qcl_value *artwork                = qcl_value_get(&config, "artwork");
+        qcl_value *selection_highlight    = qcl_value_get(&config, "selection-highlight");
+        qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
+        qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -206,6 +208,30 @@ parse_rc(void)
                                 ok = 0;
                         else
                                 glconf.runtime.selection_highlight = c;
+                }
+        }
+        if (search_highlight) {
+                if (search_highlight->kind != QCL_VALUE_KIND_STRING) {
+                        printf("wwrc error: search-highlight is expected to be a string\n");
+                        ok = 0;
+                } else {
+                        char *c;
+                        if (!(c = verify_colors(((qcl_value_string *)search_highlight)->s)))
+                                ok = 0;
+                        else
+                                glconf.runtime.search_highlight = c;
+                }
+        }
+        if (search_highlight_exact) {
+                if (search_highlight_exact->kind != QCL_VALUE_KIND_STRING) {
+                        printf("wwrc error: search-highlight-exact is expected to be a string\n");
+                        ok = 0;
+                } else {
+                        char *c;
+                        if (!(c = verify_colors(((qcl_value_string *)search_highlight_exact)->s)))
+                                ok = 0;
+                        else
+                                glconf.runtime.search_highlight_exact = c;
                 }
         }
 

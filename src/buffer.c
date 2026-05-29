@@ -2225,9 +2225,9 @@ drawln(const buffer *b, size_t idx)
                                 if (in_selection)
                                         printf("%s " RESET, glconf.runtime.selection_highlight);
                                 else if (in_cursor_match)
-                                        printf(INVERT ORANGE BOLD " " RESET);
+                                        printf("%s " RESET, glconf.runtime.search_highlight_exact);
                                 else if (in_search)
-                                        printf(INVERT YELLOW BOLD " " RESET);
+                                        printf("%s " RESET, glconf.runtime.search_highlight);
                                 else {
                                         if (/*b->show_trailing_whitespace && */t == 0)
                                                 printf(GRAY ">" RESET);
@@ -2251,9 +2251,9 @@ drawln(const buffer *b, size_t idx)
                                 if (in_selection)
                                         printf("%s%c" RESET, glconf.runtime.selection_highlight, c);
                                 else if (in_cursor_match)
-                                        printf(INVERT ORANGE BOLD "%c" RESET, c);
+                                        printf("%s%c" RESET, glconf.runtime.search_highlight_exact, c);
                                 else if (in_search)
-                                        printf(INVERT YELLOW BOLD "%c" RESET, c);
+                                        printf("%s%c" RESET, glconf.runtime.search_highlight, c);
                                 else
                                         putchar(c);
                         }
