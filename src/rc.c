@@ -146,6 +146,7 @@ parse_rc(void)
         qcl_value *selection_highlight    = qcl_value_get(&config, "selection-highlight");
         qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
         qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
+        qcl_value *menu_highlight         = qcl_value_get(&config, "menu-highlight");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -232,6 +233,18 @@ parse_rc(void)
                                 ok = 0;
                         else
                                 glconf.runtime.search_highlight_exact = c;
+                }
+        }
+        if (menu_highlight) {
+                if (menu_highlight->kind != QCL_VALUE_KIND_STRING) {
+                        printf("wwrc error: menu-highlight is expected to be a string\n");
+                        ok = 0;
+                } else {
+                        char *c;
+                        if (!(c = verify_colors(((qcl_value_string *)menu_highlight)->s)))
+                                ok = 0;
+                        else
+                                glconf.runtime.menu_highlight = c;
                 }
         }
 

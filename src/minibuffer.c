@@ -130,7 +130,7 @@ completion_draw(ww                *ed,
                                         printf(" | ");
 
                                 if (i == st->selected_idx)
-                                        printf(YELLOW BOLD INVERT);
+                                        printf("%s", glconf.runtime.menu_highlight/*YELLOW BOLD INVERT*/);
 
                                 printf("%.*s...",
                                        (int)display_chars,
@@ -146,7 +146,7 @@ completion_draw(ww                *ed,
                                 printf(" | ");
 
                         if (i == st->selected_idx)
-                                printf("%s", YELLOW BOLD INVERT);
+                                printf("%s", glconf.runtime.menu_highlight/*YELLOW BOLD INVERT*/);
 
                         printf("%s", name);
 
