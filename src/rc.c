@@ -37,6 +37,8 @@
 #include "term.h"
 #include "utils.h"
 #include "flags.h"
+#include "colors.h"
+#include "str.h"
 #include "glconf.h"
 #include "config.h"
 
@@ -58,6 +60,63 @@ get_config_path(void)
         return buf;
 }
 
+static char *
+verify_colors(const char *c)
+{
+        str res = str_create();
+        int ok = 1;
+        char *buf = strdup(c);
+        char *tok = strtok(buf, " ");
+        static const char *accepted[] = {
+                "yellow", "green", "bright_green", "gray",
+                "red", "blue", "magenta", "orange", "white",
+                "black", "cyan", "pink", "bright_pink", "purple",
+                "bright_purple", "brown",
+
+                "underline", "bold", "italic", "dim",
+                "invert", "reset",
+        };
+
+        while (tok) {
+                if (!strcmp(tok, "yellow"))             str_concat(&res, YELLOW);
+                else if (!strcmp(tok, "green"))         str_concat(&res, GREEN);
+                else if (!strcmp(tok, "bright_green"))  str_concat(&res, BRIGHT_GREEN);
+                else if (!strcmp(tok, "gray"))          str_concat(&res, GRAY);
+                else if (!strcmp(tok, "red"))           str_concat(&res, RED);
+                else if (!strcmp(tok, "blue"))          str_concat(&res, BLUE);
+                else if (!strcmp(tok, "magenta"))       str_concat(&res, MAGENTA);
+                else if (!strcmp(tok, "orange"))        str_concat(&res, ORANGE);
+                else if (!strcmp(tok, "white"))         str_concat(&res, WHITE);
+                else if (!strcmp(tok, "black"))         str_concat(&res, BLACK);
+                else if (!strcmp(tok, "cyan"))          str_concat(&res, CYAN);
+                else if (!strcmp(tok, "pink"))          str_concat(&res, PINK);
+                else if (!strcmp(tok, "bright_pink"))   str_concat(&res, BRIGHT_PINK);
+                else if (!strcmp(tok, "purple"))        str_concat(&res, PURPLE);
+                else if (!strcmp(tok, "bright_purple")) str_concat(&res, BRIGHT_PURPLE);
+                else if (!strcmp(tok, "brown"))         str_concat(&res, BROWN);
+                else if (!strcmp(tok, "underline"))     str_concat(&res, UNDERLINE);
+                else if (!strcmp(tok, "bold"))          str_concat(&res, BOLD);
+                else if (!strcmp(tok, "italic"))        str_concat(&res, ITALIC);
+                else if (!strcmp(tok, "dim"))           str_concat(&res, DIM);
+                else if (!strcmp(tok, "invert"))        str_concat(&res, INVERT);
+                else if (!strcmp(tok, "reset"))         str_concat(&res, RESET);
+                else {
+                        printf("invalid color/effect `%s' in string `%s'\n", tok, c);
+                        printf("valid values are:\n");
+                        for (size_t i = 0; i < sizeof(accepted)/sizeof(*accepted); ++i)
+                                printf("  %s\n", accepted[i]);
+                        str_destroy(&res);
+                        ok = 0;
+                        break;
+                }
+                tok = strtok(NULL, " ");
+        }
+
+        free(buf);
+
+        return ok ? res.chars : NULL;
+}
+
 int
 parse_rc(void)
 {
@@ -77,13 +136,14 @@ parse_rc(void)
                 return 0;
         }
 
-        int ok = 1;
-        qcl_value *tabmode         = qcl_value_get(&config, "tabmode");
-        qcl_value *show_trails     = qcl_value_get(&config, "show-trails");
-        qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
-        qcl_value *compile_command = qcl_value_get(&config, "compile-command");
-        qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
-        qcl_value *artwork         = qcl_value_get(&config, "artwork");
+        int ok                         = 1;
+        qcl_value *tabmode             = qcl_value_get(&config, "tab-mode");
+        qcl_value *show_trails         = qcl_value_get(&config, "show-trails");
+        qcl_value *space_amt           = qcl_value_get(&config, "space-amt");
+        qcl_value *compile_command     = qcl_value_get(&config, "compile-command");
+        qcl_value *to_clipboard        = qcl_value_get(&config, "to-clipboard");
+        qcl_value *artwork             = qcl_value_get(&config, "artwork");
+        qcl_value *selection_highlight = qcl_value_get(&config, "selection-highlight");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -135,6 +195,18 @@ parse_rc(void)
                 }
                 else
                         glconf.runtime.artwork = strdup(((qcl_value_string *)artwork)->s);
+        }
+        if (selection_highlight) {
+                if (selection_highlight->kind != QCL_VALUE_KIND_STRING) {
+                        printf("wwrc error: selection-highlight is expected to be a string\n");
+                        ok = 0;
+                } else {
+                        char *c;
+                        if (!(c = verify_colors(((qcl_value_string *)selection_highlight)->s)))
+                                ok = 0;
+                        else
+                                glconf.runtime.selection_highlight = c;
+                }
         }
 
         if (!ok) {

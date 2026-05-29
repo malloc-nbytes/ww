@@ -17,6 +17,8 @@
  * with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "colors.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <termios.h>
@@ -32,6 +34,11 @@ struct {
                 int   space_amt;
                 char *artwork;
                 const char *to_clipboard;
+                char *selection_highlight;
+                char *search_highlight;
+                char *search_highlight_exact;
+                char *menu_highlight;
+                int   disable_quit_keybind;
         } runtime;
         uint32_t flags;
 } glconf = {
@@ -41,10 +48,15 @@ struct {
                 .termios = {0},
         },
         .runtime = {
-                .compile   = NULL,
-                .space_amt = 8,
-                .artwork   = "ww1",
-                .to_clipboard = "echo -E '%%s' | xclip -selection clipboard",
+                .compile                = NULL,
+                .space_amt              = 8,
+                .artwork                = "ww1",
+                .to_clipboard           = "echo -E '%%s' | xclip -selection clipboard",
+                .selection_highlight    = INVERT,
+                .search_highlight       = INVERT DIM YELLOW,
+                .search_highlight_exact = INVERT BOLD ORANGE,
+                .menu_highlight         = YELLOW BOLD INVERT,
+                .disable_quit_keybind   = 0,
         },
         .flags = 0x0000,
 };

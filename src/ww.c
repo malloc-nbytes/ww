@@ -846,7 +846,7 @@ metax(ww *ed)
                 find_file(ed);
         else if (!strcmp(inp, WW_CMD_COMPILE))
                 compile(ed);
-        else if (!strcmp(inp, WW_CMD_TOGGLE_SPACEMODE))
+        else if (!strcmp(inp, WW_CMD_TOGGLE_TABMODE))
                 toggle_spacemode();
         else if (!strcmp(inp, WW_CMD_SPACEAMT))
                 set_spaceamt(ed);
@@ -976,7 +976,7 @@ try_jump_to_error(ww *ed, buffer *compilation)
                                         memcpy(filename, ln->txt.chars + matches[1].rm_so, (size_t)fname_len);
                                         filename[fname_len] = '\0';
                                         row = atoi(ln->txt.chars + matches[2].rm_so);
-                                        col = 0;                    // Python rarely gives column
+                                        col = 0;
                                 }
                         }
                         regfree(&regex);

@@ -36,7 +36,12 @@ extern struct {
                 char *compile;
                 int   space_amt;
                 char *artwork;
-                const char *to_clipboard;
+                char *to_clipboard;
+                char *selection_highlight;
+                char *search_highlight;
+                char *search_highlight_exact;
+                char *menu_highlight;
+                int   disable_quit_keybind;
         } runtime;
         uint32_t flags;
 } glconf;

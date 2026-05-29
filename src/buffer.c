@@ -1203,6 +1203,9 @@ buffer_center_view(buffer *b)
 static buffer_action
 combine_lines(buffer *b)
 {
+        if (!writable(b))
+                return BA_NOP;
+
         line   *l0;
         line   *l1;
         str    *s0;
@@ -2142,6 +2145,8 @@ line_selection_range(const buffer *b,
 static ssize_t
 find_trailing_whitespace_start(const str *s)
 {
+        if ((glconf.flags & FK_SHOWTRAILS) == 0)
+                return -1;
         if (s->len == 0)
                 return -1;
         if (s->len <= 1 || !isspace(s->chars[s->len-2]))
@@ -2218,7 +2223,7 @@ drawln(const buffer *b, size_t idx)
                         unsigned next_stop = (unsigned)(tabw - ((b->hoff + screen_col) % tabw));
                         for (unsigned t = 0; t < next_stop && screen_col < win_w; ++t) {
                                 if (in_selection)
-                                        printf(INVERT BOLD " " RESET);
+                                        printf("%s " RESET, glconf.runtime.selection_highlight);
                                 else if (in_cursor_match)
                                         printf(INVERT ORANGE BOLD " " RESET);
                                 else if (in_search)
@@ -2244,7 +2249,7 @@ drawln(const buffer *b, size_t idx)
                                 printf(GRAY "-" RESET);
                         } else {
                                 if (in_selection)
-                                        printf(INVERT BOLD "%c" RESET, c);
+                                        printf("%s%c" RESET, glconf.runtime.selection_highlight, c);
                                 else if (in_cursor_match)
                                         printf(INVERT ORANGE BOLD "%c" RESET, c);
                                 else if (in_search)

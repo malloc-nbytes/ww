@@ -28,7 +28,7 @@
 #define WW_CMD_SAVE             "save-file"
 #define WW_CMD_FIND_FILE        "find-file"
 #define WW_CMD_COMPILE          "compile"
-#define WW_CMD_TOGGLE_SPACEMODE "toggle-spacemode"
+#define WW_CMD_TOGGLE_TABMODE   "toggle-tabmode"
 #define WW_CMD_SPACEAMT         "space-amt"
 #define WW_CMD_TUT              "tutorial"
 #define WW_CMD_HELP             "help"
@@ -39,7 +39,7 @@
         WW_CMD_SAVE, \
         WW_CMD_FIND_FILE, \
         WW_CMD_COMPILE, \
-        WW_CMD_TOGGLE_SPACEMODE, \
+        WW_CMD_TOGGLE_TABMODE, \
         WW_CMD_SPACEAMT, \
         WW_CMD_TUT, \
         WW_CMD_HELP, \
