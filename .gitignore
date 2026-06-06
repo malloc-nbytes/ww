@@ -29,3 +29,4 @@ src/include/config.h.in
 src/tmp.txt
 src/bin
 src/obj
+*.tar.gz
