@@ -23,6 +23,8 @@
 #include <stdint.h>
 #include <termios.h>
 
+typedef struct qcl_config qcl_config;
+
 struct {
         struct {
                 size_t         w;
@@ -40,7 +42,8 @@ struct {
                 char *menu_highlight;
                 int   disable_quit_keybind;
         } runtime;
-        uint32_t flags;
+        uint32_t    flags;
+        qcl_config *config;
 } glconf = {
         .term = {
                 .w       = 0,
@@ -58,5 +61,6 @@ struct {
                 .menu_highlight         = YELLOW BOLD INVERT,
                 .disable_quit_keybind   = 0,
         },
-        .flags = 0x0000,
+        .flags  = 0x0000,
+        .config = NULL,
 };

@@ -82,6 +82,8 @@
 #ifndef QCL_INCLUDED_H
 #define QCL_INCLUDED_H
 
+typedef struct qcl_config qcl_config;
+
 #ifdef QCL_IMPL
 
 #include <assert.h>
@@ -1706,7 +1708,7 @@ _qcl_interpret(_qcl_program *p)
         return ctx;
 }
 
-typedef struct {
+typedef struct qcl_config {
         _qcl_interpret_context interpreter;
         _qcl_err err;
 } qcl_config;

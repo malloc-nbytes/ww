@@ -121,33 +121,37 @@ int
 parse_rc(void)
 {
         const char *path;
-        qcl_config config;
+        qcl_config *config;
+
+        config = (qcl_config *)malloc(sizeof(qcl_config));
 
         path = get_config_path();
 
         if (!file_exists(path))
                 return 1;
 
-        config = qcl_parse_file(path);
+        *config = qcl_parse_file(path);
 
-        if (!qcl_ok(&config)) {
-                printf("wwrc error: %s\n", qcl_geterr(&config));
+        glconf.config = config;
+
+        if (!qcl_ok(config)) {
+                printf("wwrc error: %s\n", qcl_geterr(config));
                 anykey();
                 return 0;
         }
 
         int ok                            = 1;
-        qcl_value *tabmode                = qcl_value_get(&config, "tab-mode");
-        qcl_value *show_trails            = qcl_value_get(&config, "show-trails");
-        qcl_value *space_amt              = qcl_value_get(&config, "space-amt");
-        qcl_value *compile_command        = qcl_value_get(&config, "compile-command");
-        qcl_value *to_clipboard           = qcl_value_get(&config, "to-clipboard");
-        qcl_value *artwork                = qcl_value_get(&config, "artwork");
-        qcl_value *selection_highlight    = qcl_value_get(&config, "selection-highlight");
-        qcl_value *search_highlight       = qcl_value_get(&config, "search-highlight");
-        qcl_value *search_highlight_exact = qcl_value_get(&config, "search-highlight-exact");
-        qcl_value *menu_highlight         = qcl_value_get(&config, "menu-highlight");
-        qcl_value *disable_quit_keybind   = qcl_value_get(&config, "disable-quit-keybind");
+        qcl_value *tabmode                = qcl_value_get(config, "tab-mode");
+        qcl_value *show_trails            = qcl_value_get(config, "show-trails");
+        qcl_value *space_amt              = qcl_value_get(config, "space-amt");
+        qcl_value *compile_command        = qcl_value_get(config, "compile-command");
+        qcl_value *to_clipboard           = qcl_value_get(config, "to-clipboard");
+        qcl_value *artwork                = qcl_value_get(config, "artwork");
+        qcl_value *selection_highlight    = qcl_value_get(config, "selection-highlight");
+        qcl_value *search_highlight       = qcl_value_get(config, "search-highlight");
+        qcl_value *search_highlight_exact = qcl_value_get(config, "search-highlight-exact");
+        qcl_value *menu_highlight         = qcl_value_get(config, "menu-highlight");
+        qcl_value *disable_quit_keybind   = qcl_value_get(config, "disable-quit-keybind");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -264,4 +268,3 @@ parse_rc(void)
 
         return 1;
 }
-

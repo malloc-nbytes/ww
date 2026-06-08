@@ -26,6 +26,7 @@
 #include "flags.h"
 #include "utils.h"
 #include "tut.h"
+#include "qcl.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -829,7 +830,7 @@ done:
 static void
 cfgvars(ww *ed)
 {
-        assert(0);
+        qcl_config *config = glconf.config;
 }
 
 static void

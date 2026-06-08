@@ -43,7 +43,8 @@ extern struct {
                 char *menu_highlight;
                 int   disable_quit_keybind;
         } runtime;
-        uint32_t flags;
+        uint32_t    flags;
+        qcl_config *config;
 } glconf;
 
 #endif // GLCONF_H_INCLUDED
