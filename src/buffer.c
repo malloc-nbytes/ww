@@ -1011,7 +1011,7 @@ insert_char(buffer *b,
                         ++b->cy;
                         ++b->al;
                 }
-                if (autotab)
+                if (autotab && ((glconf.flags & FK_NODUMBINDENT) == 0))
                         tab(b, 1);
         } /*else if (autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
                 char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
@@ -1862,7 +1862,7 @@ tab(buffer *b, int add_multiplier)
                 return BA_NOP;
         }
 
-        ++b->last_tab;
+        //++b->last_tab;
 
         if (glconf.flags & FK_TABMODE)
                 return insert_char(b, '\t', 1, 0, 0);
@@ -1872,6 +1872,7 @@ tab(buffer *b, int add_multiplier)
                 : (size_t)glconf.runtime.space_amt;
 
         for (size_t i = 0; i < end; ++i) {
+                ++b->last_tab;
                 if (ba == BA_REDRAW)
                         insert_char(b, ' ', 1, 0, 0);
                 else
@@ -2069,6 +2070,7 @@ buffer_process(buffer *b)
                 else if (ch == 'g')     return metag(b);
                 else if (ch == '\'')    return buffer_shell(b);
                 else if (ch == '/')     return accept_autocomplete(b);
+                else if (ch == 'i')     return tab(b, 1);
                 else if (ch == 0)       return expand_region(b);
         } break;
 
