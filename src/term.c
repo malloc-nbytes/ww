@@ -37,41 +37,84 @@ input_type
 get_input(char *c)
 {
         assert(c);
+
         while (1) {
                 *c = get_char();
+
                 if (ESCSEQ(*c)) {
                         int next0 = get_char();
+
                         if (CSI(next0)) {
                                 int next1 = get_char();
-                                if (next1 >= '0' && next1 <= '9') { // Modifier key detected
-                                        int semicolon = get_char();
-                                        if (semicolon == ';') {
-                                                int modifier = get_char();
-                                                int arrow_key = get_char();
-                                                if (modifier == '2') { // Shift modifier
-                                                        switch (arrow_key) {
-                                                        case 'A': *c = UP_ARROW;    return INPUT_TYPE_SHIFT_ARROW;
-                                                        case 'B': *c = DOWN_ARROW;  return INPUT_TYPE_SHIFT_ARROW;
-                                                        case 'C': *c = RIGHT_ARROW; return INPUT_TYPE_SHIFT_ARROW;
-                                                        case 'D': *c = LEFT_ARROW;  return INPUT_TYPE_SHIFT_ARROW;
-                                                        default: return INPUT_TYPE_UNKNOWN;
+
+                                // CSI 200~ -> bracketed paste begins
+                                // CSI 201~ -> bracketed paste ends
+                                if (next1 >= '0' && next1 <= '9') {
+                                        int value = next1 - '0';
+
+                                        while (1) {
+                                                int ch = get_char();
+
+                                                if (ch >= '0' && ch <= '9') {
+                                                        value = value * 10 + (ch - '0');
+                                                }
+                                                else if (ch == '~') {
+                                                        switch (value) {
+                                                                case 200:
+                                                                        return INPUT_TYPE_PASTE_BEGIN;
+                                                                case 201:
+                                                                        return INPUT_TYPE_PASTE_END;
+                                                                default:
+                                                                        return INPUT_TYPE_UNKNOWN;
                                                         }
                                                 }
-                                        }
-                                        return INPUT_TYPE_UNKNOWN;
-                                } else { // Regular arrow key
-                                        switch (next1) {
-                                        case DOWN_ARROW:
-                                        case RIGHT_ARROW:
-                                        case LEFT_ARROW:
-                                        case UP_ARROW:
-                                                *c = (char)next1;
-                                                return INPUT_TYPE_ARROW;
-                                        default:
-                                                return INPUT_TYPE_UNKNOWN;
+                                                else if (ch == ';') {
+                                                        /* Modifier sequence (e.g. Shift+Arrow). */
+                                                        int modifier = get_char();
+                                                        int arrow = get_char();
+
+                                                        if (modifier == '2') {
+                                                                switch (arrow) {
+                                                                        case UP_ARROW:
+                                                                                *c = UP_ARROW;
+                                                                                return INPUT_TYPE_SHIFT_ARROW;
+                                                                        case DOWN_ARROW:
+                                                                                *c = DOWN_ARROW;
+                                                                                return INPUT_TYPE_SHIFT_ARROW;
+                                                                        case RIGHT_ARROW:
+                                                                                *c = RIGHT_ARROW;
+                                                                                return INPUT_TYPE_SHIFT_ARROW;
+                                                                        case LEFT_ARROW:
+                                                                                *c = LEFT_ARROW;
+                                                                                return INPUT_TYPE_SHIFT_ARROW;
+                                                                        default:
+                                                                                return INPUT_TYPE_UNKNOWN;
+                                                                }
+                                                        }
+
+                                                        return INPUT_TYPE_UNKNOWN;
+                                                }
+                                                else {
+                                                        return INPUT_TYPE_UNKNOWN;
+                                                }
                                         }
                                 }
-                        } else { // [ALT] key
+                                else {
+                                        /* Regular arrow keys */
+                                        switch (next1) {
+                                                case UP_ARROW:
+                                                case DOWN_ARROW:
+                                                case LEFT_ARROW:
+                                                case RIGHT_ARROW:
+                                                        *c = (char)next1;
+                                                        return INPUT_TYPE_ARROW;
+                                                default:
+                                                        return INPUT_TYPE_UNKNOWN;
+                                        }
+                                }
+                        }
+                        else {
+                                /* Alt+key */
                                 *c = (char)next0;
                                 return INPUT_TYPE_ALT;
                         }
@@ -79,8 +122,11 @@ get_input(char *c)
                 else if (*c >= CTRL_A && *c <= CTRL_Z && *c != CTRL_J) {
                         return INPUT_TYPE_CTRL;
                 }
-                else return INPUT_TYPE_NORMAL;
+                else {
+                        return INPUT_TYPE_NORMAL;
+                }
         }
+
         return INPUT_TYPE_UNKNOWN;
 }
 
@@ -252,5 +298,19 @@ void
 show_cursor(void)
 {
         printf("\033[?25h");
+}
+
+void
+enable_bracketed_paste(void)
+{
+        printf("\033[?2004h");
+        fflush(stdout);
+}
+
+void
+disable_bracketed_paste(void)
+{
+        printf("\033[?2004l");
+        fflush(stdout);
 }
 

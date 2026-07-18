@@ -92,6 +92,7 @@ typedef struct {
         void        *ac;          // autocomplete
         size_t       ac_cycle;    // current autocomplete cycle
         cstr_set     found_words; // found words for autocomplete
+        int          paste;       // are we in a bracketed paste
 } buffer;
 
 ARRAY_DEFINE(buffer *, bufferp_ar);

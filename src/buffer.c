@@ -293,6 +293,7 @@ buffer_from(str      name,
         b->ac          = trie_alloc();
         b->ac_cycle    = 0;
         b->found_words = cstr_set_create(cstr_set_hash, cstr_set_cmp, NULL);
+        b->paste       = 0;
 
         collect_ac_from_buffer(b);
 
@@ -1011,12 +1012,12 @@ insert_char(buffer *b,
                         ++b->cy;
                         ++b->al;
                 }
-                if (autotab && ((glconf.flags & FK_NODUMBINDENT) == 0))
+                if (!b->paste && autotab && ((glconf.flags & FK_NODUMBINDENT) == 0))
                         tab(b, 1);
-        } /*else if (autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
+        } else if (!b->paste && autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
                 char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
                 str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
-        }*/
+        }
 
         //add_to_popxy(b);
 
@@ -1852,6 +1853,9 @@ tab(buffer *b, int add_multiplier)
         buffer_action ba;
         char          prevchar;
 
+        if (b->paste)
+                add_multiplier = 0;
+
         ba = BA_NOP;
 
         if (b->cx > 0)
@@ -1986,6 +1990,12 @@ buffer_process(buffer *b)
         char ch;
 
         switch (ty = get_input(&ch)) {
+        case INPUT_TYPE_PASTE_BEGIN: {
+                b->paste = 1;
+        } break;
+        case INPUT_TYPE_PASTE_END: {
+                b->paste = 0;
+        } break;
         case INPUT_TYPE_ARROW: {
                 if (ch == DOWN_ARROW)  return down(b);
                 if (ch == UP_ARROW)    return up(b);

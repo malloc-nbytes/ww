@@ -104,6 +104,8 @@ typedef enum {
         INPUT_TYPE_ARROW,
         INPUT_TYPE_SHIFT_ARROW,
         INPUT_TYPE_NORMAL,
+        INPUT_TYPE_PASTE_BEGIN,
+        INPUT_TYPE_PASTE_END,
         INPUT_TYPE_UNKNOWN,
 } input_type;
 
@@ -124,5 +126,7 @@ void       enable_mousewheel_capture(void);
 void       disable_mousewheel_capture(void);
 void       hide_cursor(void);
 void       show_cursor(void);
+void       enable_bracketed_paste(void);
+void       disable_bracketed_paste(void);
 
 #endif // TERM_H_INCLUDED

@@ -96,6 +96,7 @@ init(void)
         if (!enable_raw_terminal(STDIN_FILENO, &glconf.term.termios))
                 return 0;
 
+        enable_bracketed_paste();
         term_fullscrn();
         clear_terminal();
         //enable_mousewheel_capture();
@@ -107,6 +108,7 @@ static void
 cleanup(void)
 {
         (void)disable_raw_terminal(STDIN_FILENO, &glconf.term.termios);
+        disable_bracketed_paste();
         term_exit_fullscrn();
         //disable_mousewheel_capture();
 }
