@@ -970,6 +970,22 @@ kill_line(buffer *b)
         return BA_REDRAW;
 }
 
+static int
+prev_line_all_spaces(buffer *b)
+{
+        if (b->al == 0)
+                return 0;
+
+        const str *s = &b->lines.data[b->al-1]->txt;
+
+        for (size_t i = 0; i < s->len; ++i) {
+                if (!isspace(s->chars[i]))
+                        return 0;
+        }
+
+        return 1;
+}
+
 static buffer_action
 insert_char(buffer *b,
             char    ch,
@@ -1012,8 +1028,15 @@ insert_char(buffer *b,
                         ++b->cy;
                         ++b->al;
                 }
+
                 if (!b->paste && autotab && ((glconf.flags & FK_NODUMBINDENT) == 0))
                         tab(b, 1);
+
+                if (prev_line_all_spaces(b)) {
+                        str_clear(&b->lines.data[b->al-1]->txt);
+                        str_append(&b->lines.data[b->al-1]->txt, '\n');
+                }
+
         } else if (!b->paste && autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
                 const str *cur = &b->lines.data[b->al]->txt;
                 int on_pair = cur->chars[b->cx] == ')'
