@@ -26,6 +26,8 @@
 #include "flags.h"
 #include "utils.h"
 #include "tut.h"
+#include "confirmbox.h"
+#include "colors.h"
 #include "glconf.h"
 
 #include <assert.h>
@@ -1120,6 +1122,32 @@ jmp_next_error(ww *ed, int prev)
         sort_buffers(ed);
 }
 
+static int
+maybe_exit(ww *ed)
+{
+        int ok = 1;
+        str msg = str_from(BOLD "You have unsaved buffers, really exit?\n");
+        str_concat(&msg, "The following have unsaved changes" RESET ":\n");
+
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                const buffer *b = ed->buffers.data[i];
+                if (!b->saved) {
+                        ok = 0;
+                        str_concat(&msg, BOLD RED "*" RESET " ");
+                        str_concat(&msg, b->name.chars);
+                        str_append(&msg, '\n');
+                }
+        }
+
+        if (!ok) {
+                int res = confirmbox(msg.chars, NULL);
+                str_destroy(&msg);
+                return res;
+        }
+
+        return 1;
+}
+
 void
 ww_run(ww *ed)
 {
@@ -1143,7 +1171,11 @@ ww_run(ww *ed)
                 buffer *b = ed->monitors[ed->am];
                 buffer_action act = buffer_process(b);
 
-                if      (act == BA_REQ_EXIT)         break;
+                if (act == BA_REQ_EXIT) {
+                        if (maybe_exit(ed))
+                                break;
+                        act = BA_REDRAW;
+                }
                 else if (act == BA_REQ_FINDFILE)     find_file(ed);
                 else if (act == BA_REQ_SWITCHBUFFER) ww_switch_buffer(ed);
                 else if (act == BA_REQ_MAXIMIZEMON)

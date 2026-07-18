@@ -32,6 +32,7 @@
 #include "trie.h"
 #include "set.h"
 #include "art.h"
+#include "confirmbox.h"
 
 #include <assert.h>
 #include <stdio.h>

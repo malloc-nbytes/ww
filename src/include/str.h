@@ -31,6 +31,7 @@ typedef struct {
 } str;
 
 ARRAY_DEFINE(str, str_ar);
+ARRAY_DEFINE(const str *, conststrp_ar);
 
 str         str_create(void);
 str         str_from(const char *chars);
