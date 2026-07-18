@@ -1839,6 +1839,8 @@ find_indent_multiplier(buffer *b)
         for (size_t i = 0; i < s->len; ++i) {
                 if (s->chars[i] == ' ')
                         ++spaces;
+                else if (s->chars[i] == '\t')
+                        spaces += (size_t)glconf.runtime.space_amt;
         }
 
         return spaces/(size_t)glconf.runtime.space_amt;
@@ -1861,8 +1863,6 @@ tab(buffer *b, int add_multiplier)
                 display_autocomplete(b);
                 return BA_NOP;
         }
-
-        //++b->last_tab;
 
         if (glconf.flags & FK_TABMODE)
                 return insert_char(b, '\t', 1, 0, 0);
