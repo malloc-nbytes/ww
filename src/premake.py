@@ -20,6 +20,7 @@
 # This is the file that should run before compiling ww.
 
 import subprocess
+import argparse
 import tempfile
 import shutil
 import sys
@@ -38,6 +39,8 @@ CFLAGS = [
 ]
 
 PREFIX = '/usr/local'
+CC = None
+SKIP_CHECKS = False
 
 def err(msg):
     print(f'[premake ERR]: {msg}')
@@ -54,6 +57,10 @@ def print_file(path):
 # Compiler detection
 # --------------------------
 def detect_compiler():
+    global CC
+    if CC is not None:
+        info(f'using predefined compiler {CC}')
+        return CC
     candidates = [
         shutil.which('x86_64-pc-linux-gnu-gcc'),
         shutil.which('x86_64-pc-linux-gnu-cc'),
@@ -152,6 +159,11 @@ def get_compiler_version(cc):
     return "unknown"
 
 def check_compiler_flags(cc, flags):
+    global SKIP_CHECKS
+
+    if SKIP_CHECKS:
+        return ['-Iinclude']
+
     test_c_code = "int main() { return 0; }"
     accepted_flags = []
     for flag in flags:
@@ -244,17 +256,19 @@ def generate_config():
     info("Done.")
 
 def handle_args(argv):
-    global PREFIX
-    if len(argv) <= 0:
-        return
-    for arg in argv:
-        parts = arg.split('=')
-        if len(parts) <= 1:
-            err(f'unknown option `{arg}\'')
-        if parts[0] == '--prefix':
-            PREFIX = parts[1]
-        else:
-            err(f'unknown option `{arg}\'')
+    global PREFIX, CC, SKIP_CHECKS
+    parser = argparse.ArgumentParser(prog='premake.py', description='Precompile step for ww', epilog='Run `make\' after this script')
+    parser.add_argument('--prefix', help='set an install prefix')
+    parser.add_argument('--cc', help='set a compiler explicitly')
+    parser.add_argument('--skip-checks', action='store_true', help='skip compiler flag checks')
+    args = parser.parse_args()
+
+    if args.prefix:
+        PREFIX = args.prefix
+    if args.cc:
+        CC = args.cc
+    if args.skip_checks:
+        SKIP_CHECKS = True
 
 if __name__ == "__main__":
     handle_args(sys.argv[1:])

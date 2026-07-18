@@ -1873,9 +1873,12 @@ find_indent_multiplier(buffer *b)
                         ++spaces;
                 else if (s->chars[i] == '\t')
                         spaces += (size_t)glconf.runtime.space_amt;
+                else
+                        break;
         }
 
-        return spaces/(size_t)glconf.runtime.space_amt;
+        //return spaces/(size_t)glconf.runtime.space_amt;
+        return spaces;
 }
 
 static buffer_action
@@ -1903,17 +1906,17 @@ tab(buffer *b, int add_multiplier)
                 return insert_char(b, '\t', 1, 0, 0);
 
         size_t end = add_multiplier ?
-                find_indent_multiplier(b)*(size_t)glconf.runtime.space_amt
-                //MAX((size_t)glconf.runtime.space_amt, find_indent_multiplier(b)*(size_t)glconf.runtime.space_amt)
+                find_indent_multiplier(b)//*(size_t)glconf.runtime.space_amt
                 : (size_t)glconf.runtime.space_amt;
 
         for (size_t i = 0; i < end; ++i) {
-                ++b->last_tab;
                 if (ba == BA_REDRAW)
                         insert_char(b, ' ', 1, 0, 0);
                 else
                         ba = insert_char(b, ' ', 1, 0, 0);
         }
+
+        b->last_tab += (int)(end / (size_t)glconf.runtime.space_amt);
 
         return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
