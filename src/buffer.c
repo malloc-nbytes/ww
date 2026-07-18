@@ -1919,6 +1919,8 @@ tab(buffer *b, int add_multiplier)
 
         b->last_tab += (int)(end / (size_t)glconf.runtime.space_amt);
 
+        b->wish_col = b->cx;
+
         return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
