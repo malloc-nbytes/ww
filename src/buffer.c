@@ -1015,8 +1015,16 @@ insert_char(buffer *b,
                 if (!b->paste && autotab && ((glconf.flags & FK_NODUMBINDENT) == 0))
                         tab(b, 1);
         } else if (!b->paste && autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
-                char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
-                str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
+                const str *cur = &b->lines.data[b->al]->txt;
+                int on_pair = cur->chars[b->cx] == ')'
+                                || cur->chars[b->cx] == '}'
+                                || cur->chars[b->cx] == ']'
+                                || cur->chars[b->cx] == '\''
+                                || cur->chars[b->cx] == '"';
+                if (isspace(cur->chars[b->cx]) || on_pair) {
+                        char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
+                        str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
+                }
         }
 
         //add_to_popxy(b);
@@ -1036,7 +1044,7 @@ jump_to_top_of_buffer(buffer *b)
         b->wish_col = 0;
         b->al = b->lines.len-1;
         adjust_cursor(b);
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1047,7 +1055,7 @@ jump_to_bottom_of_buffer(buffer *b)
         b->wish_col = 0;
         b->al = 0;
         adjust_cursor(b);
-        return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
+        return (buffer_adjust_scroll(b) == BA_REDRAW || b->state == BS_SELECTION) ? BA_REDRAW : BA_XY;
 }
 
 static buffer_action
@@ -1872,7 +1880,8 @@ tab(buffer *b, int add_multiplier)
                 return insert_char(b, '\t', 1, 0, 0);
 
         size_t end = add_multiplier ?
-                MAX((size_t)glconf.runtime.space_amt, find_indent_multiplier(b)*(size_t)glconf.runtime.space_amt)
+                find_indent_multiplier(b)*(size_t)glconf.runtime.space_amt
+                //MAX((size_t)glconf.runtime.space_amt, find_indent_multiplier(b)*(size_t)glconf.runtime.space_amt)
                 : (size_t)glconf.runtime.space_amt;
 
         for (size_t i = 0; i < end; ++i) {

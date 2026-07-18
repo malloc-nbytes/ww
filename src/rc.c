@@ -78,13 +78,14 @@ parse_rc(void)
         }
 
         int ok = 1;
-        qcl_value *tabmode         = qcl_value_get(&config, "tabmode");
-        qcl_value *show_trails     = qcl_value_get(&config, "show-trails");
-        qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
-        qcl_value *compile_command = qcl_value_get(&config, "compile-command");
-        qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
-        qcl_value *dumb_indent     = qcl_value_get(&config, "dumb-indent");
-        qcl_value *artwork         = qcl_value_get(&config, "artwork");
+        qcl_value *tabmode          = qcl_value_get(&config, "tabmode");
+        qcl_value *show_trails      = qcl_value_get(&config, "show-trails");
+        qcl_value *space_amt        = qcl_value_get(&config, "space-amt");
+        qcl_value *compile_command  = qcl_value_get(&config, "compile-command");
+        qcl_value *to_clipboard     = qcl_value_get(&config, "to-clipboard");
+        qcl_value *dumb_indent      = qcl_value_get(&config, "dumb-indent");
+        qcl_value *artwork          = qcl_value_get(&config, "artwork");
+        qcl_value *no_auto_bracket  = qcl_value_get(&config, "no-auto-bracket");
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -144,6 +145,14 @@ parse_rc(void)
                 }
                 else
                         glconf.runtime.artwork = strdup(((qcl_value_string *)artwork)->s);
+        }
+        if (no_auto_bracket) {
+                if (no_auto_bracket->kind != QCL_VALUE_KIND_BOOL) {
+                        printf("wwrc error: no-auto-bracket is expected to be a bool\n");
+                        ok = 0;
+                }
+                else if (((qcl_value_bool *)no_auto_bracket)->b)
+                        glconf.flags |= FK_NOAUTOBRACKET;
         }
 
         if (glconf.flags & FK_TABMODE)

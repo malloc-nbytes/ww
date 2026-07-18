@@ -830,7 +830,13 @@ done:
 static void
 toggle_dumb_indenting(void)
 {
-        glconf.flags ^= (FK_NODUMBINDENT);
+        glconf.flags ^= FK_NODUMBINDENT;
+}
+
+static void
+toggle_autobracket(void)
+{
+        glconf.flags ^= FK_NOAUTOBRACKET;
 }
 
 static void
@@ -867,6 +873,8 @@ metax(ww *ed)
                 exit(0);
         else if (!strcmp(inp, WW_CMD_MAN))
                 man(ed);
+        else if (!strcmp(inp, WW_CMD_TOGGLE_AUTOBRACKET))
+                toggle_autobracket();
 
         free(inp);
         array_free(cmds);

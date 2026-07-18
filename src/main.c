@@ -34,10 +34,7 @@
 #include <unistd.h>
 
 static void
-sigint_handler(int sig)
-{
-        (void)sig;
-}
+sigint_handler(int sig) { (void)sig; }
 
 static void
 run(const char *path)

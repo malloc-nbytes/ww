@@ -88,4 +88,7 @@ const char *g_default_config_str = "# Basic configuration file for ww,\n"
 "# or set it to an empty string.\n"
 "# Valid options are:\n"
 "#   ww1, ww2, flag1\n"
-"artwork = 'ww1';\n";
+"artwork = 'ww1';\n"
+"\n"
+"# Disable ( { [ and \" autocomplete pairing.\n"
+"no-auto-bracket = false;\n";
