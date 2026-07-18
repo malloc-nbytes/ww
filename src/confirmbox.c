@@ -2,12 +2,15 @@
 #include "term.h"
 #include "colors.h"
 
+#include <assert.h>
 #include <stdio.h>
 
 int
 confirmbox(const char *prompt,
            const char *extra_option)
 {
+        assert(!extra_option && "confirmbox: extra_option is unimplemented");
+
         (void)prompt;
         (void)extra_option;
 
@@ -46,6 +49,12 @@ confirmbox(const char *prompt,
                         if (ch == RIGHT_ARROW && option > 0)
                                 --option;
                         if (ch == LEFT_ARROW && option < 1)
+                                ++option;
+                } break;
+                case INPUT_TYPE_CTRL: {
+                        if (ch == CTRL_P && option > 0)
+                                --option;
+                        if (ch == CTRL_N && option < 1)
                                 ++option;
                 } break;
                 default: break;
