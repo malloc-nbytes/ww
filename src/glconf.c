@@ -28,6 +28,9 @@ struct {
                 struct termios termios;
         } term;
         struct {
+                size_t start_row;
+        } prelude;
+        struct {
                 char *compile;
                 int   space_amt;
                 char *artwork;
@@ -39,6 +42,9 @@ struct {
                 .w       = 0,
                 .h       = 0,
                 .termios = {0},
+        },
+        .prelude = {
+                .start_row = 1,
         },
         .runtime = {
                 .compile   = NULL,

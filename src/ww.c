@@ -1123,22 +1123,24 @@ jmp_next_error(ww *ed, int prev)
 void
 ww_run(ww *ed)
 {
-        (void)ww_make_buffer_primary_by_path;
         (void)make_command;
 
         signal(SIGWINCH, resize_signal_handler);
 
+        ed->monitors[ed->am]->al = glconf.prelude.start_row-1;
+        ed->monitors[ed->am]->cy = (unsigned)glconf.prelude.start_row-1;
+        buffer_adjust_scroll(ed->monitors[ed->am]);
+        buffer_center_view(ed->monitors[ed->am]);
+
         ww_display_monitors(ed, BA_REDRAW);
-        gotoxy(0, 0);
+        //gotoxy(0, ed->monitors[ed->am]->cy);
         fflush(stdout);
 
         while (ed->monitors[0]) {
                 assert(ed->am < 4);
 
                 handle_resize(ed);
-
                 buffer *b = ed->monitors[ed->am];
-
                 buffer_action act = buffer_process(b);
 
                 if      (act == BA_REQ_EXIT)         break;

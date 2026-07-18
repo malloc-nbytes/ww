@@ -33,6 +33,9 @@ extern struct {
                 struct termios termios;
         } term;
         struct {
+                size_t start_row;
+        } prelude;
+        struct {
                 char *compile;
                 int   space_amt;
                 char *artwork;

@@ -26,6 +26,7 @@
 #include "flags.h"
 #include "rc.h"
 #include "default-config.h"
+#include "glconf.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -123,7 +124,7 @@ usage(void)
         printf("  - https://github.com/malloc-nbytes/ww/issues\n");
         printf("  - or zdhdev@yahoo.com\n\n");
 
-        printf("Usage: ww [OPTIONS...] [FILEPATH]\n");
+        printf("Usage: ww [OPTIONS...] [FILEPATH] [+<lineno>]\n");
         printf("Options:\n");
         printf("  -h, --help             show this information\n");
         printf("  -v, --version          show only version information\n");
@@ -210,6 +211,16 @@ parse_1hy_option(argument **a)
         }
 }
 
+static void
+parse_start_row(const char *s)
+{
+        assert(s[0] == '+');
+        ++s;
+
+        int start = atoi(s);
+        glconf.prelude.start_row = (size_t)start;
+}
+
 char *
 parse_args(int argc, char *argv[])
 {
@@ -226,6 +237,8 @@ parse_args(int argc, char *argv[])
                         parse_1hy_option(&it);
                 else if (it->h == 2)
                         parse_2hy_option(&it);
+                else if (it->s[0] == '+')
+                        parse_start_row(it->s);
                 else if (filename)
                         fatal("only one filename is supported");
                 else if (file_exists(it->s))
