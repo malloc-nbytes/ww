@@ -2008,7 +2008,7 @@ buffer_process(buffer *b)
                 else if (BACKSPACE(ch))                     return backspace(b);
                 else if (ch == 0)                           return selection(b);
                 else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
-                else                                        return insert_char(b, ch, 1, 1, (glconf.flags & FK_NOAUTOBRACKET) == 0);
+                else                                        return insert_char(b, ch, 1, (glconf.flags & FK_TABMODE) == 0, (glconf.flags & FK_NOAUTOBRACKET) == 0);
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch != 9)

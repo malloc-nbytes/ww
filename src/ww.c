@@ -676,6 +676,7 @@ static void
 toggle_spacemode(void)
 {
         glconf.flags ^= FK_TABMODE;
+        glconf.flags &= ~(uint32_t)FK_NODUMBINDENT;
 }
 
 static void

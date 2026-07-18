@@ -146,6 +146,9 @@ parse_rc(void)
                         glconf.runtime.artwork = strdup(((qcl_value_string *)artwork)->s);
         }
 
+        if (glconf.flags & FK_TABMODE)
+                glconf.flags &= ~(uint32_t)FK_NODUMBINDENT;
+
         if (!ok) {
                 anykey();
                 return 0;
