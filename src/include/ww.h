@@ -25,15 +25,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define WW_CMD_SAVE             "save-file"
-#define WW_CMD_FIND_FILE        "find-file"
-#define WW_CMD_COMPILE          "compile"
-#define WW_CMD_TOGGLE_SPACEMODE "toggle-spacemode"
-#define WW_CMD_SPACEAMT         "space-amt"
-#define WW_CMD_TUT              "tutorial"
-#define WW_CMD_HELP             "help"
-#define WW_CMD_QUIT             "quit"
-#define WW_CMD_MAN              "man"
+#define WW_CMD_SAVE              "save-file"
+#define WW_CMD_FIND_FILE         "find-file"
+#define WW_CMD_COMPILE           "compile"
+#define WW_CMD_TOGGLE_SPACEMODE  "toggle-spacemode"
+#define WW_CMD_SPACEAMT          "space-amt"
+#define WW_CMD_TUT               "tutorial"
+#define WW_CMD_HELP              "help"
+#define WW_CMD_QUIT              "quit"
+#define WW_CMD_MAN               "man"
+#define WW_CMD_TOGGLE_DUMBINDENT "toggle-dumb-indent"
 
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
@@ -45,6 +46,7 @@
         WW_CMD_HELP, \
         WW_CMD_QUIT, \
         WW_CMD_MAN, \
+        WW_CMD_TOGGLE_DUMBINDENT, \
 }
 
 typedef struct ww {
