@@ -20,7 +20,8 @@
 #ifndef UTILS_H_INCLUDED
 #define UTILS_H_INCLUDED
 
-#define MIN(a, b) (a) <= (b) ? (a) : (b)
+#define MIN(a, b) ((a) <= (b) ? (a) : (b))
+#define MAX(a, b) ((a) >= (b) ? (a) : (b))
 
 int doregex(const char *pattern, const char *s);
 int cstr_isdigit(const char *s);

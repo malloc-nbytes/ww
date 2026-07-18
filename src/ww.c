@@ -827,6 +827,12 @@ done:
 }
 
 static void
+toggle_dumb_indenting(void)
+{
+        glconf.flags ^= (FK_NODUMBINDENT);
+}
+
+static void
 metax(ww *ed)
 {
         char *inp;
@@ -850,6 +856,8 @@ metax(ww *ed)
                 toggle_spacemode();
         else if (!strcmp(inp, WW_CMD_SPACEAMT))
                 set_spaceamt(ed);
+        else if (!strcmp(inp, WW_CMD_TOGGLE_DUMBINDENT))
+                toggle_dumb_indenting();
         else if (!strcmp(inp, WW_CMD_TUT))
                 tutorial(ed);
         else if (!strcmp(inp, WW_CMD_HELP))

@@ -21,9 +21,10 @@
 #define FLAGS_H_INCLUDED
 
 typedef enum {
-        FK_TABMODE        = 1 << 0,
-        FK_NOAUTOBRACKET  = 1 << 1,
-        FK_SHOWTRAILS     = 1 << 2,
+        FK_TABMODE        = (1 << 0),
+        FK_NOAUTOBRACKET  = (1 << 1),
+        FK_SHOWTRAILS     = (1 << 2),
+        FK_NODUMBINDENT   = (1 << 3),
 } flag_kind;
 
 #define FLAG_1HY_HELP 'h'

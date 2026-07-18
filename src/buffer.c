@@ -66,6 +66,7 @@ draw_status(const buffer *b,
 
 static buffer_action right(buffer *b);
 static buffer_action left(buffer *b);
+static buffer_action tab(buffer *b, int add_multiplier);
 
 char_ar g_cpy_buf = {0};
 
@@ -969,7 +970,11 @@ kill_line(buffer *b)
 }
 
 static buffer_action
-insert_char(buffer *b, char ch, int newline_advance, int autobracket)
+insert_char(buffer *b,
+            char    ch,
+            int     newline_advance,
+            int     autotab,
+            int     autobracket)
 {
         (void)autobracket;
 
@@ -1006,6 +1011,8 @@ insert_char(buffer *b, char ch, int newline_advance, int autobracket)
                         ++b->cy;
                         ++b->al;
                 }
+                if (autotab && ((glconf.flags & FK_NODUMBINDENT) == 0))
+                        tab(b, 1);
         } /*else if (autobracket && (ch == '{' || ch == '(' || ch == '[' || ch == '\'' || ch == '"')) {
                 char opp = ch == '{' ? '}' : ch == '[' ? ']' : ch == '(' ? ')' : ch == '\'' ? '\'' : '"';
                 str_insert(&b->lines.data[b->al]->txt, b->cx, opp);
@@ -1590,7 +1597,7 @@ paste(buffer *b)
         }
 
         for (size_t i = 0; i < g_cpy_buf.len; ++i) {
-                insert_char(b, g_cpy_buf.data[i], 1, 0);
+                insert_char(b, g_cpy_buf.data[i], 1, 0, 0);
                 if (g_cpy_buf.data[i] == '\n')
                         newline = 1;
         }
@@ -1820,8 +1827,25 @@ done:
         return buffer_adjust_scroll(b) == BA_REDRAW ? BA_REDRAW : BA_XY;
 }
 
+static size_t
+find_indent_multiplier(buffer *b)
+{
+        if (b->al == 0)
+                return 1;
+
+        const str *s  = &b->lines.data[b->al-1]->txt;
+        size_t spaces = 0;
+
+        for (size_t i = 0; i < s->len; ++i) {
+                if (s->chars[i] == ' ')
+                        ++spaces;
+        }
+
+        return spaces/(size_t)glconf.runtime.space_amt;
+}
+
 static buffer_action
-tab(buffer *b)
+tab(buffer *b, int add_multiplier)
 {
         buffer_action ba;
         char          prevchar;
@@ -1838,16 +1862,21 @@ tab(buffer *b)
                 return BA_NOP;
         }
 
-        ++b->last_tab;
+        //++b->last_tab;
 
         if (glconf.flags & FK_TABMODE)
-                return insert_char(b, '\t', 1, 0);
+                return insert_char(b, '\t', 1, 0, 0);
 
-        for (size_t i = 0; i < (size_t)glconf.runtime.space_amt; ++i) {
+        size_t end = add_multiplier ?
+                MAX((size_t)glconf.runtime.space_amt, find_indent_multiplier(b)*(size_t)glconf.runtime.space_amt)
+                : (size_t)glconf.runtime.space_amt;
+
+        for (size_t i = 0; i < end; ++i) {
+                ++b->last_tab;
                 if (ba == BA_REDRAW)
-                        insert_char(b, ' ', 1, 0);
+                        insert_char(b, ' ', 1, 0, 0);
                 else
-                        ba = insert_char(b, ' ', 1, 0);
+                        ba = insert_char(b, ' ', 1, 0, 0);
         }
 
         return ba == BA_REDRAW ? BA_REDRAW : BA_XY;
@@ -1979,14 +2008,14 @@ buffer_process(buffer *b)
                 else if (BACKSPACE(ch))                     return backspace(b);
                 else if (ch == 0)                           return selection(b);
                 else if (ch == '\n' && b->state == BS_AUTO) return accept_autocomplete(b);
-                else                                        return insert_char(b, ch, 1, (glconf.flags & FK_NOAUTOBRACKET) == 0);
+                else                                        return insert_char(b, ch, 1, 1, (glconf.flags & FK_NOAUTOBRACKET) == 0);
         } break;
         case INPUT_TYPE_CTRL: {
                 if (ch != 9)
                         b->last_tab = 0;
 
                 if (ch == CTRL_N)      return down(b);
-                else if (ch == 9)      return tab(b);
+                else if (ch == 9)      return tab(b, 0);
                 else if (ch == CTRL_P) return up(b);
                 else if (ch == CTRL_F) return right(b);
                 else if (ch == CTRL_B) return left(b);
@@ -1994,7 +2023,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_A) return bol(b);
                 else if (ch == CTRL_K) return delete_until_eol(b);
                 else if (ch == CTRL_O) {
-                        if (insert_char(b, '\n', 0, 0) != BA_NOP) {
+                        if (insert_char(b, '\n', 0, 0, 0) != BA_NOP) {
                                 --b->cx;
                                 return BA_REDRAW;
                         }
@@ -2041,6 +2070,7 @@ buffer_process(buffer *b)
                 else if (ch == 'g')     return metag(b);
                 else if (ch == '\'')    return buffer_shell(b);
                 else if (ch == '/')     return accept_autocomplete(b);
+                else if (ch == 'i')     return tab(b, 1);
                 else if (ch == 0)       return expand_region(b);
         } break;
 

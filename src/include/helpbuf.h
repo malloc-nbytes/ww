@@ -82,6 +82,8 @@
 "M-BACKSPC     = backspace word *\n" \
 "ENTER   | C-j = insert newline *\n" \
 "C-o           = insert newline (at cursor)\n" \
+"C-i           = insert tab\n" \
+"M-i           = insert tab with dumb indenting (even when feature is disabled)\n" \
 "C-d           = delete char under cursor *\n" \
 "M-d           = delete word\n" \
 "C-SPACE | C-c = begin/end selection *\n" \

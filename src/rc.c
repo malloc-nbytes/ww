@@ -83,6 +83,7 @@ parse_rc(void)
         qcl_value *space_amt       = qcl_value_get(&config, "space-amt");
         qcl_value *compile_command = qcl_value_get(&config, "compile-command");
         qcl_value *to_clipboard    = qcl_value_get(&config, "to-clipboard");
+        qcl_value *dumb_indent     = qcl_value_get(&config, "dumb-indent");
         qcl_value *artwork         = qcl_value_get(&config, "artwork");
 
         if (tabmode) {
@@ -127,6 +128,14 @@ parse_rc(void)
                 }
                 else
                         glconf.runtime.to_clipboard = strdup(((qcl_value_string *)to_clipboard)->s);
+        }
+        if (dumb_indent) {
+                if (dumb_indent->kind != QCL_VALUE_KIND_BOOL) {
+                        printf("wwrc error: dumbd-indent is expected to be a bool\n");
+                        ok = 0;
+                }
+                else if (((qcl_value_bool *)dumb_indent)->b == 0)
+                        glconf.flags |= FK_NODUMBINDENT;
         }
         if (artwork) {
                 if (artwork->kind != QCL_VALUE_KIND_STRING) {
