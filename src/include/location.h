@@ -9,5 +9,6 @@ typedef struct {
 } location;
 
 location location_from(size_t r, size_t c, const char *path);
+const char *loc_fmt_cstr(location loc);
 
 #endif // LOCATION_H_INCLUDED

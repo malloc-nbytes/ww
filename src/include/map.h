@@ -73,7 +73,7 @@
         void \
         mapname##_insert(mapname *map, ktype k, vtype v) \
         { \
-                unsigned idx = map->hash(&k) % map->tbl.cap;  \
+                unsigned idx = map->hash(&k) % (unsigned)map->tbl.cap;  \
                 __##mapname##_node *it = map->tbl.data[idx]; \
                 __##mapname##_node *prev = NULL; \
                 while (it) { \
@@ -106,7 +106,7 @@
         vtype * \
         mapname##_get(mapname *map, ktype k) \
         { \
-                unsigned idx = map->hash(&k) % map->tbl.cap; \
+                unsigned idx = map->hash(&k) % (unsigned)map->tbl.cap; \
                 __##mapname##_node *it = map->tbl.data[idx]; \
                 while (it) { \
                         if (!map->cmp(&it->k, &k)) {  \

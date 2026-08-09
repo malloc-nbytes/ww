@@ -3,6 +3,7 @@
 
 #include "line.h"
 #include "array.h"
+#include "map.h"
 #include "location.h"
 #include "sv.h"
 
@@ -21,6 +22,8 @@ typedef enum {
         TOKEN_KIND_KEYWORD,
 } token_kind;
 
+MAP_DEFINE(const char *, token_kind, opmap);
+
 typedef struct token {
         token_kind k;
         sv lx;
@@ -36,6 +39,7 @@ typedef enum {
 
 typedef struct {
         lexer_cfg_mode mode;
+        opmap ops;
         linep_ar lns;
         const char *path;
 } lexer_cfg;
@@ -47,5 +51,7 @@ typedef struct {
 } lexer;
 
 lexer lex_file(lexer_cfg cfg);
+void lexer_dump(const lexer *l);
+token *lexer_peek(const lexer *l);
 
 #endif // LEX_H_INCLUDED
