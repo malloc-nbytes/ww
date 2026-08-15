@@ -35,3 +35,20 @@ To see the help buffer and to see the controls, either invoke =ww= with a direct
 
 You can also view a tutorial (wip) by invoking =M-x tutorial= and picking the chapter you are interested in.
 
+** Other Notes
+
+There is an option to enable support for communicating with an Ollama local server and interacting with an LLM.
+
+This will never be enabled by default, but if you wish to have it, run =premake.py --with-llm=.
+
+*Note*: =libcurl= is expected to be installed on the system if using this option.
+
+The server must be running on =http://localhost:11434=.
+
+To choose your model, add this to your =.wwrc=:
+
+#+begin_src
+  llm_model = '<your model>';
+#+end_src
+
+You can see your models by doing =ollama ls=.

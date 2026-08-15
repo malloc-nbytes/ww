@@ -301,7 +301,7 @@ send_to_model(ww *ed)
                 return 0;
         }
 
-        cJSON_AddStringToObject(request, "model", "qwen2.5-coder:7b");
+        cJSON_AddStringToObject(request, "model", glconf.runtime.llm_model);
         cJSON_AddStringToObject(request, "system", system_prompt);
         cJSON_AddStringToObject(request, "prompt", full_prompt);
         cJSON_AddBoolToObject(request, "stream", 0);

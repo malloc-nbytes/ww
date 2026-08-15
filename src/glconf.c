@@ -17,6 +17,8 @@
  * with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <termios.h>
@@ -35,6 +37,9 @@ struct {
                 int   space_amt;
                 char *artwork;
                 const char *to_clipboard;
+#ifdef WITH_LLM
+                const char *llm_model;
+#endif
         } runtime;
         uint32_t flags;
 } glconf = {
@@ -51,6 +56,9 @@ struct {
                 .space_amt = 8,
                 .artwork   = "ww1",
                 .to_clipboard = "echo -E '%%s' | xclip -selection clipboard",
+#ifdef WITH_LLM
+                .llm_model = "qwen2.5-coder:7b",
+#endif
         },
         .flags = 0x0000,
 };

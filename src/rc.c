@@ -86,6 +86,9 @@ parse_rc(void)
         qcl_value *dumb_indent      = qcl_value_get(&config, "dumb-indent");
         qcl_value *artwork          = qcl_value_get(&config, "artwork");
         qcl_value *no_auto_bracket  = qcl_value_get(&config, "no-auto-bracket");
+#ifdef WITH_LLM
+        qcl_value *llm_model        = qcl_value_get(&config, "llm-model");
+#endif
 
         if (tabmode) {
                 if (tabmode->kind != QCL_VALUE_KIND_BOOL) {
@@ -154,6 +157,16 @@ parse_rc(void)
                 else if (((qcl_value_bool *)no_auto_bracket)->b)
                         glconf.flags |= FK_NOAUTOBRACKET;
         }
+#ifdef WITH_LLM
+        if (llm_model) {
+                if (llm_model->kind != QCL_VALUE_KIND_STRING) {
+                        printf("wwrc error: llm_model is expected to be a string\n");
+                        ok = 0;
+                }
+                else
+                        glconf.runtime.llm_model = strdup(((qcl_value_string *)llm_model)->s);
+        }
+#endif
 
         if (glconf.flags & FK_TABMODE)
                 glconf.flags &= ~(uint32_t)FK_NODUMBINDENT;
