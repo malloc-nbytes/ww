@@ -52,3 +52,7 @@ To choose your model, add this to your =.wwrc= (*Note*: use =ww --create-config=
 #+end_src
 
 You can see your models by doing =ollama ls=.
+
+To use it, do =M-x prompt=. This will take you to a "conversation" buffer
+where whatever you type in there is sent as the prompt. It will also use
+any buffers that you have open as context.
