@@ -24,6 +24,7 @@
 #include "line.h"
 #include "str.h"
 #include "set.h"
+#include "config.h"
 
 #define BUFFER_BUILTIN_COMPILE "ww-compile"
 #define BUFFER_BUILTIN_HELP    "ww-help"
@@ -54,7 +55,9 @@ typedef enum {
         BA_REQ_ERRJMP,
         BA_REQ_NEXTERROR,
         BA_REQ_PREVERROR,
+#ifdef WITH_LLM
         BA_REQ_CONVO,
+#endif
 } buffer_action;
 
 typedef enum {

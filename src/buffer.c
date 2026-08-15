@@ -1785,8 +1785,10 @@ ctrlx(buffer *b)
                         return BA_REQ_EXIT;
                 if (ch == CTRL_F)
                         return BA_REQ_FINDFILE;
-                if (ch == CTRL_X)
+#ifdef WITH_LLM
+                if (ch == CTRL_X && !strcmp(b->name.chars, "Ollama Response"))
                         return BA_REQ_CONVO;
+#endif
         } break;
         default: break;
         }
