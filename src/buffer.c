@@ -44,6 +44,7 @@
 #define PATH_MAX 4096
 #endif
 #include <unistd.h>
+#include <poll.h>
 
 #define TAB_WIDTH        8
 #define MAX_AUTOCOMPLETE 32
@@ -2061,6 +2062,22 @@ buffer_action
 buffer_process(buffer *b)
 {
         (void)visual_width_up_to;
+
+        struct pollfd pfd = {
+                .fd = STDIN_FILENO,
+                .events = POLLIN,
+        };
+
+        int ret = poll(&pfd, 1, 20);
+
+        if (ret < 0)
+                return BA_NOP;
+
+        if (ret == 0)
+                return BA_NOP;
+
+        if (!(pfd.revents & POLLIN))
+                return BA_NOP;
 
         input_type ty;
         char ch;
