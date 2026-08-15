@@ -194,7 +194,7 @@ def read_version_file(path='../VERSION'):
         return f.read().strip()
 
 def write_config_mk(cc, accepted_flags):
-    global PREFIX
+    global PREFIX, WITH_LLM
 
     config_mk_path = 'config.mk'
     with open(config_mk_path, 'w', encoding='utf-8') as f:
@@ -203,6 +203,7 @@ def write_config_mk(cc, accepted_flags):
         f.write(f'CFLAGS := {" ".join(accepted_flags)}\n')
         f.write(f'DEBUG_FLAGS := -O0 -g3\n')
         f.write(f'PREFIX := {PREFIX}\n')
+        f.write('LDFLAGS := ' + ('-lcurl -lpthread' if WITH_LLM else ' '))
     print_file(config_mk_path)
     info(f'Wrote {config_mk_path}')
 
