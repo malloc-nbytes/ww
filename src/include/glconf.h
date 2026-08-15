@@ -43,6 +43,7 @@ extern struct {
                 const char *to_clipboard;
 #ifdef WITH_LLM
                 const char *llm_model;
+                int         llm_think;
 #endif
         } runtime;
         uint32_t flags;

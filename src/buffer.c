@@ -2166,7 +2166,6 @@ buffer_process(buffer *b)
         return BA_NOP;
 }
 
-
 static void
 draw_status(const buffer *b,
             const char   *msg)

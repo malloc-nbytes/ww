@@ -88,6 +88,7 @@ parse_rc(void)
         qcl_value *no_auto_bracket  = qcl_value_get(&config, "no-auto-bracket");
 #ifdef WITH_LLM
         qcl_value *llm_model        = qcl_value_get(&config, "llm-model");
+        qcl_value *llm_think        = qcl_value_get(&config, "llm-think");
 #endif
 
         if (tabmode) {
@@ -160,11 +161,19 @@ parse_rc(void)
 #ifdef WITH_LLM
         if (llm_model) {
                 if (llm_model->kind != QCL_VALUE_KIND_STRING) {
-                        printf("wwrc error: llm_model is expected to be a string\n");
+                        printf("wwrc error: llm-model is expected to be a string\n");
                         ok = 0;
                 }
                 else
                         glconf.runtime.llm_model = strdup(((qcl_value_string *)llm_model)->s);
+        }
+        if (llm_think) {
+                if (llm_think->kind != QCL_VALUE_KIND_BOOL) {
+                        printf("wwrc error: llm-think is expected to be a bool\n");
+                        ok = 0;
+                }
+                else
+                        glconf.runtime.llm_think = ((qcl_value_bool *)llm_think)->b;
         }
 #endif
 

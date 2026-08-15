@@ -39,6 +39,7 @@ struct {
                 const char *to_clipboard;
 #ifdef WITH_LLM
                 const char *llm_model;
+                int         llm_think;
 #endif
         } runtime;
         uint32_t flags;
@@ -58,6 +59,7 @@ struct {
                 .to_clipboard = "echo -E '%%s' | xclip -selection clipboard",
 #ifdef WITH_LLM
                 .llm_model = "qwen2.5-coder:7b",
+                .llm_think = 0,
 #endif
         },
         .flags = 0x0000,

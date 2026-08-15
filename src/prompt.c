@@ -76,7 +76,7 @@ const char *g_llm_system_prompt =
         "are relevant to the current request. "
 
         "27. For every response, begin with the exact ASCII prefix "
-        "\"[LLM Response]:\" followed by the response content. "
+        "\"[LLM Response]: \" followed by the response content. "
         "28. The prefix must be present even for short responses, numbers, "
         "code, or other output. "
         "29. Never output characters outside the ASCII range. "

@@ -421,6 +421,11 @@ send_to_model(ww *ed)
                 "stream",
                 0);
 
+        cJSON_AddBoolToObject(
+                request,
+                "think",
+                glconf.runtime.llm_think);
+
         free(full_prompt);
 
         char *json_request = cJSON_PrintUnformatted(request);
