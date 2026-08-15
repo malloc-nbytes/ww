@@ -71,6 +71,40 @@ static buffer_action tab(buffer *b, int add_multiplier);
 
 char_ar g_cpy_buf = {0};
 
+char *
+buffer_to_cstr(const buffer *b)
+{
+        size_t sz = 0;
+
+        for (size_t i = 0; i < b->lines.len; ++i)
+                sz += b->lines.data[i]->txt.len;
+
+        char *res = (char *)malloc(sz+1);
+        memset(res, 0, sz+1);
+
+        for (size_t i = 0; i < b->lines.len; ++i)
+                (void)strcat(res, b->lines.data[i]->txt.chars);
+
+        res[sz] = 0;
+
+        return res;
+}
+
+void
+buffer_append_cstr(buffer *b, char *s)
+{
+        linep_ar lns = lines_from(s);
+        for (size_t i = 0; i < lns.len; ++i)
+                array_append(b->lines, lns.data[i]);
+        array_free(lns);
+}
+
+void
+buffer_disable_readonly(buffer *b)
+{
+        b->writable = 1;
+}
+
 static int
 find_next_expand_region(buffer *b,
                         size_t *out_x,
@@ -1751,6 +1785,10 @@ ctrlx(buffer *b)
                         return BA_REQ_EXIT;
                 if (ch == CTRL_F)
                         return BA_REQ_FINDFILE;
+#ifdef WITH_LLM
+                if (ch == CTRL_X && !strcmp(b->name.chars, "Ollama Response"))
+                        return BA_REQ_CONVO;
+#endif
         } break;
         default: break;
         }

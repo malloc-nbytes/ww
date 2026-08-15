@@ -34,7 +34,7 @@ sv_from(const char *s, ssize_t len)
 }
 
 const char *
-sv_cstr(sv view)
+sv_view(sv view)
 {
 #define BUF_CAP 1024
         assert(view.len <= BUF_CAP);

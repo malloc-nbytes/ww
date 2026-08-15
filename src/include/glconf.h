@@ -21,6 +21,7 @@
 #define GLCONF_H_INCLUDED
 
 #include "qcl.h"
+#include "config.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -40,6 +41,9 @@ extern struct {
                 int   space_amt;
                 char *artwork;
                 const char *to_clipboard;
+#ifdef WITH_LLM
+                const char *llm_model;
+#endif
         } runtime;
         uint32_t flags;
 } glconf;

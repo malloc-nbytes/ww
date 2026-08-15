@@ -24,6 +24,7 @@
 #include "line.h"
 #include "str.h"
 #include "set.h"
+#include "config.h"
 
 #define BUFFER_BUILTIN_COMPILE "ww-compile"
 #define BUFFER_BUILTIN_HELP    "ww-help"
@@ -54,6 +55,9 @@ typedef enum {
         BA_REQ_ERRJMP,
         BA_REQ_NEXTERROR,
         BA_REQ_PREVERROR,
+#ifdef WITH_LLM
+        BA_REQ_CONVO,
+#endif
 } buffer_action;
 
 typedef enum {
@@ -111,6 +115,7 @@ void           buffer_draw(const buffer *b);
 void           buffer_drawxy(const buffer *b);
 buffer_action  buffer_process(buffer *b);
 void           buffer_make_readonly(buffer *b);
+void           buffer_disable_readonly(buffer *b);
 buffer_action  buffer_save(buffer *b);
 buffer_action  buffer_adjust_scroll(buffer *b);
 void           buffer_make_builtin(buffer *b);
@@ -118,5 +123,7 @@ buffer        *ww_helpbuf_alloc(unsigned w, unsigned h, unsigned ws, unsigned hs
 void           buffer_free(buffer *b);
 void           buffer_jump_to_verts(buffer *b, size_t x, size_t y);
 buffer_action  buffer_center_view(buffer *b);
+char          *buffer_to_cstr(const buffer *b);
+void           buffer_append_cstr(buffer *b, char *s);
 
 #endif // BUFFER_H_INCLUDED

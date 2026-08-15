@@ -5,7 +5,7 @@ DOCDIR := ../docs
 
 DEBUG_FLAGS := -O0 -g3
 
-LDFLAGS :=
+LDFLAGS := -lcurl
 
 SRCDIR := .
 OBJDIR := obj

@@ -21,6 +21,7 @@
 #define WW_H_INCLUDED
 
 #include "buffer.h"
+#include "config.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -37,6 +38,12 @@
 #define WW_CMD_TOGGLE_DUMBINDENT  "toggle-dumb-indent"
 #define WW_CMD_TOGGLE_AUTOBRACKET "toggle-autobracket"
 
+#ifdef WITH_LLM
+#define WW_CMD_PROMPT             "prompt"
+#else
+#define WW_CMD_PROMPT             NULL
+#endif
+
 #define WW_CMD_CPL { \
         WW_CMD_SAVE, \
         WW_CMD_FIND_FILE, \
@@ -49,7 +56,10 @@
         WW_CMD_MAN, \
         WW_CMD_TOGGLE_DUMBINDENT, \
         WW_CMD_TOGGLE_AUTOBRACKET, \
+        WW_CMD_PROMPT, \
+        NULL, \
 }
+// NOTE: WW_CMD_PROMPT MUST BE LAST BEFORE NULL
 
 typedef struct ww {
         bufferp_ar  buffers;

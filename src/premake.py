@@ -41,6 +41,7 @@ CFLAGS = [
 PREFIX = '/usr/local'
 CC = None
 SKIP_CHECKS = False
+WITH_LLM = False
 
 def err(msg):
     print(f'[premake ERR]: {msg}')
@@ -209,7 +210,7 @@ def write_config_mk(cc, accepted_flags):
 # Generate config
 # --------------------------
 def generate_config():
-    global PREFIX
+    global PREFIX, WITH_LLM
 
     info("Detecting system and compiler...")
     cc = detect_compiler()
@@ -247,6 +248,8 @@ def generate_config():
         f.write(f'#define VERSION "{version}"\n\n')
         f.write(f'#define COMPILER "{compiler_version}"\n\n')
         f.write(f'#define PREFIX "{PREFIX}"\n\n')
+        if WITH_LLM:
+            f.write(f'#define WITH_LLM\n\n')
         for macro, exists in macro_results.items():
             f.write(f"#define HAVE_{macro} {1 if exists else 0}\n\n")
         for func, exists in function_results.items():
@@ -256,11 +259,12 @@ def generate_config():
     info("Done.")
 
 def handle_args(argv):
-    global PREFIX, CC, SKIP_CHECKS
+    global PREFIX, CC, SKIP_CHECKS, WITH_LLM
     parser = argparse.ArgumentParser(prog='premake.py', description='Precompile step for ww', epilog='Run `make\' after this script')
     parser.add_argument('--prefix', help='set an install prefix')
     parser.add_argument('--cc', help='set a compiler explicitly')
     parser.add_argument('--skip-checks', action='store_true', help='skip compiler flag checks')
+    parser.add_argument('--with-llm', action='store_true', help='[EXPERIMENTAL] enable ability to interface with Ollama local server')
     args = parser.parse_args()
 
     if args.prefix:
@@ -269,6 +273,8 @@ def handle_args(argv):
         CC = args.cc
     if args.skip_checks:
         SKIP_CHECKS = True
+    if args.with_llm:
+        WITH_LLM = True
 
 if __name__ == "__main__":
     handle_args(sys.argv[1:])
