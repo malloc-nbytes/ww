@@ -43,12 +43,12 @@ This will never be enabled by default, but if you wish to have it, run =premake.
 
 *Note*: =libcurl= is expected to be installed on the system if using this option.
 
-The server must be running on =http://localhost:11434=.
+*Note*: The server must be running on =http://localhost:11434=.
 
-To choose your model, add this to your =.wwrc=:
+To choose your model, add this to your =.wwrc= (*Note*: use =ww --create-config= to create this file):
 
 #+begin_src
-  llm_model = '<your model>';
+  llm-model = '<your model>';
 #+end_src
 
 You can see your models by doing =ollama ls=.
