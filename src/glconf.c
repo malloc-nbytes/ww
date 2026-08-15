@@ -58,7 +58,7 @@ struct {
                 .artwork   = "ww1",
                 .to_clipboard = "echo -E '%%s' | xclip -selection clipboard",
 #ifdef WITH_LLM
-                .llm_model = "qwen2.5-coder:7b",
+                .llm_model = "qwen3:8b",
                 .llm_think = 0,
 #endif
         },

@@ -49,6 +49,7 @@ To choose your model, add this to your =.wwrc= (*Note*: use =ww --create-config=
 
 #+begin_src
   llm-model = '<your model>';
+  llm-think = false; # or true if you want thinking
 #+end_src
 
 You can see your models by doing =ollama ls=.
