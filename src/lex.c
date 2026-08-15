@@ -104,7 +104,7 @@ lexer_dump(const lexer *l)
         for (size_t i = 0; i < l->tokens.len; ++i) {
                 const token *t = l->tokens.data[i];
                 printf("<lx=%s, k=%s, ", sv_view(t->lx), token_kind_ccstr(t->k));
-                printf("loc=%s, n=%p>", loc_fmt_cstr(t->loc), t->n);
+                printf("loc=%s, n=%p>\n", loc_fmt_cstr(t->loc), t->n);
         }
 }
 
@@ -114,6 +114,21 @@ lexer_peek(const lexer *l)
         if (l->cursor >= l->tokens.len)
                 return NULL;
         return l->tokens.data[l->cursor];
+}
+
+token *
+lexer_next(lexer *l)
+{
+        if (l->cursor >= l->tokens.len)
+                return NULL;
+        return l->tokens.data[l->cursor++];
+}
+
+void
+lexer_discard(lexer *l)
+{
+        if (l->cursor < l->tokens.len)
+                ++l->cursor;
 }
 
 lexer
@@ -133,46 +148,47 @@ lex_file(lexer_cfg cfg)
         for (size_t i = 0; i < l.cfg.lns.len; ++i) {
                 const line *ln = l.cfg.lns.data[i];
                 const str  *s  = &ln->txt;
+                size_t      j  = 0;
 
-                for (size_t j = 0; j < s->len; ++j) {
+                while (j < s->len) {
                         const char *src = s->chars;
                         char        ch  = src[j];
                         if (ch == '\n') {
                                 c = 1;
                                 ++r;
-                                ++i;
+                                ++j;
                         } else if (isspace(ch)) {
                                 ++c;
-                                ++i;
+                                ++j;
                         } else if (isalpha(ch) || ch == '_') {
                                 assert(0 && "identifiers unimplemented");
                         } else if (ch == '"') {
-                                size_t len = consume_while(src+i+1, not_double_quote);
+                                size_t len = consume_while(src+j+1, not_double_quote);
                                 token *t = token_alloc(TOKEN_KIND_STRING_LITERAL,
-                                                       src+i+1, len, r, c,
+                                                       src+j+1, len, r, c,
                                                        l.cfg.path);
                                 append(&l, t);
-                                i += len+2;
+                                j += len+2;
                                 c += len+2;
                         } else if (ch == '\'') {
                                 assert(0 && "single quotes unimplemented");
                         } else if (isdigit(ch)) {
-                                size_t len = consume_while(src+i, isdigit);
+                                size_t len = consume_while(src+j, isdigit);
                                 token *t = token_alloc(TOKEN_KIND_NUMBER_LITERAL,
-                                                       src+i, len, r, c,
+                                                       src+j, len, r, c,
                                                        l.cfg.path);
-                                i += len;
+                                j += len;
                                 c += len;
                                 append(&l, t);
                         } else {
-                                size_t len = consume_while(src+i, isop);
-                                token_kind *k = determine_op(src+i, &len, l.cfg.ops);
+                                size_t len = consume_while(src+j, isop);
+                                token_kind *k = determine_op(src+j, &len, l.cfg.ops);
                                 if (!k) {
                                         assert(0 && "unhandled operator");
                                 }
-                                token *t = token_alloc(*k, src+i, len, r, c, l.cfg.path);
+                                token *t = token_alloc(*k, src+j, len, r, c, l.cfg.path);
                                 append(&l, t);
-                                i += len;
+                                j += len;
                                 c += len;
                         }
                 }

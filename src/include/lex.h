@@ -19,6 +19,7 @@ typedef enum {
         TOKEN_KIND_COMMA,
         TOKEN_KIND_STRING_LITERAL,
         TOKEN_KIND_NUMBER_LITERAL,
+        TOKEN_KIND_IDENTIFIER,
         TOKEN_KIND_KEYWORD,
 } token_kind;
 
@@ -53,5 +54,7 @@ typedef struct {
 lexer lex_file(lexer_cfg cfg);
 void lexer_dump(const lexer *l);
 token *lexer_peek(const lexer *l);
+token *lexer_next(lexer *l);
+void lexer_discard(lexer *l);
 
 #endif // LEX_H_INCLUDED

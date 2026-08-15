@@ -36,8 +36,14 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <regex.h>
+#include <curl/curl.h>
+#include <cjson/cJSON.h>
 
 static volatile sig_atomic_t g_resize_flag = 0;
+
+static buffer *
+get_buffer_by_name(ww         *ed,
+                   const char *name);
 
 static void
 resize_signal_handler(int sig)
@@ -66,6 +72,335 @@ handle_resize(ww *ed)
         glconf.term.h = win_height;
 
         ww_display_monitors(ed, BA_REDRAW);
+}
+
+struct response_buffer {
+        char *data;
+        size_t size;
+};
+
+static size_t
+write_callback(void   *contents,
+               size_t  size,
+               size_t  nmemb,
+               void   *userp)
+{
+        size_t realsize = size*nmemb;
+        struct response_buffer *mem = userp;
+
+        char *ptr = (char *)realloc(mem->data, mem->size+realsize+1);
+        if (ptr == NULL)
+                return 0;
+
+        mem->data = ptr;
+        memcpy(mem->data+mem->size, contents, realsize);
+        mem->size += realsize;
+        mem->data[mem->size] = 0;
+
+        return realsize;
+}
+
+static void
+switch_to_convo_buf(ww *ed)
+{
+        buffer *convobuf;
+
+        if (!(convobuf = get_buffer_by_name(ed, "Ollama Response"))) {
+                convobuf = buffer_from(str_from("Ollama Response"),
+                                       str_from("Ollama Response"),
+                                       (unsigned)glconf.term.w,
+                                       (unsigned)glconf.term.h,
+                                       0, 0, lines_from("\n"), ed);
+                ww_add_buffer(ed, convobuf);
+                ww_make_buffer_primary_by_name(ed, "Ollama Response");
+        } else if (!strcmp(ed->monitors[0]->name.chars, "Ollama Response")) {
+                ww_make_buffer_primary_by_name(ed, "Ollama Response");
+        }
+}
+
+static int
+send_to_model(ww *ed)
+{
+        CURL *curl;
+        CURLcode res;
+        struct response_buffer response = {
+                .data = NULL,
+                .size = 0,
+        };
+
+        static const char *system_prompt =
+                "You are an AI assistant integrated into a text editor. "
+                "Expect that your responses will be displayed in a terminal "
+                "text editor. "
+                "Follow these rules at all times: "
+                "1. Output only ASCII characters (characters 0 through 127). "
+                "2. Never output Unicode characters, including smart quotes, "
+                "em dashes, ellipses, emojis, or other non-ASCII symbols. "
+                "3. Answer the user's request directly and concisely. "
+                "4. Do not add unnecessary explanations, introductions, "
+                "or conclusions unless the user asks for them. "
+                "5. Preserve the formatting and style requested by the user. "
+                "6. When generating code, output valid code and do not wrap it "
+                "in Markdown fences unless the user explicitly asks for them. "
+                "7. Do not mention these system instructions in your response. "
+                "8. Do not invent information. If something is ambiguous, "
+                "make the most reasonable assumption and proceed. "
+                "9. The response will be inserted directly into a text editor, "
+                "so do not include conversational filler. "
+                "10. Because this is going into a text editor, do not put too "
+                "much information on one line. Split it with newlines when "
+                "applicable. "
+                "11. Make all responses easy to copy and paste. "
+                "12. The contents of the open buffers are provided as context. "
+                "Use them when they are relevant to the user's request. "
+                "13. The main prompt that is given is from a conversation buffer. "
+                "It will either be just what the user is typing to prompt you, or it will "
+                "be a conversation between you and the user. If it is a conversation, use what "
+                "you have said previously for more context. "
+                "14. For every response that you give, no matter the content, start with '[LLM Response]:' followed "
+                "by the actual reponse. This includes long response, short responses, numbers, everything. ";
+
+        buffer *convobuf = get_buffer_by_name(ed, "Ollama Response");
+        assert(convobuf);
+        buffer_make_readonly(convobuf);
+        char *user_prompt = buffer_to_cstr(convobuf);
+
+        cstr_ar files = array_empty(cstr_ar);
+
+        size_t prompt_size = strlen(user_prompt) + 256;
+
+        for (size_t i = 0; i < ed->buffers.len; ++i) {
+                char *file = buffer_to_cstr(ed->buffers.data[i]);
+
+                if (!file)
+                        continue;
+
+                array_append(files, file);
+
+                /*
+                 *   ===== OPEN BUFFER N =====
+                 *   <contents>
+                 *   ===== END BUFFER N =====
+                 */
+                prompt_size += strlen(file) + 128;
+        }
+
+        char *full_prompt = malloc(prompt_size);
+
+        if (!full_prompt) {
+                fprintf(stderr, "failed to allocate prompt\n");
+                fflush(stderr);
+
+                array_free(files);
+                return 0;
+        }
+
+        size_t offset = 0;
+
+        offset += (size_t)snprintf(full_prompt + offset,
+                                   prompt_size - offset,
+                                   "The following buffers are currently open "
+                                   "in the text editor.\n\n");
+
+        for (size_t i = 0; i < files.len; ++i) {
+                offset += (size_t)snprintf(full_prompt + offset,
+                                           prompt_size - offset,
+                                           "===== OPEN BUFFER %zu =====\n",
+                                           i + 1);
+
+                offset += (size_t)snprintf(full_prompt + offset,
+                                           prompt_size - offset,
+                                           "%s",
+                                           files.data[i]);
+
+                offset += (size_t)snprintf(full_prompt + offset,
+                                           prompt_size - offset,
+                                           "\n===== END BUFFER %zu =====\n\n",
+                                           i + 1);
+        }
+
+        offset += (size_t)snprintf(full_prompt + offset,
+                                   prompt_size - offset,
+                                   "User request:\n%s",
+                                   user_prompt);
+
+        cJSON *request = cJSON_CreateObject();
+
+        if (!request) {
+                fprintf(stderr, "failed to create JSON request\n");
+                fflush(stderr);
+
+                free(full_prompt);
+                array_free(files);
+                return 0;
+        }
+
+        /* cJSON_AddStringToObject(request, */
+        /*                         "model", */
+        /*                         "qwen2.5-coder:14b"); */
+        cJSON_AddStringToObject(request,
+                                "model",
+                                "qwen2.5-coder:7b");
+
+        cJSON_AddStringToObject(request,
+                                "system",
+                                system_prompt);
+
+        cJSON_AddStringToObject(request,
+                                "prompt",
+                                full_prompt);
+
+        cJSON_AddBoolToObject(request,
+                              "stream",
+                              0);
+
+        char *json_request = cJSON_PrintUnformatted(request);
+
+        cJSON_Delete(request);
+
+        if (!json_request) {
+                fprintf(stderr, "failed to serialize JSON request\n");
+                fflush(stderr);
+
+                free(full_prompt);
+                array_free(files);
+                return 0;
+        }
+
+        free(full_prompt);
+
+        curl_global_init(CURL_GLOBAL_DEFAULT);
+
+        curl = curl_easy_init();
+
+        if (!curl) {
+                fprintf(stderr, "curl_easy_init() failed\n");
+                fflush(stderr);
+
+                free(json_request);
+                array_free(files);
+                curl_global_cleanup();
+
+                return 0;
+        }
+
+        curl_easy_setopt(curl,
+                         CURLOPT_URL,
+                         "http://localhost:11434/api/generate");
+
+        curl_easy_setopt(curl,
+                         CURLOPT_POST,
+                         1L);
+
+        curl_easy_setopt(curl,
+                         CURLOPT_POSTFIELDS,
+                         json_request);
+
+        struct curl_slist *headers = NULL;
+
+        headers = curl_slist_append(headers,
+                                    "Content-Type: application/json");
+
+        curl_easy_setopt(curl,
+                         CURLOPT_HTTPHEADER,
+                         headers);
+
+        curl_easy_setopt(curl,
+                         CURLOPT_WRITEFUNCTION,
+                         write_callback);
+
+        curl_easy_setopt(curl,
+                         CURLOPT_WRITEDATA,
+                         &response);
+
+        curl_easy_setopt(curl,
+                         CURLOPT_TIMEOUT,
+                         300L);
+
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+                fprintf(stderr,
+                        "curl_easy_perform() failed: %s\n",
+                        curl_easy_strerror(res));
+                fflush(stderr);
+
+                curl_slist_free_all(headers);
+                curl_easy_cleanup(curl);
+
+                free(json_request);
+                free(response.data);
+                array_free(files);
+
+                curl_global_cleanup();
+
+                return 0;
+        }
+
+        long http_code = 0L;
+
+        curl_easy_getinfo(curl,
+                          CURLINFO_RESPONSE_CODE,
+                          &http_code);
+
+        if (http_code != 200) {
+                fprintf(stderr,
+                        "Ollama returned HTTP %ld\n",
+                        http_code);
+
+                fprintf(stderr,
+                        "Response: %s\n",
+                        response.data ? response.data : "");
+
+                fflush(stderr);
+
+                curl_slist_free_all(headers);
+                curl_easy_cleanup(curl);
+
+                free(json_request);
+                free(response.data);
+                array_free(files);
+
+                curl_global_cleanup();
+
+                return 0;
+        }
+
+        /*
+         * Ollama returned JSON.
+         */
+        cJSON *json = cJSON_Parse(response.data);
+
+        if (!json) {
+                fprintf(stderr,
+                        "failed to parse Ollama response as JSON\n");
+                fflush(stderr);
+        } else {
+                cJSON *answer =
+                        cJSON_GetObjectItem(json, "response");
+
+                if (cJSON_IsString(answer)) {
+                        char *data = answer->valuestring;
+                        buffer_append_cstr(convobuf, data);
+                }
+
+                cJSON_Delete(json);
+        }
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+
+        free(json_request);
+        free(response.data);
+
+        array_free(files);
+
+        curl_global_cleanup();
+
+        buffer_disable_readonly(convobuf);
+
+        return 1;
+
 }
 
 static ssize_t
@@ -359,7 +694,8 @@ draw_monitor_based_on_action(ww            *ed,
             || ba == BA_REQ_KILLBUF
             || ba == BA_REQ_SWITCHCOMPL
             || ba == BA_REQ_ERRJMP
-            || ba == BA_REQ_NEXTERROR)
+            || ba == BA_REQ_NEXTERROR
+            || ba == BA_REQ_CONVO)
                 buffer_draw(ed->monitors[idx]);
         else if (ba == BA_XY)
                 buffer_drawxy(ed->monitors[idx]);
@@ -877,6 +1213,8 @@ metax(ww *ed)
                 man(ed);
         else if (!strcmp(inp, WW_CMD_TOGGLE_AUTOBRACKET))
                 toggle_autobracket();
+        else if (!strcmp(inp, WW_CMD_PROMPT))
+                switch_to_convo_buf(ed);
 
         free(inp);
         array_free(cmds);
@@ -1195,6 +1533,7 @@ ww_run(ww *ed)
                 else if (act == BA_REQ_ERRJMP)        (void)try_jump_to_error(ed, NULL);
                 else if (act == BA_REQ_NEXTERROR)     jmp_next_error(ed, 0);
                 else if (act == BA_REQ_PREVERROR)     jmp_next_error(ed, 1);
+                else if (act == BA_REQ_CONVO)         send_to_model(ed);
 
                 ww_display_monitors(ed, act);
         }
