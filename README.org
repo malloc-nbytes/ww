@@ -56,3 +56,9 @@ You can see your models by doing =ollama ls=.
 To use it, do =M-x prompt=. This will take you to a "conversation" buffer
 where whatever you type in there is sent as the prompt. It will also use
 any buffers that you have open as context.
+
+When you're ready, do =C-x C-x= (while in this conversation buffer) and
+it will start generating.
+
+*Note*: Right now, this _is_ a blocking processes, so the editor will be
+unresponsive while it is running.
