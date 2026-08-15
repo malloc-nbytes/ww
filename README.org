@@ -61,5 +61,3 @@ any buffers that you have open as context.
 When you're ready, do =C-x C-x= (while in this conversation buffer) and
 it will start generating.
 
-*Note*: Right now, this _is_ a blocking processes, so the editor will be
-unresponsive while it is running.
