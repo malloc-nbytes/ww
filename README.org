@@ -1,63 +1,64 @@
-* ww
+# ww
 
-*NOTE*: This package can be installed through forge [ https://github.com/malloc-nbytes/forge ].
+**Note:** This package can be installed through [forge](https://github.com/malloc-nbytes/forge).
 
-*NOTE*: This project is a work in progress and may not function correctly.
+**Note:** This project is a work in progress and may not function correctly.
 
-*NOTE*: See [[./TODO.org][TODO]] for active features being worked on.
+**Note:** See [TODO.org](TODO) for active features being worked on.
 
-=ww= is a text editor similar to vim or nano but with a _very_ heavy Emacs influence (but nowhere near as customizable as it!).
-It's controls are mostly default Emacs keybindings (see the help buffer in =ww= by doing =M-x help=).
+`ww` is a text editor similar to vim or nano but with a _very_ heavy Emacs influence (but nowhere near as customizable as it!).
 
-Also, dependencies such as =ncurses= are not needed, just a =C= compiler and python for some pre-compile stuff.
+It's controls are mostly default Emacs keybindings (see the help buffer in `ww` by doing `M-x help`).
 
-** Dependencies
+Also, dependencies such as `ncurses` are not needed, just a `C` compiler and python for some pre-compile stuff.
 
-- A =C= compiler
-- =python3=
+## Dependencies
 
-** Build
+- A `C` compiler
+- `python3`
 
-*NOTE:* The =--prefix= option for =premake.py= is optional and is =/usr/local= by default.
+## Build
 
-#+begin_src bash
-  cd src
-  python3 premake.py --prefix=<prefix>
-  make
-  make install
-#+end_src
+**Note:** The `--prefix` option for `premake.py` is optional and is `/usr/local` by default.
 
-** How to use
+```bash
+cd src
+python3 premake.py --prefix=<prefix>
+make
+make install
+```
 
-Invoke by doing =ww <filepath>= to start editing/creating a file.
+## How to use
 
-To see the help buffer and to see the controls, either invoke =ww= with a directory (or nothing) instead of a file, or type =M-x help=.
+Invoke by doing `ww <filepath>` to start editing/creating a file.
 
-You can also view a tutorial (wip) by invoking =M-x tutorial= and picking the chapter you are interested in.
+To see the help buffer and to see the controls, either invoke `ww` with a directory (or nothing) instead of a file, or type `M-x help`.
 
-** Other Notes
+You can also view a tutorial (wip) by invoking `M-x tutorial` and picking the chapter you are interested in.
+
+## Other Notes
 
 There is an option to enable support for communicating with an Ollama local server and interacting with an LLM.
 
-This will never be enabled by default, but if you wish to have it, run =premake.py --with-llm=.
+This will never be enabled by default, but if you wish to have it, run `premake.py --with-llm`.
 
-*Note*: =libcurl= is expected to be installed on the system if using this option.
+**Note:** `libcurl` is expected to be installed on the system if using this option.
 
-*Note*: The server must be running on =http://localhost:11434=.
+**Note:** The server must be running on `http://localhost:11434`.
 
-To choose your model, add this to your =.wwrc= (*Note*: use =ww --create-config= to create this file):
+To choose your model, add this to your `.wwrc` (*Note:* use `ww --create-config` to create this file):
 
-#+begin_src
-  llm-model = '<your model>';
-  llm-think = false; # or true if you want thinking
-#+end_src
+```c
+llm-model = '<your model>';
+llm-think = false; # or true if you want thinking
+```
 
-You can see your models by doing =ollama ls=.
+You can see your models by doing `ollama ls`.
 
-To use it, do =M-x prompt=. This will take you to a "conversation" buffer
+To use it, do `M-x prompt`. This will take you to a "conversation" buffer
 where whatever you type in there is sent as the prompt. It will also use
 any buffers that you have open as context.
 
-When you're ready, do =C-x C-x= (while in this conversation buffer) and
+When you're ready, do `C-x C-x` (while in this conversation buffer) and
 it will start generating.
 
