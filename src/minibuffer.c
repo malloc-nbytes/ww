@@ -240,6 +240,18 @@ minibuffer_input(ww         *ed,
                         }
                 } break;
 
+                case INPUT_TYPE_ARROW: {
+                        if (ch == RIGHT_ARROW) {
+                                if (total_matches > 0 &&
+                                    st.selected_idx < total_matches - 1)
+                                        st.selected_idx++;
+                        } else if (ch == LEFT_ARROW) {
+                                if (total_matches > 0 &&
+                                    st.selected_idx > 0)
+                                        st.selected_idx--;
+                        }
+                } break;
+
                 case INPUT_TYPE_CTRL: {
                         if (ch == CTRL_H) {
                                 if (cx > 0 && st.input.len > 0) {
