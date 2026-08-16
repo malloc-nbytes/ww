@@ -382,8 +382,8 @@ find_all_matches_in_buffer(buffer *b)
         return pairs;
 }
 
-static void
-search(buffer *b, int reverse)
+void
+buffer_search(buffer *b, int reverse)
 {
         input_type  ty;
         char        ch;
@@ -2142,7 +2142,7 @@ buffer_process(buffer *b)
                 else if (ch == CTRL_W) return cut_selection(b);
                 else if (ch == CTRL_X) return ctrlx(b);
                 else if (ch == CTRL_S || ch == CTRL_R) {
-                        search(b, ch == CTRL_R);
+                        buffer_search(b, ch == CTRL_R);
                         return BA_REDRAW;
                 }
         } break;

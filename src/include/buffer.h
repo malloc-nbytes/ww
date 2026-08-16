@@ -125,5 +125,6 @@ void           buffer_jump_to_verts(buffer *b, size_t x, size_t y);
 buffer_action  buffer_center_view(buffer *b);
 char          *buffer_to_cstr(const buffer *b);
 void           buffer_append_cstr(buffer *b, char *s);
+void           buffer_search(buffer *b, int reverse);
 
 #endif // BUFFER_H_INCLUDED

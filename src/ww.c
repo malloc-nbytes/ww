@@ -876,7 +876,7 @@ static void
 split_vertical(ww *ed)
 {
         // TODO: check for monitor[2]
-        /*if (ed->buffers.len <= 1)
+        /*if (ed->buffers.len <= 1)
                 return;*/
 
         buffer *b = NULL;
@@ -1319,6 +1319,8 @@ metax(ww *ed)
                 find_file(ed);
         else if (!strcmp(inp, WW_CMD_COMPILE))
                 compile(ed);
+        else if (!strcmp(inp, WW_CMD_SEARCH))
+                buffer_search(ed->monitors[ed->am], 0);
         else if (!strcmp(inp, WW_CMD_TOGGLE_SPACEMODE))
                 toggle_spacemode();
         else if (!strcmp(inp, WW_CMD_SPACEAMT))
